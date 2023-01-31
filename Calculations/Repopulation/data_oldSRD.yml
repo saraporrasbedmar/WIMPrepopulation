@@ -1,0 +1,79 @@
+# DATA FROM HOST
+host:
+    R_vir: 220  # [kpc]
+    rho_0: 9.04e6 # [Msun / kpc**3]
+    r_s: 20.  # [kpc]
+
+# COSMOLOGICAL CONSTANTS
+cosmo_constants:
+    G: 4.297e-6 # gravitational constant [kpc / Msun * (km/s)**2]
+    H_0: 71.1   # Hubble constant [km/s/Mpc]
+    rho_crit: 135.73 # == 0.7 * 0.7 * 277  [Msun / kpc**3]
+
+# DRACO CONSTANTS
+draco:
+    D_D: 80. # D_GC of Draco
+    M_D: 2.0e8 # mass of Draco
+    C_D: 19 # concentration of Draco
+
+
+# SUBHALO POPULATION FUNCTIONS ------------------------
+SHVF:
+    dmo:
+        mm: -3.9557
+        bb: 5.7313
+        
+    hydro:
+        mm: -3.9313
+        bb: 5.0796
+    
+    # Min and max velocities to repopulate [km/s]
+    RangeMin: 5.
+    RangeMax: 30.
+    
+    
+
+SRD:
+    formula:
+        resilient: '10 ** ((DistGC / args[0]) ** args[1] * np.exp(-args[2] * (DistGC - args[0]) / args[0]))'
+        fragile: '10 ** ((DistGC / args[0]) ** args[1] * np.exp(-args[2] * (DistGC - args[0]) / args[0]))'
+    dmo:
+        resilient:
+            args: [1071.47476, 0.38394437, 2.31235586] # R0, aa, bb
+    
+        fragile:
+            args: [1011.38716, 0.4037927,  2.35522213] # R0, aa, bb
+            last_subhalo: 6.61  # [kpc]
+
+    hydro:
+        resilient:
+            args: [898.1587, 0.55858766, 2.53959436] # R0, aa, bb
+    
+        fragile:
+            args: [666.49179, 0.75291017, 2.90546523] # R0, aa, bb
+            last_subhalo: 13.6  # [kpc]
+
+Cv:
+    dmo:
+        mm: -0.603
+        bb: 5.498
+        sigma: 0.29
+    
+    hydro:
+        mm: -0.628
+        bb: 5.242
+        sigma: 0.22
+
+
+# REPOPULATION
+repopulations:
+    its: 20
+    id: 'Prueba'
+    print_freq: 25
+    num_brightest: 1
+    
+    type:
+        1: ['dmo', True]
+        2: ['dmo', False]
+        3: ['hydro', True]
+        4: ['hydro', False]

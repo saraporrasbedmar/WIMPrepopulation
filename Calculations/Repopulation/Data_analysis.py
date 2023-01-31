@@ -32,33 +32,24 @@ plt.rc('ytick.minor', size=4, width=1)
 
 
 
-path_name = 'Prueba 13-01-2023 08:48:01'
+path_name = 'outputs/Prueba 31-01-2023 11:46:02'
 
-datos_Js_frag_hyd = np.loadtxt('/home/saraporras/Desktop/TFM/Paper/New_code/'
-                               + path_name + '/Js_hydro_ResFalse_results.txt')
-datos_Js_frag_dmo = np.loadtxt('/home/saraporras/Desktop/TFM/Paper/New_code/'
-                               + path_name + '/Js_dmo_ResFalse_results.txt')
+datos_Js_frag_hyd = np.loadtxt(path_name + '/Js_hydro_ResFalse_results.txt')
+datos_Js_frag_dmo = np.loadtxt(path_name + '/Js_dmo_ResFalse_results.txt')
 
-datos_J03_frag_hyd = np.loadtxt('/home/saraporras/Desktop/TFM/Paper/New_code/'
-                               + path_name + '/J03_hydro_ResFalse_results.txt')
-datos_J03_frag_dmo = np.loadtxt('/home/saraporras/Desktop/TFM/Paper/New_code/'
-                               + path_name + '/J03_dmo_ResFalse_results.txt')
+datos_J03_frag_hyd = np.loadtxt(path_name + '/J03_hydro_ResFalse_results.txt')
+datos_J03_frag_dmo = np.loadtxt(path_name + '/J03_dmo_ResFalse_results.txt')
 
-#path_name = 'ResDarkaaaadsd_'
-datos_Js_resi_hyd = np.loadtxt('/home/saraporras/Desktop/TFM/Paper/New_code/'
-                               + path_name + '/Js_hydro_ResTrue_results.txt')
-datos_Js_resi_dmo = np.loadtxt('/home/saraporras/Desktop/TFM/Paper/New_code/'
-                               + path_name + '/Js_dmo_ResTrue_results.txt')
+datos_Js_resi_hyd = np.loadtxt(path_name + '/Js_hydro_ResTrue_results.txt')
+datos_Js_resi_dmo = np.loadtxt(path_name + '/Js_dmo_ResTrue_results.txt')
 
-datos_J03_resi_hyd = np.loadtxt('/home/saraporras/Desktop/TFM/Paper/New_code/'
-                               + path_name + '/J03_hydro_ResTrue_results.txt')
-datos_J03_resi_dmo = np.loadtxt('/home/saraporras/Desktop/TFM/Paper/New_code/'
-                               + path_name + '/J03_dmo_ResTrue_results.txt')
+datos_J03_resi_hyd = np.loadtxt(path_name + '/J03_hydro_ResTrue_results.txt')
+datos_J03_resi_dmo = np.loadtxt(path_name + '/J03_dmo_ResTrue_results.txt')
 
-constraints_bb_2204 = np.loadtxt('/home/saraporras/Desktop/TFM/Constraints_2204/Limit_bb.txt')
-constraints_tau_2204 = np.loadtxt('/home/saraporras/Desktop/TFM/Constraints_2204/Limit_tau.txt')
-sigmav_bb_2204 = np.loadtxt('/home/saraporras/Desktop/TFM/Constraints_2204/sigmav_bb.txt')
-sigmav_tau_2204 = np.loadtxt('/home/saraporras/Desktop/TFM/Constraints_2204/sigmav_tau.txt')
+constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
+constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')
+sigmav_bb_2204 = np.loadtxt('../Constraints_2204/sigmav_bb.txt')
+sigmav_tau_2204 = np.loadtxt('../Constraints_2204/sigmav_tau.txt')
 
 sigmav_bb_2204 = sigmav_bb_2204[sigmav_bb_2204[:,0].argsort()[::], :]
 sigmav_tau_2204 = sigmav_tau_2204[sigmav_tau_2204[:,0].argsort()[::], :]
@@ -484,7 +475,7 @@ print(np.shape(np.where(datos_J03_frag_dmo[:,column]<num_min))[1], np.shape(np.w
 
 
 
-
+plt.show()
 
 
 

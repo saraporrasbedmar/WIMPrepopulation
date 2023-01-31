@@ -34,8 +34,8 @@ plt.rc('ytick.minor', size=4, width=1)
 
 
 #        Rmax        Vmax      Radius
-Grand_dmo = np.loadtxt('/home/saraporras/Desktop/TFM/Functions/Grand_stuff/RmaxVmaxRadDMO0_1.txt')
-Grand_hydro = np.loadtxt('/home/saraporras/Desktop/TFM/Functions/Grand_stuff/RmaxVmaxRadFP0_1.txt')
+Grand_dmo = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
+Grand_hydro = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
 
 Grand_hydro = Grand_hydro[Grand_hydro[:,1]>1e-4, :]
 
@@ -459,245 +459,246 @@ plt.axvline(gmean_dmo, linestyle=':', color='limegreen')
 
 plt.legend()
 
-
-
-# SEPARATE Cv IN RADIAL DISTANCE (TWO BINS ONLY, IN 0.3 R200)
-
-plt.subplots(2, 2)
-for i in range(1,3):
-    if i==1:
-        Grand_dmo = Grand_dmo_raw[Grand_dmo_raw[:, 2] < 0.3 * 220, :]
-        Grand_dmo[:, 0] = Cv_Grand_points(Grand_dmo[:, 1], Grand_dmo[:, 0])
-        Grand_hydro = Grand_hydro_raw[Grand_hydro_raw[:, 2] < 0.3 * 220, :]
-        Grand_hydro[:, 0] = Cv_Grand_points(Grand_hydro[:, 1], Grand_hydro[:, 0])
-    if i==2:
-        Grand_dmo = Grand_dmo_raw[Grand_dmo_raw[:, 2] > 0.3 * 220, :]
-        Grand_dmo[:, 0] = Cv_Grand_points(Grand_dmo[:, 1], Grand_dmo[:, 0])
-        Grand_hydro = Grand_hydro_raw[Grand_hydro_raw[:, 2] > 0.3 * 220, :]
-        Grand_hydro[:, 0] = Cv_Grand_points(Grand_hydro[:, 1], Grand_hydro[:, 0])
-    
-    
-        
-    ax1 = plt.subplot(2, 2, i)
-    plt.plot(Grand_dmo[:,1], Grand_dmo[:,0], '.k', label='DMO', markersize=3)
-    plt.plot(Grand_hydro[:,1], Grand_hydro[:,0], '.', label='Hydro', color='limegreen', markersize=3)
-    plt.axvline(6.4, color='k', alpha=0.5, linestyle='--')
-    
-    plt.xscale('log')
-    plt.yscale('log')
-    
-    
-    
-    number_bins_dmo = 10
-    number_bins_hydro = 5
-    
-    
-    xx_dmo, yy_dmo, y20_dmo, y80_dmo = calculate_med(Grand_dmo, number_bins_dmo, perc_low=16, perc_high=84)
-    xx_hydro, yy_hydro, y20_hydro, y80_hydro = calculate_med(Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)
-    
-    xx_dmo_mean, yy_dmo_mean = calculate_mean(Grand_dmo, number_bins_dmo, perc_low=16, perc_high=84)
-    xx_hydro_mean, yy_hydro_mean = calculate_mean(
-            Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)
-    
-    
-    # Limit to the power law tendency
-    hydroLimit = 10
-    dmoLimit = 10
-    
-    # ------- Calculations of power laws assuming m from median value -----------------------
-    #print()
-    
-    print('DMO') 
-    fitsM_dmo, exps_dmo = power_law_from_median(yy_dmo, y20_dmo, y80_dmo, xx_dmo, dmoLimit)
-    print('Scatter: %.3f and %.3f' %(exps_dmo[0]-exps_dmo[1], exps_dmo[2]-exps_dmo[0]))
-    print()
-    print()
-    print('Hydro')
-    fitsM_hydro, exps_hydro = power_law_from_median(yy_hydro, y20_hydro, y80_hydro,xx_hydro, hydroLimit) 
-    print('Scatter: %.3f and %.3f' %(exps_hydro[0]-exps_hydro[1], exps_hydro[2]-exps_hydro[0]))
-    
-    print()
-    print('Mean')
-    print('DMO') 
-    fitsM_dmo_mean, exps_dmo_mean = power_law_from_median(yy_dmo_mean, y20_dmo, y80_dmo, xx_dmo_mean, dmoLimit)
-    print('Scatter: %.3f and %.3f' %(exps_dmo_mean[0]-exps_dmo_mean[1], exps_dmo_mean[2]-exps_dmo_mean[0]))
-    print()
-    print()
-    print('Hydro')
-    fitsM_hydro_mean, exps_hydro_mean = power_law_from_median(yy_hydro_mean, y20_hydro, y80_hydro,  xx_hydro_mean, hydroLimit)
-    print('Scatter: %.3f and %.3f' %(exps_hydro_mean[0]-exps_hydro_mean[1], exps_hydro_mean[2]-exps_hydro_mean[0]))
-    
-    
-
-    
-    
-    plt.subplot(2,2,i + 2, sharex=ax1)
-    
-    #xx_plot = np.logspace(np.log10(xx_dmo[0]), np.log10(xx_dmo[-1]))
-    xx_plot = np.logspace(np.log10(xx_dmo[0]), np.log10(60))
-    
-    
-    '''
-    plt.fill_between(xx_plot, 10**exps_dmo[1]*xx_plot**fitsM_dmo,
-                              10**exps_dmo[2]*xx_plot**fitsM_dmo,
-                     color='grey', alpha=0.3, label=r'1 $\sigma$')
-    
-    plt.fill_between(xx_plot, 10**exps_hydro[1]*xx_plot**fitsM_hydro,
-                              10**exps_hydro[2]*xx_plot**fitsM_hydro,
-                     color='limegreen', alpha=0.4)
-    '''
-    #plt.plot(xx_plot, Cv_Mol2021_redshift0(xx_plot), color='red', label='Moliné+21', alpha=0.5, linewidth=3)
-    
-    
-    
-    plt.plot(xx_plot, 10**exps_dmo  [0]*xx_plot**fitsM_dmo,   '-k', linewidth=3)
-    plt.plot(xx_plot, 10**exps_hydro[0]*xx_plot**fitsM_hydro, '-g', linewidth=3)
-    
-    plt.plot(xx_plot, 10**exps_dmo_mean  [0]*xx_plot**fitsM_dmo_mean,   '--k', linewidth=3)
-    plt.plot(xx_plot, 10**exps_hydro_mean[0]*xx_plot**fitsM_hydro_mean, '--g', linewidth=3)
-    
-    
-    plt.plot(xx_dmo, Cv_Grand_points(xx_dmo, yy_dmo), '.k', label='DMO', ms=13)
-    plt.plot(xx_hydro, Cv_Grand_points(xx_hydro, yy_hydro), '.g', label='Hydro', ms=13)
-    
-    plt.plot(xx_dmo_mean, Cv_Grand_points(xx_dmo_mean, yy_dmo_mean), 'xk', ms=13)
-    plt.plot(xx_hydro_mean, Cv_Grand_points(xx_hydro_mean, yy_hydro_mean), 'xg', ms=13)
-    
-    
-    plt.axvline(dmoLimit, linestyle='-', color='k', alpha=0.3, linewidth=2)
-    plt.axvline(hydroLimit, linestyle='-', color='g', alpha=0.3, linewidth=2)
-    
-    plt.xscale('log')
-    plt.yscale('log')
-    
-    plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
-    
-    
-    plt.annotate('- median \n -- mean', (20, 2670))
-    
-    #plt.xlim(1.3, 53)
-
-plt.subplot(221)
-plt.title('Subs < 0.3 * 220')
-plt.ylabel(r'$R_\mathrm{max}$ [kpc]', size=22)
-
-
-plt.subplot(222)
-plt.title('Subs > 0.3 * 220')
-
-plt.subplot(223)
-plt.ylabel(r'c$_\mathrm{V}$', size=28)
-
-
-
-#%%
-
-print()
-print("COMPARISON BETWEEN Cv AND C200 (assuming NFW)")
-
-
-
-C200_dmo,   C20_dmo,   C80_dmo   = C200_from_Cv(yy_dmo,   y20_dmo,   y80_dmo,   xx_dmo)
-C200_hydro, C20_hydro, C80_hydro = C200_from_Cv(yy_hydro, y20_hydro, y80_hydro, xx_hydro)
-
-
-masses_dmo   = mass_from_Vmax(xx_dmo,   yy_dmo,   C200_dmo)
-masses_hydro = mass_from_Vmax(xx_hydro, yy_hydro, C200_hydro)
-
-dmoLimit_mass = 1.5e8
-hydroLimit_mass = 1.5e8
-
-print('DMO') 
-fitsM_dmo_mass,   exps_dmo_mass   = power_law_from_median(C200_dmo,   C20_dmo,   C80_dmo,   masses_dmo,   dmoLimit_mass)
-print('Scatter: %.3f and %.3f' %(exps_dmo_mass[0]-exps_dmo_mass[1], exps_dmo_mass[2]-exps_dmo_mass[0]))
-print()
-print('Hydro')
-fitsM_hydro_mass, exps_hydro_mass = power_law_from_median(C200_hydro, C20_hydro, C80_hydro, masses_hydro, hydroLimit_mass) 
-print('Scatter: %.3f and %.3f' %(exps_hydro_mass[0]-exps_hydro_mass[1], exps_hydro_mass[2]-exps_hydro_mass[0]))
-
-#print()
-#print()
-#print('Dmo')
-#bb_dmo   = sigma_from_2080(exps_dmo)
-#print()
-#print('Hydro')
-#bb_hydro = sigma_from_2080(exps_hydro)
-
-
-#%%
-#---------------------------------------------------------------------------------------------------
-
-plt.figure(figsize=(9,9))
-
-xx_plot = np.logspace(np.log10(masses_dmo[0]), np.log10(masses_dmo[-1]))
-
-colors= ['wheat', 'orange', 'darkorange']
-col=0
-for dist in [0.1, 0.3, 1.]:
-    orig = Cm_Mol16(xx_plot, R200*dist)
-    plt.plot(xx_plot, orig, '-', color=colors[col], label=(r'Mol+17 x$_\mathrm{sub}$ = ' + str(dist)))
-    col += 1
-
-plt.plot(masses_dmo,   C200_dmo,   '.', color='k', label='DMO')
-plt.plot(masses_hydro, C200_hydro, '.', color='g', label='Hydro')
-
-#plt.axvline(LIMIT, color=colour, alpha=0.5)
-
-
-plt.plot(xx_plot, 10**exps_dmo_mass  [0]*xx_plot**fitsM_dmo_mass,   '-k')
-plt.plot(xx_plot, 10**exps_hydro_mass[0]*xx_plot**fitsM_hydro_mass, '-g')
-
-plt.fill_between(xx_plot, 10**exps_dmo_mass[1]*xx_plot**fitsM_dmo_mass,
-                          10**exps_dmo_mass[2]*xx_plot**fitsM_dmo_mass,
-                 color='k', alpha=0.3, label=r'1 $\sigma$')
-
-plt.fill_between(xx_plot, 10**exps_hydro_mass[1]*xx_plot**fitsM_hydro_mass,
-                          10**exps_hydro_mass[2]*xx_plot**fitsM_hydro_mass,
-                 color='g', alpha=0.3)
-
-
-
-plt.ylabel(r'$c_{200}$', size=22)
-plt.xlabel(r'$\mathrm{M}$ ($\mathrm{M}_{\mathrm{sun}}$)', size=20)
-
-
-plt.xscale('log')
-plt.yscale('log')
-plt.legend()
-
-
-plt.figure()
-plt.plot(xx_dmo, masses_dmo, '.k', label='DMO')
-plt.plot(xx_hydro, masses_hydro, '.g', label='Hydro')
-
-Rmax = 56.7728 # from VLII website
-Vmax = 201.033 # from VLII website
-R_vir = 402. # from Pieri
-r_s_MW = 21.
-
-print('MW mass from NFW transformation: %.2e Msun' %mass_from_Vmax(Vmax, Rmax, R_vir/r_s_MW))
-
-plt.plot(Vmax, mass_from_Vmax(Vmax, Rmax, R_vir/r_s_MW), '+r', label='MW')
-
-plt.xscale('log')
-plt.yscale('log')
-plt.legend()
-
-plt.ylabel(r'$\mathrm{M}$ ($\mathrm{M}_{\mathrm{sun}}$)', size=20)
-plt.xlabel(r'V$_{max}$ [km/s]', size=22)
-
-
-#%%
-
-xxx = np.logspace(0, np.log10(60))
-#plt.close('all')
-plt.figure()
-
-plt.plot(xxx, 10**(exps_dmo[0]-exps_hydro[0]) * xxx**(fitsM_dmo-fitsM_hydro))
-
-
-plt.xscale('log')
-#plt.legend()
-
-plt.xlabel(r'V$_{max}$ [km/s]', size=22)
-plt.ylabel(r'$\frac{c_{V, DMO}}{c_{V, Hydro}}$', size=26)
+#
+#
+# # SEPARATE Cv IN RADIAL DISTANCE (TWO BINS ONLY, IN 0.3 R200)
+#
+# plt.subplots(2, 2)
+# for i in range(1,3):
+#     if i==1:
+#         Grand_dmo = Grand_dmo_raw[Grand_dmo_raw[:, 2] < 0.3 * 220, :]
+#         Grand_dmo[:, 0] = Cv_Grand_points(Grand_dmo[:, 1], Grand_dmo[:, 0])
+#         Grand_hydro = Grand_hydro_raw[Grand_hydro_raw[:, 2] < 0.3 * 220, :]
+#         Grand_hydro[:, 0] = Cv_Grand_points(Grand_hydro[:, 1], Grand_hydro[:, 0])
+#     if i==2:
+#         Grand_dmo = Grand_dmo_raw[Grand_dmo_raw[:, 2] > 0.3 * 220, :]
+#         Grand_dmo[:, 0] = Cv_Grand_points(Grand_dmo[:, 1], Grand_dmo[:, 0])
+#         Grand_hydro = Grand_hydro_raw[Grand_hydro_raw[:, 2] > 0.3 * 220, :]
+#         Grand_hydro[:, 0] = Cv_Grand_points(Grand_hydro[:, 1], Grand_hydro[:, 0])
+#
+#
+#
+#     ax1 = plt.subplot(2, 2, i)
+#     plt.plot(Grand_dmo[:,1], Grand_dmo[:,0], '.k', label='DMO', markersize=3)
+#     plt.plot(Grand_hydro[:,1], Grand_hydro[:,0], '.', label='Hydro', color='limegreen', markersize=3)
+#     plt.axvline(6.4, color='k', alpha=0.5, linestyle='--')
+#
+#     plt.xscale('log')
+#     plt.yscale('log')
+#
+#
+#
+#     number_bins_dmo = 10
+#     number_bins_hydro = 5
+#
+#
+#     xx_dmo, yy_dmo, y20_dmo, y80_dmo = calculate_med(Grand_dmo, number_bins_dmo, perc_low=16, perc_high=84)
+#     xx_hydro, yy_hydro, y20_hydro, y80_hydro = calculate_med(Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)
+#
+#     xx_dmo_mean, yy_dmo_mean = calculate_mean(Grand_dmo, number_bins_dmo, perc_low=16, perc_high=84)
+#     xx_hydro_mean, yy_hydro_mean = calculate_mean(
+#             Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)
+#
+#
+#     # Limit to the power law tendency
+#     hydroLimit = 10
+#     dmoLimit = 10
+#
+#     # ------- Calculations of power laws assuming m from median value -----------------------
+#     #print()
+#
+#     print('DMO')
+#     fitsM_dmo, exps_dmo = power_law_from_median(yy_dmo, y20_dmo, y80_dmo, xx_dmo, dmoLimit)
+#     print('Scatter: %.3f and %.3f' %(exps_dmo[0]-exps_dmo[1], exps_dmo[2]-exps_dmo[0]))
+#     print()
+#     print()
+#     print('Hydro')
+#     fitsM_hydro, exps_hydro = power_law_from_median(yy_hydro, y20_hydro, y80_hydro,xx_hydro, hydroLimit)
+#     print('Scatter: %.3f and %.3f' %(exps_hydro[0]-exps_hydro[1], exps_hydro[2]-exps_hydro[0]))
+#
+#     print()
+#     print('Mean')
+#     print('DMO')
+#     fitsM_dmo_mean, exps_dmo_mean = power_law_from_median(yy_dmo_mean, y20_dmo, y80_dmo, xx_dmo_mean, dmoLimit)
+#     print('Scatter: %.3f and %.3f' %(exps_dmo_mean[0]-exps_dmo_mean[1], exps_dmo_mean[2]-exps_dmo_mean[0]))
+#     print()
+#     print()
+#     print('Hydro')
+#     fitsM_hydro_mean, exps_hydro_mean = power_law_from_median(yy_hydro_mean, y20_hydro, y80_hydro,  xx_hydro_mean, hydroLimit)
+#     print('Scatter: %.3f and %.3f' %(exps_hydro_mean[0]-exps_hydro_mean[1], exps_hydro_mean[2]-exps_hydro_mean[0]))
+#
+#
+#
+#
+#
+#     plt.subplot(2,2,i + 2, sharex=ax1)
+#
+#     #xx_plot = np.logspace(np.log10(xx_dmo[0]), np.log10(xx_dmo[-1]))
+#     xx_plot = np.logspace(np.log10(xx_dmo[0]), np.log10(60))
+#
+#
+#     '''
+#     plt.fill_between(xx_plot, 10**exps_dmo[1]*xx_plot**fitsM_dmo,
+#                               10**exps_dmo[2]*xx_plot**fitsM_dmo,
+#                      color='grey', alpha=0.3, label=r'1 $\sigma$')
+#
+#     plt.fill_between(xx_plot, 10**exps_hydro[1]*xx_plot**fitsM_hydro,
+#                               10**exps_hydro[2]*xx_plot**fitsM_hydro,
+#                      color='limegreen', alpha=0.4)
+#     '''
+#     #plt.plot(xx_plot, Cv_Mol2021_redshift0(xx_plot), color='red', label='Moliné+21', alpha=0.5, linewidth=3)
+#
+#
+#
+#     plt.plot(xx_plot, 10**exps_dmo  [0]*xx_plot**fitsM_dmo,   '-k', linewidth=3)
+#     plt.plot(xx_plot, 10**exps_hydro[0]*xx_plot**fitsM_hydro, '-g', linewidth=3)
+#
+#     plt.plot(xx_plot, 10**exps_dmo_mean  [0]*xx_plot**fitsM_dmo_mean,   '--k', linewidth=3)
+#     plt.plot(xx_plot, 10**exps_hydro_mean[0]*xx_plot**fitsM_hydro_mean, '--g', linewidth=3)
+#
+#
+#     plt.plot(xx_dmo, Cv_Grand_points(xx_dmo, yy_dmo), '.k', label='DMO', ms=13)
+#     plt.plot(xx_hydro, Cv_Grand_points(xx_hydro, yy_hydro), '.g', label='Hydro', ms=13)
+#
+#     plt.plot(xx_dmo_mean, Cv_Grand_points(xx_dmo_mean, yy_dmo_mean), 'xk', ms=13)
+#     plt.plot(xx_hydro_mean, Cv_Grand_points(xx_hydro_mean, yy_hydro_mean), 'xg', ms=13)
+#
+#
+#     plt.axvline(dmoLimit, linestyle='-', color='k', alpha=0.3, linewidth=2)
+#     plt.axvline(hydroLimit, linestyle='-', color='g', alpha=0.3, linewidth=2)
+#
+#     plt.xscale('log')
+#     plt.yscale('log')
+#
+#     plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
+#
+#
+#     plt.annotate('- median \n -- mean', (20, 2670))
+#
+#     #plt.xlim(1.3, 53)
+#
+# plt.subplot(221)
+# plt.title('Subs < 0.3 * 220')
+# plt.ylabel(r'$R_\mathrm{max}$ [kpc]', size=22)
+#
+#
+# plt.subplot(222)
+# plt.title('Subs > 0.3 * 220')
+#
+# plt.subplot(223)
+# plt.ylabel(r'c$_\mathrm{V}$', size=28)
+#
+#
+#
+# #%%
+#
+# print()
+# print("COMPARISON BETWEEN Cv AND C200 (assuming NFW)")
+#
+#
+#
+# C200_dmo,   C20_dmo,   C80_dmo   = C200_from_Cv(yy_dmo,   y20_dmo,   y80_dmo,   xx_dmo)
+# C200_hydro, C20_hydro, C80_hydro = C200_from_Cv(yy_hydro, y20_hydro, y80_hydro, xx_hydro)
+#
+#
+# masses_dmo   = mass_from_Vmax(xx_dmo,   yy_dmo,   C200_dmo)
+# masses_hydro = mass_from_Vmax(xx_hydro, yy_hydro, C200_hydro)
+#
+# dmoLimit_mass = 1.5e8
+# hydroLimit_mass = 1.5e8
+#
+# print('DMO')
+# fitsM_dmo_mass,   exps_dmo_mass   = power_law_from_median(C200_dmo,   C20_dmo,   C80_dmo,   masses_dmo,   dmoLimit_mass)
+# print('Scatter: %.3f and %.3f' %(exps_dmo_mass[0]-exps_dmo_mass[1], exps_dmo_mass[2]-exps_dmo_mass[0]))
+# print()
+# print('Hydro')
+# fitsM_hydro_mass, exps_hydro_mass = power_law_from_median(C200_hydro, C20_hydro, C80_hydro, masses_hydro, hydroLimit_mass)
+# print('Scatter: %.3f and %.3f' %(exps_hydro_mass[0]-exps_hydro_mass[1], exps_hydro_mass[2]-exps_hydro_mass[0]))
+#
+# #print()
+# #print()
+# #print('Dmo')
+# #bb_dmo   = sigma_from_2080(exps_dmo)
+# #print()
+# #print('Hydro')
+# #bb_hydro = sigma_from_2080(exps_hydro)
+#
+#
+# #%%
+# #---------------------------------------------------------------------------------------------------
+#
+# plt.figure(figsize=(9,9))
+#
+# xx_plot = np.logspace(np.log10(masses_dmo[0]), np.log10(masses_dmo[-1]))
+#
+# colors= ['wheat', 'orange', 'darkorange']
+# col=0
+# for dist in [0.1, 0.3, 1.]:
+#     orig = Cm_Mol16(xx_plot, R200*dist)
+#     plt.plot(xx_plot, orig, '-', color=colors[col], label=(r'Mol+17 x$_\mathrm{sub}$ = ' + str(dist)))
+#     col += 1
+#
+# plt.plot(masses_dmo,   C200_dmo,   '.', color='k', label='DMO')
+# plt.plot(masses_hydro, C200_hydro, '.', color='g', label='Hydro')
+#
+# #plt.axvline(LIMIT, color=colour, alpha=0.5)
+#
+#
+# plt.plot(xx_plot, 10**exps_dmo_mass  [0]*xx_plot**fitsM_dmo_mass,   '-k')
+# plt.plot(xx_plot, 10**exps_hydro_mass[0]*xx_plot**fitsM_hydro_mass, '-g')
+#
+# plt.fill_between(xx_plot, 10**exps_dmo_mass[1]*xx_plot**fitsM_dmo_mass,
+#                           10**exps_dmo_mass[2]*xx_plot**fitsM_dmo_mass,
+#                  color='k', alpha=0.3, label=r'1 $\sigma$')
+#
+# plt.fill_between(xx_plot, 10**exps_hydro_mass[1]*xx_plot**fitsM_hydro_mass,
+#                           10**exps_hydro_mass[2]*xx_plot**fitsM_hydro_mass,
+#                  color='g', alpha=0.3)
+#
+#
+#
+# plt.ylabel(r'$c_{200}$', size=22)
+# plt.xlabel(r'$\mathrm{M}$ ($\mathrm{M}_{\mathrm{sun}}$)', size=20)
+#
+#
+# plt.xscale('log')
+# plt.yscale('log')
+# plt.legend()
+#
+#
+# plt.figure()
+# plt.plot(xx_dmo, masses_dmo, '.k', label='DMO')
+# plt.plot(xx_hydro, masses_hydro, '.g', label='Hydro')
+#
+# Rmax = 56.7728 # from VLII website
+# Vmax = 201.033 # from VLII website
+# R_vir = 402. # from Pieri
+# r_s_MW = 21.
+#
+# print('MW mass from NFW transformation: %.2e Msun' %mass_from_Vmax(Vmax, Rmax, R_vir/r_s_MW))
+#
+# plt.plot(Vmax, mass_from_Vmax(Vmax, Rmax, R_vir/r_s_MW), '+r', label='MW')
+#
+# plt.xscale('log')
+# plt.yscale('log')
+# plt.legend()
+#
+# plt.ylabel(r'$\mathrm{M}$ ($\mathrm{M}_{\mathrm{sun}}$)', size=20)
+# plt.xlabel(r'V$_{max}$ [km/s]', size=22)
+#
+#
+# #%%
+#
+# xxx = np.logspace(0, np.log10(60))
+# #plt.close('all')
+# plt.figure()
+#
+# plt.plot(xxx, 10**(exps_dmo[0]-exps_hydro[0]) * xxx**(fitsM_dmo-fitsM_hydro))
+#
+#
+# plt.xscale('log')
+# #plt.legend()
+#
+# plt.xlabel(r'V$_{max}$ [km/s]', size=22)
+# plt.ylabel(r'$\frac{c_{V, DMO}}{c_{V, Hydro}}$', size=26)
+plt.show()
