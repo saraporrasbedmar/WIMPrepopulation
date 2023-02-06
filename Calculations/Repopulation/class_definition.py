@@ -4,35 +4,15 @@ import numpy as np
 import random as rdm
 import time
 
-from optparse import OptionParser
 
-from numba import njit, jit
-# from numba.core.errors import NumbaDeprecationWarning, \
-#     NumbaPendingDeprecationWarning
-# import warnings
-#
-# warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
-# warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
-
-from numba import int32, float32
-from numba.experimental import jitclass
-
-spec = [
-    ('_cosmo', ),
-    ('_host_cts', ),
-    ('_cv_cts', ),
-    ('_srd_cts', ),
-    ('_SHVF_cts', ),
-    ('_repopulations', ),
-    ('_sim_type', ),
-    ('_resilient', ),
-    ('path_name', ),
-    ('value', int32),  # a simple scalar field
-    ('array', float32[:])  # an array field
-    ]
+def memory_usage_psutil():
+    # return the memory usage in MB
+    import psutil
+    process = psutil.Process(os.getpid())
+    mem = process.memory_info()[0] / float(10 ** 6)
+    return mem
 
 
-@jitclass(spec)
 class Jfact_calculation(object):
 
     def __init__(self, data_dict):
@@ -50,7 +30,7 @@ class Jfact_calculation(object):
         self._resilient = None
 
         self.path_name = str('outputs/' + self._repopulations['id']
-                             + time.strftime(" %d-%m-%Y %H:%M:%S",
+                             + time.strftime(" %Y-%m-%d %H:%M:%S",
                                              time.gmtime()))
 
         if not os.path.exists(self.path_name):
@@ -62,6 +42,9 @@ class Jfact_calculation(object):
     def repopulation(self, new_sim_types):
         self._sim_type = new_sim_types[0]
         self._resilient = new_sim_types[1]
+        print('    Max. number of repop subhalos: %i' %
+              self.SHVF_Grand2012_int(
+                  self._SHVF_cts['RangeMin'], self._SHVF_cts['RangeMax']))
         self.computing()
         return
 
@@ -98,10 +81,10 @@ class Jfact_calculation(object):
         :return: float or array-like
             Integrated SHVF.
         """
-        return (10 ** self._SHVF_cts[self._sim_type]['bb']
-                / (self._SHVF_cts[self._sim_type]['mm'] + 1) *
-                (V2 ** (self._SHVF_cts[self._sim_type]['mm'] + 1)
-                 - V1 ** (self._SHVF_cts[self._sim_type]['mm'] + 1)))
+        return np.round(10 ** self._SHVF_cts[self._sim_type]['bb']
+                        / (self._SHVF_cts[self._sim_type]['mm'] + 1) *
+                        (V2 ** (self._SHVF_cts[self._sim_type]['mm'] + 1)
+                         - V1 ** (self._SHVF_cts[self._sim_type]['mm'] + 1)))
 
     # ----------- CONCENTRATIONS ----------------------
 
@@ -450,7 +433,7 @@ class Jfact_calculation(object):
             Expected number of subhalos between two values.
         """
         # return integrate.quad(mass_pdf, M1, M2)[0])
-        return np.round(self.SHVF_Grand2012_int(M1, M2))
+        return self.SHVF_Grand2012_int(M1, M2)
 
     def make_local_data(self, M1, M2, mass_pdf, rad_pdf):
         """
@@ -533,8 +516,10 @@ class Jfact_calculation(object):
                        + str(self._resilient) + '_results.txt', 'w')
         file_J03 = open(self.path_name + '/J03_' + self._sim_type + '_Res'
                         + str(self._resilient) + '_results.txt', 'w')
-        fileRoche = open(self.path_name + '/RocheMuerte_'
-                         + self._sim_type + '.txt', 'w')
+
+        # if self._resilient is False:
+        #     fileRoche = open(self.path_name + '/RocheMuerte_'
+        #                      + self._sim_type + '.txt', 'w')
 
         file_Js.write(headerS)
         file_J03.write(header03)
@@ -542,7 +527,7 @@ class Jfact_calculation(object):
         for it in range(self._repopulations['its']):
 
             if it % self._repopulations['print_freq'] == 0:
-                print(self._sim_type, ', res: ', self._resilient,
+                print('    ', self._sim_type, ', res: ', self._resilient,
                       ', iteration ', it)
 
             # Repopulation happens, obtain subhalo masses and distances to GC
@@ -564,6 +549,9 @@ class Jfact_calculation(object):
             repop_DistShEarth = ((repop_Xs - 8.5) ** 2 + repop_Ys ** 2
                                  + repop_Zs ** 2) ** 0.5
 
+            if it % self._repopulations['print_freq'] == 0:
+                print('        %.3f' % memory_usage_psutil())
+
             del (repop_Xs, repop_Ys, repop_Zs, repop_Theta, repop_phis)
 
             repop_C = self.Cv_Grand2012(repop_Vmax)
@@ -576,14 +564,17 @@ class Jfact_calculation(object):
             repop_Theta = 180 / np.pi * np.arctan(
                 self.R_s(repop_Vmax, repop_C) / repop_DistShEarth)
 
-            Roche_cut = (self.R_t(repop_Vmax, repop_C, repop_DistShGc)
-                         < self.R_s(repop_Vmax, repop_C))
+            # if self._resilient is False:
+            #     Roche_cut = (self.R_t(repop_Vmax, repop_C, repop_DistShGc)
+            #                  < self.R_s(repop_Vmax, repop_C))
+            #     np.savetxt(fileRoche,
+            #                np.column_stack((repop_J03[Roche_cut],
+            #                                 repop_Vmax[Roche_cut],
+            #                                 repop_DistShGc[Roche_cut])))
+            #     fileRoche.write('\n')
 
-            np.savetxt(fileRoche, np.column_stack((repop_J03[Roche_cut],
-                                                   repop_Vmax[Roche_cut],
-                                                   repop_DistShGc[Roche_cut])))
-            fileRoche.write('\n')
-
+            if it % self._repopulations['print_freq'] == 0:
+                print('        %.3f' % memory_usage_psutil())
             for num in range(self._repopulations['num_brightest']):
 
                 bright_Js = np.where(np.max(repop_Js) == repop_Js)[0][0]
@@ -608,7 +599,8 @@ class Jfact_calculation(object):
                                             repop_Theta[bright_Js],
                                             repop_C[bright_Js])))
                 repop_Js[bright_Js] = 0.
-
+            if it % self._repopulations['print_freq'] == 0:
+                print('        %.3f' % memory_usage_psutil())
             for num in range(self._repopulations['num_brightest']):
 
                 bright_J03 = np.where(np.max(repop_J03) == repop_J03)[0][0]
@@ -633,8 +625,10 @@ class Jfact_calculation(object):
                                             repop_Theta[bright_J03],
                                             repop_C[bright_J03])))
                 repop_J03[bright_J03] = 0.
-
+        print('        %.3f' % memory_usage_psutil())
         file_Js.close()
         file_J03.close()
-        fileRoche.close()
+
+        # if self._resilient is False:
+        #     fileRoche.close()
         return

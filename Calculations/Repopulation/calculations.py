@@ -2,6 +2,7 @@
 import yaml
 import time
 from class_definition import Jfact_calculation
+from multiprocessing import Pool
 
 
 # Configuration file reading and data input/output ---------#
@@ -17,13 +18,37 @@ def read_config_file(ConfigFile):
 # Calculations ----------------#
 
 config_data = read_config_file('data_newResSRD.yml')
-
 cosa = Jfact_calculation(data_dict=config_data)
 
 print(time.strftime(" %d-%m-%Y %H:%M:%S", time.gmtime()))
+print(config_data['repopulations']['type'])
 
-for each in config_data['repopulations']['type']:
+def try_Vminmin(Vmin):
     init_process_time = time.process_time()
-    cosa.repopulation(config_data['repopulations']['type'][each])
+    config_data_process = config_data
+    config_data_process['SHVF']['RangeMin'] = Vmin
+    config_data_process['repopulations']['id'] = str(Vmin) + ' as Vmin'
+    print()
+    print(config_data_process['repopulations']['id'])
+    cosa = Jfact_calculation(data_dict=config_data_process)
+    for each in config_data_process['repopulations']['type']:
+        cosa.repopulation(config_data_process['repopulations']['type'][each])
     end = time.process_time()
-    print(end - init_process_time)
+    print('%.2f s' % (end - init_process_time))
+
+
+def one_Vmin(data):
+    init_process_time = time.process_time()
+    print(data)
+    cosa.repopulation(config_data['repopulations']['type'][data])
+    end = time.process_time()
+    print('%.2f s' % (end - init_process_time))
+
+
+if __name__ == '__main__':
+
+    p = Pool(4, None)
+    # p.map(try_Vminmin, [5., 3., 2., 1., 0.7, 0.6])
+    p.map(one_Vmin, config_data['repopulations']['type'])
+    p.close()
+    p.join()

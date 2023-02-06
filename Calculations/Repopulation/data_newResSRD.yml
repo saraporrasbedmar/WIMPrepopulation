@@ -28,7 +28,7 @@ SHVF:
         bb: 5.0796
     
     # Min and max velocities to repopulate [km/s]
-    RangeMin: 0.5
+    RangeMin: 0.1
     RangeMax: 7.
     
     
@@ -39,7 +39,7 @@ SRD:
         fragile: '10 ** ((DistGC / args[0]) ** args[1] * np.exp(-args[2] * (DistGC - args[0]) / args[0]))'
     dmo:
         resilient:
-            args: [ 0.54343928, -2.17672138]
+            args: [ 0.54343928, -2.17672138]  #[ 0.54343928, -2.17672138]
     
         fragile:
             args: [1011.38716, 0.4037927,  2.35522213] # R0, aa, bb
@@ -47,7 +47,7 @@ SRD:
 
     hydro:
         resilient:
-            args: [ 0.97254648, -3.08584275]
+            args: [ 0.97254648, -3.08584275]  # [ 0.97254648, -3.08584275]
     
         fragile:
             args: [666.49179, 0.75291017, 2.90546523] # R0, aa, bb
@@ -67,9 +67,9 @@ Cv:
 
 # REPOPULATION
 repopulations:
-    its: 20
-    id: 'Prueba'
-    print_freq: 5
+    its: 500
+    id: 'Test_physnet'
+    print_freq: 100
     num_brightest: 1
     
     type:
