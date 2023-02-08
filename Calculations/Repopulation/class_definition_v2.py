@@ -843,7 +843,7 @@ class Jfact_calculation(object):
             # We calculate our subhalo population one by one in order to
             # save memory
             m_min = self._SHVF_cts['RangeMin']
-            inc_factor = 1.5
+            inc_factor = 1.02
             ceil = int(np.ceil(np.log(self._SHVF_cts['RangeMax']
                                       / self._SHVF_cts['RangeMin'])
                                / np.log(inc_factor)))
@@ -879,7 +879,7 @@ class Jfact_calculation(object):
                     brightest_J03[1:, 0] = new_data[bright_J03, 2:]
 
                 if it == 0:
-                    print('   ', m_min, m_max, num_subhalos, int(num_subhalos))
+                    print('   ', m_min, m_max, num_subhalos)
                     print('        %.3f' % memory_usage_psutil())
 
                 m_min *= inc_factor
