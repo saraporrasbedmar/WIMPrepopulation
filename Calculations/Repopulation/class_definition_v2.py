@@ -1,5 +1,6 @@
 import os
 import math
+import yaml
 import numpy as np
 import random as rdm
 import time
@@ -38,10 +39,16 @@ class Jfact_calculation(object):
         if not os.path.exists(self.path_name):
             os.makedirs(self.path_name)
 
+        # Save input data in a file in the outputs directory
+        file_inputs = open(self.path_name + '/input_data.yml', 'w')
+        yaml.dump(data_dict, file_inputs,
+                  default_flow_style=False, allow_unicode=True)
+        file_inputs.close()
+
         print(self.path_name)
         return
 
-    def repopulation(self, new_sim_types):
+    def repopulation(self, new_sim_types, type_loop):
         self._sim_type = new_sim_types[0]
         self._resilient = new_sim_types[1]
         print(self._SHVF_cts['RangeMin'],
@@ -52,7 +59,20 @@ class Jfact_calculation(object):
                   self._SHVF_cts['RangeMin'],
                   self._SHVF_cts['RangeMax'])[0])
               )
-        self.computing_bin_by_bin()
+
+        if type_loop == 'all_at_once':
+            self.computing()
+
+        elif type_loop == 'one_by_one':
+            self.computing_one_by_one()
+
+        elif type_loop == 'bin_by_bin':
+            self.computing_bin_by_bin()
+
+        else:
+            print('No method for compution input: repopulation cancelled.')
+
+        print(self.path_name)
         return
 
     @staticmethod
@@ -122,9 +142,14 @@ class Jfact_calculation(object):
         :return: float or array-like
             Subhalos with scattered concentrations.
         """
-        return np.array([np.random.lognormal(
-            np.log(C[i]), self._cv_cts[self._sim_type]['sigma'])
-            for i in range(C.size)])
+        if np.size(C) == 1:
+            return np.random.lognormal(
+                np.log(C), self._cv_cts[self._sim_type]['sigma'])
+
+        else:
+            return np.array([np.random.lognormal(
+                np.log(C[i]), self._cv_cts[self._sim_type]['sigma'])
+                for i in range(np.size(C))])
 
     # ----------- J-FACTORS --------------------------------
 
@@ -664,15 +689,14 @@ class Jfact_calculation(object):
 
         repop_C = self.Cv_Grand2012(Vmax)
         repop_C = self.C_Scatt(repop_C)
-        # repop_C = np.random.lognormal(
-        #    np.log(repop_C), self._cv_cts[self._sim_type]['sigma'])
 
         repop_Js = self.Js_vel(Vmax, repop_DistEarth, repop_C)
         repop_J03 = self.J03_vel(Vmax, repop_DistEarth, repop_C)
 
         if self._resilient is False:
             roche = (self.R_t(Vmax, repop_C, Distgc)
-                     < self.R_s(Vmax, repop_C))
+                     > self.R_s(Vmax, repop_C))
+
             repop_Js *= roche
             repop_J03 *= roche
 
@@ -697,8 +721,7 @@ class Jfact_calculation(object):
         header03 = (('#\n# Vmin: [' + str(self._SHVF_cts['RangeMin']) + ', '
                      + str(self._SHVF_cts['RangeMax']) + '], resilient: '
                      + str(self._resilient) + '; '
-
-            #       + str(self._repopulations['its']) +
+                     + str(self._repopulations['its']) +
                      (' iterations \n# J03 (<0.3deg) (GeV^2 cm^-5)'
                       '       Dgc (kpc)           D_Earth (kpc)'
                       '               Vmax (km/s)               ang size (deg)'
@@ -728,18 +751,16 @@ class Jfact_calculation(object):
             # save memory
             m_min = self._SHVF_cts['RangeMin']
             inc_factor = 1.5
-            ceil = np.ceil(np.log(self._SHVF_cts['RangeMax']
-                                  / self._SHVF_cts['RangeMin'])
-                           / np.log(inc_factor)
-                           )
-            # print('ceil', ceil, int(ceil))
-            ceil = int(ceil)
+            ceil = int(np.ceil(np.log(self._SHVF_cts['RangeMax']
+                                      / self._SHVF_cts['RangeMin'])
+                               / np.log(inc_factor)))
+
             for num_bins in range(ceil):
                 m_max = np.minimum(m_min * inc_factor,
                                    self._SHVF_cts['RangeMax'])
 
-                num_subhalos = np.round(integrate.quad(
-                    self.SHVF_Grand2012, m_min, m_max)[0])
+                num_subhalos = int(np.round(integrate.quad(
+                    self.SHVF_Grand2012, m_min, m_max)[0]))
 
                 if it == 0:
                     print('   ', m_min, m_max, num_subhalos, int(num_subhalos))
@@ -753,15 +774,20 @@ class Jfact_calculation(object):
                                                  num_subhalos=1)[0]
 
                     new_data = self.calculate_characteristics_subhalo(
-                        repop_Vmax, repop_DistGC)
+                        repop_Vmax, repop_DistGC, 1)
 
-                    if new_data[0][0] > brightest_Js[0, 0]:
-                        brightest_Js[0, 0] = new_data[0][0]
-                        brightest_Js[1:, 0] = new_data[1:]
+                    if new_data[0, 0] > brightest_Js[0, 0]:
+                        brightest_Js[0, 0] = new_data[0, 0]
+                        brightest_Js[1:, 0] = new_data[0, 2:]
 
-                    if new_data[0][1] > brightest_J03[0, 0]:
-                        brightest_J03[0, 0] = new_data[0][1]
-                        brightest_J03[1:, 0] = new_data[1:]
+                    if new_data[0, 1] > brightest_J03[0, 0]:
+                        brightest_J03[0, 0] = new_data[0, 1]
+                        brightest_J03[1:, 0] = new_data[0, 2:]
+
+                if it == 0:
+                    print('   ', m_min, m_max, num_subhalos,
+                          int(num_subhalos))
+                    print('        %.3f' % memory_usage_psutil())
 
                 m_min *= inc_factor
 
