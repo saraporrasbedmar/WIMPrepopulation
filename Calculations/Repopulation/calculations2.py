@@ -18,9 +18,9 @@ def read_config_file(ConfigFile):
 # Calculations ----------------#
 
 config_data = read_config_file('input_files/data_newResSRD.yml')
-config_data['SHVF']['RangeMin'] = 0.1
+config_data['SHVF']['RangeMin'] = 3.
 config_data['repopulations']['print_freq'] = 1
-config_data['repopulations']['its'] = 1
+config_data['repopulations']['its'] = 5
 cosa = Jfact_calculation(data_dict=config_data)
 
 print(time.strftime(" %d-%m-%Y %H:%M:%S", time.gmtime()))
