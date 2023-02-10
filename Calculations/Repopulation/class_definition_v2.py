@@ -846,7 +846,10 @@ class Jfact_calculation(object):
                 progress.write(str(self._sim_type)
                                + ', res: ' + str(self._resilient)
                                + ', iteration ' + str(it))
-                progress.write('        %.3f \n' % memory_usage_psutil())
+                progress.write('        %.3f  %s\n' %
+                               (memory_usage_psutil(),
+                                time.strftime(" %Y-%m-%d %H:%M:%S",
+                                              time.gmtime())))
                 progress.close()
 
             # We calculate our subhalo population one by one in order to
@@ -895,7 +898,10 @@ class Jfact_calculation(object):
                                     + '_results.txt', 'a')
                     progress.write('   %.3f - %.3f %s'
                                    % (m_min, m_max, num_subhalos))
-                    progress.write('        %.3f \n' % memory_usage_psutil())
+                    progress.write('        %.3f  %s\n' %
+                                   (memory_usage_psutil(),
+                                    time.strftime(" %Y-%m-%d %H:%M:%S",
+                                                  time.gmtime())))
                     progress.close()
 
                 m_min *= self._repopulations['inc_factor']
