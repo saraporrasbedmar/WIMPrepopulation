@@ -71,6 +71,7 @@ repopulations:
     id: 'Test_physnet'
     print_freq: 100
     num_brightest: 1
+    inc_factor: 1.02
     
     type:
         1: ['dmo', True]

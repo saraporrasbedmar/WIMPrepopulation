@@ -571,7 +571,8 @@ class Jfact_calculation(object):
             # Repopulation happens, obtain subhalo masses and distances to GC
             repop_Vmax, repop_DistShGc = self.local_population(
                 self._SHVF_cts['RangeMin'], self._SHVF_cts['RangeMax'],
-                self.SHVF_Grand2012, self.Nr_Ntot, inc_factor=2)
+                self.SHVF_Grand2012, self.Nr_Ntot,
+                inc_factor=self._repopulations['inc_factor'])
 
             # Random distribution of subhalos around the celestial sphere
             repop_Theta = 2 * math.pi * np.random.random(len(repop_Vmax))
@@ -750,13 +751,12 @@ class Jfact_calculation(object):
             # We calculate our subhalo population one by one in order to
             # save memory
             m_min = self._SHVF_cts['RangeMin']
-            inc_factor = 1.5
             ceil = int(np.ceil(np.log(self._SHVF_cts['RangeMax']
                                       / self._SHVF_cts['RangeMin'])
-                               / np.log(inc_factor)))
+                               / np.log(self._repopulations['inc_factor'])))
 
             for num_bins in range(ceil):
-                m_max = np.minimum(m_min * inc_factor,
+                m_max = np.minimum(m_min * self._repopulations['inc_factor'],
                                    self._SHVF_cts['RangeMax'])
 
                 num_subhalos = int(np.round(integrate.quad(
@@ -789,7 +789,7 @@ class Jfact_calculation(object):
                           int(num_subhalos))
                     print('        %.3f' % memory_usage_psutil())
 
-                m_min *= inc_factor
+                m_min *= self._repopulations['inc_factor']
 
             np.savetxt(file_Js, brightest_Js.T)
             np.savetxt(file_J03, brightest_J03.T)
@@ -843,13 +843,12 @@ class Jfact_calculation(object):
             # We calculate our subhalo population one by one in order to
             # save memory
             m_min = self._SHVF_cts['RangeMin']
-            inc_factor = 1.02
             ceil = int(np.ceil(np.log(self._SHVF_cts['RangeMax']
                                       / self._SHVF_cts['RangeMin'])
-                               / np.log(inc_factor)))
+                               / np.log(self._repopulations['inc_factor'])))
 
             for num_bins in range(ceil):
-                m_max = np.minimum(m_min * inc_factor,
+                m_max = np.minimum(m_min * self._repopulations['inc_factor'],
                                    self._SHVF_cts['RangeMax'])
 
                 num_subhalos = int(np.round(integrate.quad(
@@ -882,7 +881,7 @@ class Jfact_calculation(object):
                     print('   ', m_min, m_max, num_subhalos)
                     print('        %.3f' % memory_usage_psutil())
 
-                m_min *= inc_factor
+                m_min *= self._repopulations['inc_factor']
 
             np.savetxt(file_Js, brightest_Js.T)
             np.savetxt(file_J03, brightest_J03.T)
