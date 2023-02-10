@@ -1,6 +1,7 @@
 import os
 import math
 import yaml
+import psutil
 import numpy as np
 import random as rdm
 import time
@@ -10,7 +11,6 @@ from scipy import integrate
 
 def memory_usage_psutil():
     # return the memory usage in MB
-    import psutil
     process = psutil.Process(os.getpid())
     mem = process.memory_info()[0] / float(10 ** 6)
     return mem
