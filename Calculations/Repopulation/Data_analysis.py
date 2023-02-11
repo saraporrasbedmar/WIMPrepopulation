@@ -5,7 +5,7 @@ Created on Tue Jun  7 10:02:09 2022
 
 @author: saraporras
 """
-
+import os
 import numpy as np
 import matplotlib.colorbar as colorbarr
 import matplotlib.pyplot as plt
@@ -32,8 +32,8 @@ plt.rc('ytick.minor', size=4, width=1)
 
 
 
-path_name = 'outputs/Prueba 31-01-2023 11:46:02'
-
+path_name = 'outputs/Test_functions 2023-02-11 15:52:00'
+#
 datos_Js_frag_hyd = np.loadtxt(path_name + '/Js_hydro_ResFalse_results.txt')
 datos_Js_frag_dmo = np.loadtxt(path_name + '/Js_dmo_ResFalse_results.txt')
 
@@ -46,13 +46,16 @@ datos_Js_resi_dmo = np.loadtxt(path_name + '/Js_dmo_ResTrue_results.txt')
 datos_J03_resi_hyd = np.loadtxt(path_name + '/J03_hydro_ResTrue_results.txt')
 datos_J03_resi_dmo = np.loadtxt(path_name + '/J03_dmo_ResTrue_results.txt')
 
-constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
-constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')
-sigmav_bb_2204 = np.loadtxt('../Constraints_2204/sigmav_bb.txt')
-sigmav_tau_2204 = np.loadtxt('../Constraints_2204/sigmav_tau.txt')
 
-sigmav_bb_2204 = sigmav_bb_2204[sigmav_bb_2204[:,0].argsort()[::], :]
-sigmav_tau_2204 = sigmav_tau_2204[sigmav_tau_2204[:,0].argsort()[::], :]
+
+
+# constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
+# constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')
+# sigmav_bb_2204 = np.loadtxt('../Constraints_2204/sigmav_bb.txt')
+# sigmav_tau_2204 = np.loadtxt('../Constraints_2204/sigmav_tau.txt')
+#
+# sigmav_bb_2204 = sigmav_bb_2204[sigmav_bb_2204[:,0].argsort()[::], :]
+# sigmav_tau_2204 = sigmav_tau_2204[sigmav_tau_2204[:,0].argsort()[::], :]
 
 J03_min95_2204 = 18.9208 # From digitalizing
 Js_min95_2204  = 19.4642 # From digitalizing
@@ -60,8 +63,7 @@ Js_min95_2204  = 19.4642 # From digitalizing
 plt.close('all')
 
 darkgreen = (0.024, 0.278, 0.047)
-#%%
-#plt.close('all')
+
 fig, _ = plt.subplots(2,2, figsize=(12,9))
 
 minn = np.min((np.min(np.log10(datos_Js_frag_dmo[:,0])), np.min(np.log10(datos_J03_frag_dmo[:,0])),
@@ -74,7 +76,7 @@ maxx = np.max((np.max(np.log10(datos_Js_frag_dmo[:,0])), np.max(np.log10(datos_J
                np.max(np.log10(datos_Js_resi_dmo[:,0])), np.max(np.log10(datos_J03_resi_dmo[:,0])),
                np.max(np.log10(datos_Js_resi_hyd[:,0])), np.max(np.log10(datos_J03_resi_hyd[:,0]))))
 
-bines = np.linspace(minn, maxx, 25)
+bines = np.linspace(minn, maxx, 15)
 
 
 
@@ -296,7 +298,7 @@ c2.set_label(r'D$_\mathrm{Earth}$ [kpc]', fontsize=20)
 
 
 #%%
-#plt.close('all')
+'''
 plt.subplots(1,2, figsize=(14,6))
 
 ax1 = plt.subplot(121)
@@ -374,7 +376,7 @@ print()
 print('Js')
 print('%.2f' %Js_min95_2204)
 print('%.2f  %.2f  %.2f  %.2f' %(Js95_resi_dmo, Js95_resi_hyd, Js95_frag_dmo, Js95_frag_hyd))
-
+'''
 
 fig, _ = plt.subplots(2,2, figsize=(12,9))
 
