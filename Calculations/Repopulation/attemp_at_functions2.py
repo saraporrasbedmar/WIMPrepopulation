@@ -6,6 +6,8 @@ import numpy as np
 import random as rdm
 import time
 
+from scipy.optimize import newton
+
 from numba import njit, jit
 from numba.typed import List
 from numba.core.errors import NumbaDeprecationWarning, \
@@ -66,7 +68,7 @@ file_inputs.close()
 print(path_name)
 
 
-def repopulation(sim_types, res_frag):
+def repopulation(num_subs_max, sim_types, res_frag):
     print(SHVF_cts_RangeMin,
           SHVF_cts_RangeMax)
     print('    Max. number of repop subhalos: %i' %
@@ -75,7 +77,7 @@ def repopulation(sim_types, res_frag):
               SHVF_cts_RangeMax)
           )
 
-    computing_bin_by_bin(sim_types, res_frag)
+    computing_bin_by_bin(num_subs_max, sim_types, res_frag)
 
     print(path_name)
     return
@@ -399,7 +401,7 @@ def def_Cv(c200, Cv):
 
 
 @njit
-def newton(fun, x0, args):
+def newton2(fun, x0, args):
     """
     Newton method to find the root of a function.
 
@@ -432,7 +434,7 @@ def C200_from_Cv(Cv):
         c200 of subhalo (concentration definition)
     """
     if np.shape(Cv) == ():
-        C200_med = newton(def_Cv, 40.0, Cv[0])
+        C200_med = newton2(def_Cv, 40.0, Cv[0])
         C200_med = np.array([C200_med])
     else:
         num = np.shape(Cv)[0]
@@ -440,7 +442,7 @@ def C200_from_Cv(Cv):
 
         for i in range(num):
             # opt.root(def_Cv, 40, args=Cv[i])['x'][0]
-            C200_med[i] = newton(def_Cv, 40.0, Cv[i])
+            C200_med[i] = newton2(def_Cv, 40.0, Cv[i])
 
     return C200_med
 
@@ -519,25 +521,67 @@ def calculate_characteristics_subhalo(Vmax, Distgc, num_subs):
 
 
 @jit
-def interior_loop(sim_types, res_frag):
+def xx(mmax, mmin, root):
+    return SHVF_Grand2012_int(mmin, mmax) - root
+
+
+@jit(forceobj=True)
+def interior_loop(num_subs_max, sim_types, res_frag):
     # We have 6 variables we want to save in our files,
     # change this number if necessary
     brightest_Js = np.zeros((6, 1))
     brightest_J03 = np.zeros((6, 1))
 
-
     # We calculate our subhalo population one by one in order to
     # save memory
     m_min = SHVF_cts_RangeMin
-    ceil = int(np.ceil(np.log(SHVF_cts_RangeMax
-                              / SHVF_cts_RangeMin)
-                       / np.log(repop_inc_factor)))
 
-    for num_bins in range(ceil):
+    while SHVF_Grand2012_int(m_min, SHVF_cts_RangeMax) > num_subs_max:
+
+        m_max = newton(xx, m_min, args=[m_min, num_subs_max])
+        # print('   %.6f - %.6f %d'
+        #       % (m_min, m_max, SHVF_Grand2012_int(m_min, m_max)))
+        repop_Vmax = rej_samp(m_min, m_max,
+                              SHVF_Grand2012,
+                              num_subhalos=num_subs_max,
+                              sim_types=sim_types,
+                              res_frag=res_frag)
+        repop_DistGC = rej_samp(0, host_R_vir,
+                                Nr_Ntot,
+                                num_subhalos=num_subs_max,
+                                sim_types=sim_types,
+                                res_frag=res_frag)
+
+        new_data = calculate_characteristics_subhalo(
+            repop_Vmax, repop_DistGC, num_subs_max)
+
+        bright_Js = np.where(
+            np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
+
+        if new_data[bright_Js, 0] > brightest_Js[0, 0]:
+            brightest_Js[0, 0] = new_data[bright_Js, 0]
+            brightest_Js[1:, 0] = new_data[bright_Js, 2:]
+
+        bright_J03 = np.where(
+            np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
+        if new_data[bright_J03, 1] > brightest_J03[0, 0]:
+            brightest_J03[0, 0] = new_data[bright_J03, 1]
+            brightest_J03[1:, 0] = new_data[bright_J03, 2:]
+
+        # print('        %.3f  %s\n' %
+        #       (memory_usage_psutil(),
+        #        time.strftime(" %Y-%m-%d %H:%M:%S",
+        #                      time.gmtime())))
+        m_min = m_max
+
+    while m_min < SHVF_cts_RangeMax:
         m_max = np.minimum(m_min * repop_inc_factor,
                            SHVF_cts_RangeMax)
 
         num_subhalos = SHVF_Grand2012_int(m_min, m_max)
+        print('   %.6f - %.6f %d'
+              % (m_min, m_max, num_subhalos))
+        m_min *= repop_inc_factor
 
         repop_Vmax = rej_samp(m_min, m_max,
                               SHVF_Grand2012,
@@ -566,13 +610,15 @@ def interior_loop(sim_types, res_frag):
             brightest_J03[0, 0] = new_data[bright_J03, 1]
             brightest_J03[1:, 0] = new_data[bright_J03, 2:]
 
-        m_min *= repop_inc_factor
+        print('        %.3f  %s\n' %
+              (memory_usage_psutil(),
+               time.strftime(" %Y-%m-%d %H:%M:%S",
+                             time.gmtime())))
 
     return brightest_Js, brightest_J03
 
 
-
-def computing_bin_by_bin(sim_types, res_frag):
+def computing_bin_by_bin(num_subs_max, sim_types, res_frag):
     headerS = (('#\n# Vmin: [' + str(SHVF_cts_RangeMin) + ', '
                 + str(SHVF_cts_RangeMax) + '], resilient: '
                 + str(resilient) + '; '
@@ -622,12 +668,17 @@ def computing_bin_by_bin(sim_types, res_frag):
                                           time.gmtime())))
             progress.close()
 
-        brightest_Js, brightest_J03 = interior_loop(sim_types, res_frag)
+        brightest_Js, brightest_J03 = interior_loop(num_subs_max,
+                                                    sim_types,
+                                                    res_frag)
 
         np.savetxt(file_Js, brightest_Js.T)
         np.savetxt(file_J03, brightest_J03.T)
 
-    print('        %.3f' % memory_usage_psutil())
+    print('End of repop loop: %.3f  %s\n' %
+          (memory_usage_psutil(),
+           time.strftime(" %Y-%m-%d %H:%M:%S",
+                         time.gmtime())))
     file_Js.close()
     file_J03.close()
 
@@ -644,6 +695,7 @@ for each in data_dict['repopulations']['type']:
 
     repop_its = repopulations['its']
     repop_id = repopulations['id']
+    num_subs_max = int(repopulations['num_subs_max'])
     repop_print_freq = repopulations['print_freq']
     repop_num_brightest = repopulations['num_brightest']
     repop_inc_factor = repopulations['inc_factor']
@@ -679,6 +731,8 @@ for each in data_dict['repopulations']['type']:
         srd_args = srd_cts['hydro'][res_string]['args']
         srd_last_sub = srd_cts['hydro'][res_string]['last_subhalo']
 
-    repopulation(sim_type, res_string)
+    for i in [5e6, 1e6, 5e5, 1e5, 1e4]:
+        num_subs_max = int(i)
+        repopulation(num_subs_max, sim_type, res_string)
 
 print(time.strftime(" %d-%m-%Y %H:%M:%S", time.gmtime()))
