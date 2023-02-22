@@ -17,6 +17,8 @@ import warnings
 warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
 warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 
+from multiprocessing import Pool
+
 
 def memory_usage_psutil():
     # return the memory usage in MB
@@ -34,52 +36,68 @@ def read_config_file(ConfigFile):
     return parsed_yaml
 
 
-# Calculations ----------------#
+def repopulation(num_subs_max, sim_types, res_frag,
+                 cosmo_G,
+                 cosmo_H_0,
+                 cosmo_rho_crit,
 
-data_dict = read_config_file('input_files/data_newResSRD.yml')
+                 host_R_vir,
+                 host_rho_0,
+                 host_r_s,
 
-cosmo_G = data_dict['cosmo_constants']['G']
-cosmo_H_0 = data_dict['cosmo_constants']['H_0']
-cosmo_rho_crit = data_dict['cosmo_constants']['rho_crit']
+                 pathname,
+                 repop_its,
+                 repop_print_freq,
+                 repop_inc_factor,
 
-host_R_vir = data_dict['host']['R_vir']
-host_rho_0 = float(data_dict['host']['rho_0'])
-host_r_s = data_dict['host']['r_s']
+                 SHVF_cts_RangeMin,
+                 SHVF_cts_RangeMax,
+                 SHVF_bb,
+                 SHVF_mm,
 
-cv_cts = data_dict['Cv']
-srd_cts = data_dict['SRD']
-SHVF_cts = data_dict['SHVF']
+                 Cv_bb,
+                 Cv_mm,
+                 Cv_sigma,
 
-repopulations = data_dict['repopulations']
-
-path_name = str('outputs/' + repopulations['id']
-                + time.strftime(" %Y-%m-%d %H:%M:%S",
-                                time.gmtime()))
-
-if not os.path.exists(path_name):
-    os.makedirs(path_name)
-
-# Save input data in a file in the outputs directory
-file_inputs = open(path_name + '/input_data.yml', 'w')
-yaml.dump(data_dict, file_inputs,
-          default_flow_style=False, allow_unicode=True)
-file_inputs.close()
-
-print(path_name)
-
-
-def repopulation(num_subs_max, sim_types, res_frag):
+                 srd_args,
+                 srd_last_sub):
     print(SHVF_cts_RangeMin,
           SHVF_cts_RangeMax)
     print('    Max. number of repop subhalos: %i' %
           SHVF_Grand2012_int(
               SHVF_cts_RangeMin,
-              SHVF_cts_RangeMax)
+              SHVF_cts_RangeMax,
+              SHVF_bb,
+              SHVF_mm)
           )
 
-    computing_bin_by_bin(num_subs_max, sim_types, res_frag)
+    computing_bin_by_bin(num_subs_max, sim_types, res_frag,
+                         cosmo_G,
+                         cosmo_H_0,
+                         cosmo_rho_crit,
 
-    print(path_name)
+                         host_R_vir,
+                         host_rho_0,
+                         host_r_s,
+
+                         pathname,
+                         repop_its,
+                         repop_print_freq,
+                         repop_inc_factor,
+
+                         SHVF_cts_RangeMin,
+                         SHVF_cts_RangeMax,
+                         SHVF_bb,
+                         SHVF_mm,
+
+                         Cv_bb,
+                         Cv_mm,
+                         Cv_sigma,
+
+                         srd_args,
+                         srd_last_sub)
+
+    print(pathname)
     return
 
 
@@ -90,7 +108,9 @@ def ff(c):
 
 # SHVF --------------------------------------
 @njit
-def SHVF_Grand2012(V, sim_types, res_frag):
+def SHVF_Grand2012(V,
+                   SHVF_bb,
+                   SHVF_mm):
     """
     SubHalo Velocity Function (SHVF) - number of subhalos as a
     function of Vmax. Power law formula.
@@ -107,7 +127,9 @@ def SHVF_Grand2012(V, sim_types, res_frag):
 
 
 @njit
-def SHVF_Grand2012_int(V1, V2):
+def SHVF_Grand2012_int(V1, V2,
+                       SHVF_bb,
+                       SHVF_mm):
     """
     Integration of the SHVF defined above.
     (numba needed an analytical expression.)
@@ -128,7 +150,10 @@ def SHVF_Grand2012_int(V1, V2):
 
 # ----------- CONCENTRATIONS ----------------------
 @njit
-def Cv_Grand2012(Vmax):
+def Cv_Grand2012(Vmax,
+
+                 Cv_bb,
+                 Cv_mm):
     """
     Calculate the scatter of a subhalo population.
     Based on Grand 2012.07846.
@@ -145,7 +170,8 @@ def Cv_Grand2012(Vmax):
 
 
 @jit
-def C_Scatt(C):
+def C_Scatt(C,
+            Cv_sigma):
     """
     Create a scatter in the concentration parameter of the
     repopulated population.
@@ -163,7 +189,9 @@ def C_Scatt(C):
 
 # ----------- J-FACTORS --------------------------------
 @njit
-def J_abs_vel(V, D_earth, C, change_units=True):
+def J_abs_vel(V, D_earth, C,
+              cosmo_G,
+              cosmo_H_0, change_units=True):
     """
     Jfactor enclosing whole subhalo as a function of the
     subhalo Vmax.
@@ -244,7 +272,8 @@ def J03_vel(V, D_earth, C, change_units=True):
 
 # ----------- REPOPULATION ----------------
 @njit
-def R_max(V, C):
+def R_max(V, C,
+          cosmo_H_0):
     """
     Calculate Rmax of a subhalo.
 
@@ -304,7 +333,9 @@ def R_t(V, C, DistGC):
 
 
 @njit
-def Mhost_encapsulated(R):
+def Mhost_encapsulated(R,
+                       host_rho_0,
+                       host_r_s):
     """
     Host mass encapsulated up to a certain radius. We are following
     a NFW density profile for the host.
@@ -333,7 +364,8 @@ def N_subs_fragile(DistGC, args):
 
 
 @njit
-def Nr_Ntot(DistGC, sim_types, res_frag):
+def Nr_Ntot(DistGC, sim_types, res_frag,
+            srd_last_sub):
     """
     Proportion of subhalo numbers at a certain distance of the GC.
 
@@ -364,7 +396,8 @@ def Nr_Ntot(DistGC, sim_types, res_frag):
 
 
 @njit
-def mass_from_Vmax(Vmax, Rmax, c200):
+def mass_from_Vmax(Vmax, Rmax, c200,
+                   cosmo_G):
     """
     Mass from a subhalo assuming a NFW profile.
     Theoretical steps in Moline16.
@@ -526,7 +559,31 @@ def xx(mmax, mmin, root):
 
 
 @jit(forceobj=True)
-def interior_loop(num_subs_max, sim_types, res_frag):
+def interior_loop(num_subs_max, sim_types, res_frag,
+                  cosmo_G,
+                  cosmo_H_0,
+                  cosmo_rho_crit,
+
+                  host_R_vir,
+                  host_rho_0,
+                  host_r_s,
+
+                  pathname,
+                  repop_its,
+                  repop_print_freq,
+                  repop_inc_factor,
+
+                  SHVF_cts_RangeMin,
+                  SHVF_cts_RangeMax,
+                  SHVF_bb,
+                  SHVF_mm,
+
+                  Cv_bb,
+                  Cv_mm,
+                  Cv_sigma,
+
+                  srd_args,
+                  srd_last_sub):
     # We have 6 variables we want to save in our files,
     # change this number if necessary
     brightest_Js = np.zeros((6, 1))
@@ -536,7 +593,8 @@ def interior_loop(num_subs_max, sim_types, res_frag):
     # save memory
     m_min = SHVF_cts_RangeMin
 
-    while SHVF_Grand2012_int(m_min, SHVF_cts_RangeMax) > num_subs_max:
+    while SHVF_Grand2012_int(m_min, SHVF_cts_RangeMax,
+                             SHVF_bb, SHVF_mm) > num_subs_max:
 
         m_max = newton(xx, m_min, args=[m_min, num_subs_max])
         # print('   %.6f - %.6f %d'
@@ -578,10 +636,10 @@ def interior_loop(num_subs_max, sim_types, res_frag):
         m_max = np.minimum(m_min * repop_inc_factor,
                            SHVF_cts_RangeMax)
 
-        num_subhalos = SHVF_Grand2012_int(m_min, m_max)
-        print('   %.6f - %.6f %d'
-              % (m_min, m_max, num_subhalos))
-        m_min *= repop_inc_factor
+        num_subhalos = SHVF_Grand2012_int(m_min, m_max,
+                             SHVF_bb, SHVF_mm)
+        # print('   %.6f - %.6f %d'
+        #       % (m_min, m_max, num_subhalos))
 
         repop_Vmax = rej_samp(m_min, m_max,
                               SHVF_Grand2012,
@@ -610,15 +668,41 @@ def interior_loop(num_subs_max, sim_types, res_frag):
             brightest_J03[0, 0] = new_data[bright_J03, 1]
             brightest_J03[1:, 0] = new_data[bright_J03, 2:]
 
-        print('        %.3f  %s\n' %
-              (memory_usage_psutil(),
-               time.strftime(" %Y-%m-%d %H:%M:%S",
-                             time.gmtime())))
+        m_min *= repop_inc_factor
+
+        # print('        %.3f  %s\n' %
+        #       (memory_usage_psutil(),
+        #        time.strftime(" %Y-%m-%d %H:%M:%S",
+        #                      time.gmtime())))
 
     return brightest_Js, brightest_J03
 
 
-def computing_bin_by_bin(num_subs_max, sim_types, res_frag):
+def computing_bin_by_bin(num_subs_max, sim_types, res_frag,
+                         cosmo_G,
+                         cosmo_H_0,
+                         cosmo_rho_crit,
+
+                         host_R_vir,
+                         host_rho_0,
+                         host_r_s,
+
+                         pathname,
+                         repop_its,
+                         repop_print_freq,
+                         repop_inc_factor,
+
+                         SHVF_cts_RangeMin,
+                         SHVF_cts_RangeMax,
+                         SHVF_bb,
+                         SHVF_mm,
+
+                         Cv_bb,
+                         Cv_mm,
+                         Cv_sigma,
+
+                         srd_args,
+                         srd_last_sub):
     headerS = (('#\n# Vmin: [' + str(SHVF_cts_RangeMin) + ', '
                 + str(SHVF_cts_RangeMax) + '], resilient: '
                 + str(resilient) + '; '
@@ -641,9 +725,9 @@ def computing_bin_by_bin(num_subs_max, sim_types, res_frag):
                   '               ang size (deg)'
                   '               Cv \n#\n')))
 
-    file_Js = open(path_name + '/Js_' + sim_type + '_Res'
+    file_Js = open(pathname + '/Js_' + sim_type + '_Res'
                    + str(resilient) + '_results.txt', 'w')
-    file_J03 = open(path_name + '/J03_' + sim_type + '_Res'
+    file_J03 = open(pathname + '/J03_' + sim_type + '_Res'
                     + str(resilient) + '_results.txt', 'w')
 
     file_Js.write(headerS)
@@ -655,7 +739,7 @@ def computing_bin_by_bin(num_subs_max, sim_types, res_frag):
             print('    ', sim_type, ', res: ', resilient,
                   ', iteration ', it)
             print('        %.3f' % memory_usage_psutil())
-            progress = open(path_name + '/progress_' +
+            progress = open(pathname + '/progress_' +
                             sim_type + '_Res'
                             + str(resilient)
                             + '_results.txt', 'a')
@@ -670,7 +754,31 @@ def computing_bin_by_bin(num_subs_max, sim_types, res_frag):
 
         brightest_Js, brightest_J03 = interior_loop(num_subs_max,
                                                     sim_types,
-                                                    res_frag)
+                                                    res_frag,
+                                                    cosmo_G,
+                                                    cosmo_H_0,
+                                                    cosmo_rho_crit,
+
+                                                    host_R_vir,
+                                                    host_rho_0,
+                                                    host_r_s,
+
+                                                    pathname,
+                                                    repop_its,
+                                                    repop_print_freq,
+                                                    repop_inc_factor,
+
+                                                    SHVF_cts_RangeMin,
+                                                    SHVF_cts_RangeMax,
+                                                    SHVF_bb,
+                                                    SHVF_mm,
+
+                                                    Cv_bb,
+                                                    Cv_mm,
+                                                    Cv_sigma,
+
+                                                    srd_args,
+                                                    srd_last_sub)
 
         np.savetxt(file_Js, brightest_Js.T)
         np.savetxt(file_J03, brightest_J03.T)
@@ -688,14 +796,47 @@ def computing_bin_by_bin(num_subs_max, sim_types, res_frag):
 sim_type = None
 resilient = None
 
-for each in data_dict['repopulations']['type']:
-    print(data_dict['repopulations']['type'][each])
-    sim_type = data_dict['repopulations']['type'][each][0]
-    resilient = data_dict['repopulations']['type'][each][1]
+
+def main(inputs):
+    # Calculations ----------------#
+
+    data_dict = read_config_file('input_files/data_newResSRD.yml')
+
+    cosmo_G = data_dict['cosmo_constants']['G']
+    cosmo_H_0 = data_dict['cosmo_constants']['H_0']
+    cosmo_rho_crit = data_dict['cosmo_constants']['rho_crit']
+
+    host_R_vir = data_dict['host']['R_vir']
+    host_rho_0 = float(data_dict['host']['rho_0'])
+    host_r_s = data_dict['host']['r_s']
+
+    cv_cts = data_dict['Cv']
+    srd_cts = data_dict['SRD']
+    SHVF_cts = data_dict['SHVF']
+
+    repopulations = data_dict['repopulations']
+
+    path_name = str('outputs/' + repopulations['id']
+                    + time.strftime(" %Y-%m-%d %H:%M:%S",
+                                    time.gmtime()))
+
+    if not os.path.exists(path_name):
+        os.makedirs(path_name)
+
+    # Save input data in a file in the outputs directory
+    file_inputs = open(path_name + '/input_data.yml', 'w')
+    yaml.dump(data_dict, file_inputs,
+              default_flow_style=False, allow_unicode=True)
+    file_inputs.close()
+
+    print(path_name)
+
+    sim_type = inputs[0]
+    resilient = inputs[1]
 
     repop_its = repopulations['its']
     repop_id = repopulations['id']
-    num_subs_max = int(repopulations['num_subs_max'])
+    num_subs_max = int(float(repopulations['num_subs_max']))
     repop_print_freq = repopulations['print_freq']
     repop_num_brightest = repopulations['num_brightest']
     repop_inc_factor = repopulations['inc_factor']
@@ -731,8 +872,41 @@ for each in data_dict['repopulations']['type']:
         srd_args = srd_cts['hydro'][res_string]['args']
         srd_last_sub = srd_cts['hydro'][res_string]['last_subhalo']
 
-    for i in [5e6, 1e6, 5e5, 1e5, 1e4]:
-        num_subs_max = int(i)
-        repopulation(num_subs_max, sim_type, res_string)
+    # for i in [5e6, 1e6, 5e5, 1e5, 1e4]:
+    #     num_subs_max = int(i)
+    repopulation(num_subs_max, sim_type, res_string,
+                 cosmo_G=cosmo_G,
+                 cosmo_H_0=cosmo_H_0,
+                 cosmo_rho_crit=cosmo_rho_crit,
+
+                 host_R_vir=host_R_vir,
+                 host_rho_0=host_rho_0,
+                 host_r_s=host_r_s,
+
+                 pathname=path_name,
+                 repop_its=repop_its,
+                 repop_print_freq=repop_print_freq,
+                 repop_inc_factor=repop_inc_factor,
+
+                 SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+                 SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+                 SHVF_bb=SHVF_bb,
+                 SHVF_mm=SHVF_mm,
+
+                 Cv_bb=Cv_bb,
+                 Cv_mm=Cv_mm,
+                 Cv_sigma=Cv_sigma,
+
+                 srd_args=srd_args,
+                 srd_last_sub=srd_last_sub
+                 )
+
 
 print(time.strftime(" %d-%m-%Y %H:%M:%S", time.gmtime()))
+
+if __name__ == "__main__":
+    p = Pool(4, None)
+    p.map(main, [['dmo', False], ['hydro', False],
+                 ['dmo', True], ['hydro', True]])
+    p.close()
+    p.join()
