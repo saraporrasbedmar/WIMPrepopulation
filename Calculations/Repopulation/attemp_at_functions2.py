@@ -7,6 +7,8 @@ import random as rdm
 import time
 
 from scipy.optimize import newton
+# from scipy.integrate import simpson
+from scipy.interpolate import UnivariateSpline
 
 from numba import njit, jit
 from numba.typed import List
@@ -14,10 +16,153 @@ from numba.core.errors import NumbaDeprecationWarning, \
     NumbaPendingDeprecationWarning
 import warnings
 
+# simpson_njit = njit()(simpson)
+
 warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
 warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 
 from multiprocessing import Pool
+
+
+@njit
+def simpson2(x, y):
+    n = len(y) - 1
+    h = np.zeros(n)
+    for i in range(n):
+        h[i] = x[i + 1] - x[i]
+        if h[i] < 1e-5:
+            np.delete(h, i)
+            np.delete(y, i)
+    n = len(h) - 1
+    s = 0
+    for i in range(1, n, 2):
+        a = h[i] * h[i]
+        b = h[i] * h[i - 1]
+        c = h[i - 1] * h[i - 1]
+        d = h[i] + h[i - 1]
+        alpha = (2 * a + b - c) / h[i]
+        beta = d * d * d / b
+        gamma = (-a + b + 2 * c) / h[i - 1]
+        s += alpha * y[i + 1] + beta * y[i] + gamma * y[i - 1]
+    print('holi')
+
+    if ((n + 1) % 2 == 0):
+        alpha = h[n - 1] * (3 - h[n - 1] / (h[n - 1] + h[n - 2]))
+        print('alpha')
+        beta = h[n - 1] * (3 + h[n - 1] / h[n - 2])
+        print('beta')
+        gamma = -h[n - 1] * h[n - 1] * h[n - 1] / (
+                    h[n - 2] * (h[n - 1] + h[n - 2]))
+        print('gamma')
+        return (s + alpha * y[n] + beta * y[n - 1] + gamma * y[n - 2]) / 6
+    else:
+        return s / 6
+
+def simpson(y, x=None, dx=1.0, axis=-1, even='avg'):
+    """
+    Integrate y(x) using samples along the given axis and the composite
+    Simpson's rule. If x is None, spacing of dx is assumed.
+
+    If there are an even number of samples, N, then there are an odd
+    number of intervals (N-1), but Simpson's rule requires an even number
+    of intervals. The parameter 'even' controls how this is handled.
+
+    Parameters
+    ----------
+    y : array_like
+        Array to be integrated.
+    x : array_like, optional
+        If given, the points at which `y` is sampled.
+    dx : float, optional
+        Spacing of integration points along axis of `x`. Only used when
+        `x` is None. Default is 1.
+    axis : int, optional
+        Axis along which to integrate. Default is the last axis.
+    even : str {'avg', 'first', 'last'}, optional
+        'avg' : Average two results:1) use the first N-2 intervals with
+                  a trapezoidal rule on the last interval and 2) use the last
+                  N-2 intervals with a trapezoidal rule on the first interval.
+
+        'first' : Use Simpson's rule for the first N-2 intervals with
+                a trapezoidal rule on the last interval.
+
+        'last' : Use Simpson's rule for the last N-2 intervals with a
+               trapezoidal rule on the first interval.
+
+    See Also
+    --------
+    quad : adaptive quadrature using QUADPACK
+    romberg : adaptive Romberg quadrature
+    quadrature : adaptive Gaussian quadrature
+    fixed_quad : fixed-order Gaussian quadrature
+    dblquad : double integrals
+    tplquad : triple integrals
+    romb : integrators for sampled data
+    cumulative_trapezoid : cumulative integration for sampled data
+    ode : ODE integrators
+    odeint : ODE integrators
+
+    Notes
+    -----
+    For an odd number of samples that are equally spaced the result is
+    exact if the function is a polynomial of order 3 or less. If
+    the samples are not equally spaced, then the result is exact only
+    if the function is a polynomial of order 2 or less.
+
+    """
+    y = np.asarray(y)
+    nd = len(y.shape)
+    N = y.shape[axis]
+    last_dx = dx
+    first_dx = dx
+    returnshape = 0
+    if x is not None:
+        x = np.asarray(x)
+        if len(x.shape) == 1:
+            shapex = [1] * nd
+            shapex[axis] = x.shape[0]
+            saveshape = x.shape
+            returnshape = 1
+            x = x.reshape(tuple(shapex))
+        elif len(x.shape) != len(y.shape):
+            raise ValueError("If given, shape of x must be 1-D or the "
+                             "same as y.")
+        if x.shape[axis] != N:
+            raise ValueError("If given, length of x along axis must be the "
+                             "same as y.")
+    if N % 2 == 0:
+        val = 0.0
+        result = 0.0
+        slice1 = (slice(None),)*nd
+        slice2 = (slice(None),)*nd
+        if even not in ['avg', 'last', 'first']:
+            raise ValueError("Parameter 'even' must be "
+                             "'avg', 'last', or 'first'.")
+        # Compute using Simpson's rule on first intervals
+        if even in ['avg', 'first']:
+            slice1 = tupleset(slice1, axis, -1)
+            slice2 = tupleset(slice2, axis, -2)
+            if x is not None:
+                last_dx = x[slice1] - x[slice2]
+            val += 0.5*last_dx*(y[slice1]+y[slice2])
+            result = _basic_simpson(y, 0, N-3, x, dx, axis)
+        # Compute using Simpson's rule on last set of intervals
+        if even in ['avg', 'last']:
+            slice1 = tupleset(slice1, axis, 0)
+            slice2 = tupleset(slice2, axis, 1)
+            if x is not None:
+                first_dx = x[tuple(slice2)] - x[tuple(slice1)]
+            val += 0.5*first_dx*(y[slice2]+y[slice1])
+            result += _basic_simpson(y, 1, N-2, x, dx, axis)
+        if even == 'avg':
+            val /= 2.0
+            result /= 2.0
+        result = result + val
+    else:
+        result = _basic_simpson(y, 0, N-2, x, dx, axis)
+    if returnshape:
+        x = x.reshape(saveshape)
+    return result
 
 
 def memory_usage_psutil():
@@ -25,6 +170,7 @@ def memory_usage_psutil():
     process = psutil.Process(os.getpid())
     mem = process.memory_info()[0] / float(10 ** 6)
     return mem
+
 
 
 def read_config_file(ConfigFile):
@@ -648,6 +794,93 @@ def rej_samp(x_min, x_max, pdf, num_subhalos,
     return results
 
 
+@jit(forceobj=True)
+def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
+                         sim_type, res_string,
+                         cosmo_G,
+                         cosmo_H_0,
+                         cosmo_rho_crit,
+
+                         host_R_vir,
+                         host_rho_0,
+                         host_r_s,
+
+                         pathname,
+                         repop_its,
+                         repop_print_freq,
+                         repop_inc_factor,
+
+                         SHVF_cts_RangeMin,
+                         SHVF_cts_RangeMax,
+                         SHVF_bb,
+                         SHVF_mm,
+
+                         Cv_bb,
+                         Cv_mm,
+                         Cv_sigma,
+
+                         srd_args,
+                         srd_last_sub):
+    """
+    Rejection sample algorithm. It populates a number of objects
+    with a probability distribution defined by the pdf function.
+
+    :param x_min: float
+        Minimum value the function can intake.
+    :param x_max: float
+        Maximum value the function can intake.
+    :param pdf: function
+        Function that we use a probability distribution.
+    :param num_subhalos: int
+        Number of objects we want.
+
+    :return: float or array-like
+        Population following the probability distribution.
+    """
+    x = np.logspace(np.log10(x_min), np.log10(x_max),
+                    num=1000)
+    y = pdf(x,
+            sim_type, res_string,
+            cosmo_G,
+            cosmo_H_0,
+            cosmo_rho_crit,
+
+            host_R_vir,
+            host_rho_0,
+            host_r_s,
+
+            pathname,
+            repop_its,
+            repop_print_freq,
+            repop_inc_factor,
+
+            SHVF_cts_RangeMin,
+            SHVF_cts_RangeMax,
+            SHVF_bb,
+            SHVF_mm,
+
+            Cv_bb,
+            Cv_mm,
+            Cv_sigma,
+
+            srd_args,
+            srd_last_sub)
+
+
+    cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
+    print(cumul[-1])
+    cumul /= cumul[-1]
+
+    x_mean = (x[1:] + x[:-1]) / 2.
+
+    x_min = ((np.array(cumul) - 1e-5) < 0).argmin() - 1
+
+    spline = UnivariateSpline(cumul[x_min:], x_mean[x_min:],
+                              s=0, k=1, ext=0)
+
+    return spline(np.random.random(num_subhalos))
+
+
 @njit
 def calculate_characteristics_subhalo(Vmax, Distgc,
                                       sim_type, res_string,
@@ -764,66 +997,66 @@ def interior_loop(num_subs_max, sim_type, res_string,
                        args=[m_min, SHVF_bb, SHVF_mm, num_subs_max])
         # print('   %.6f - %.6f %d'
         #       % (m_min, m_max, SHVF_Grand2012_int(m_min, m_max)))
-        repop_Vmax = rej_samp(m_min, m_max,
-                              SHVF_Grand2012,
-                              num_subhalos=num_subs_max,
-                              sim_type=sim_type,
-                              res_string=res_string,
+        repop_Vmax = montecarlo_algorithm(m_min, m_max,
+                                          SHVF_Grand2012,
+                                          num_subhalos=num_subs_max,
+                                          sim_type=sim_type,
+                                          res_string=res_string,
 
-                              cosmo_G=cosmo_G,
-                              cosmo_H_0=cosmo_H_0,
-                              cosmo_rho_crit=cosmo_rho_crit,
+                                          cosmo_G=cosmo_G,
+                                          cosmo_H_0=cosmo_H_0,
+                                          cosmo_rho_crit=cosmo_rho_crit,
 
-                              host_R_vir=host_R_vir,
-                              host_rho_0=host_rho_0,
-                              host_r_s=host_r_s,
+                                          host_R_vir=host_R_vir,
+                                          host_rho_0=host_rho_0,
+                                          host_r_s=host_r_s,
 
-                              pathname=pathname,
-                              repop_its=repop_its,
-                              repop_print_freq=repop_print_freq,
-                              repop_inc_factor=repop_inc_factor,
+                                          pathname=pathname,
+                                          repop_its=repop_its,
+                                          repop_print_freq=repop_print_freq,
+                                          repop_inc_factor=repop_inc_factor,
 
-                              SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-                              SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-                              SHVF_bb=SHVF_bb,
-                              SHVF_mm=SHVF_mm,
+                                          SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+                                          SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+                                          SHVF_bb=SHVF_bb,
+                                          SHVF_mm=SHVF_mm,
 
-                              Cv_bb=Cv_bb,
-                              Cv_mm=Cv_mm,
-                              Cv_sigma=Cv_sigma,
+                                          Cv_bb=Cv_bb,
+                                          Cv_mm=Cv_mm,
+                                          Cv_sigma=Cv_sigma,
 
-                              srd_args=srd_args,
-                              srd_last_sub=srd_last_sub)
-        repop_DistGC = rej_samp(0, host_R_vir,
-                                Nr_Ntot,
-                                num_subhalos=num_subs_max,
-                                sim_type=sim_type,
-                                res_string=res_string,
+                                          srd_args=srd_args,
+                                          srd_last_sub=srd_last_sub)
+        repop_DistGC = montecarlo_algorithm(0, host_R_vir,
+                                            Nr_Ntot,
+                                            num_subhalos=num_subs_max,
+                                            sim_type=sim_type,
+                                            res_string=res_string,
 
-                                cosmo_G=cosmo_G,
-                                cosmo_H_0=cosmo_H_0,
-                                cosmo_rho_crit=cosmo_rho_crit,
+                                            cosmo_G=cosmo_G,
+                                            cosmo_H_0=cosmo_H_0,
+                                            cosmo_rho_crit=cosmo_rho_crit,
 
-                                host_R_vir=host_R_vir,
-                                host_rho_0=host_rho_0,
-                                host_r_s=host_r_s,
+                                            host_R_vir=host_R_vir,
+                                            host_rho_0=host_rho_0,
+                                            host_r_s=host_r_s,
 
-                                pathname=pathname,
-                                repop_its=repop_its,
-                                repop_print_freq=repop_print_freq,
-                                repop_inc_factor=repop_inc_factor,
+                                            pathname=pathname,
+                                            repop_its=repop_its,
+                                            repop_print_freq=repop_print_freq,
+                                            repop_inc_factor=repop_inc_factor,
 
-                                SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-                                SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-                                SHVF_bb=SHVF_bb,
-                                SHVF_mm=SHVF_mm,
+                                            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+                                            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+                                            SHVF_bb=SHVF_bb,
+                                            SHVF_mm=SHVF_mm,
 
-                                Cv_bb=Cv_bb,
-                                Cv_mm=Cv_mm,
-                                Cv_sigma=Cv_sigma,
+                                            Cv_bb=Cv_bb,
+                                            Cv_mm=Cv_mm,
+                                            Cv_sigma=Cv_sigma,
 
-                                srd_args=srd_args,
-                                srd_last_sub=srd_last_sub)
+                                            srd_args=srd_args,
+                                            srd_last_sub=srd_last_sub)
 
         new_data = calculate_characteristics_subhalo(
             repop_Vmax, repop_DistGC,
@@ -883,66 +1116,66 @@ def interior_loop(num_subs_max, sim_type, res_string,
         # print('   %.6f - %.6f %d'
         #       % (m_min, m_max, num_subhalos))
 
-        repop_Vmax = rej_samp(m_min, m_max,
-                              SHVF_Grand2012,
-                              num_subhalos=num_subhalos,
-                              sim_type=sim_type,
-                              res_string=res_string,
+        repop_Vmax = montecarlo_algorithm(m_min, m_max,
+                                          SHVF_Grand2012,
+                                          num_subhalos=num_subhalos,
+                                          sim_type=sim_type,
+                                          res_string=res_string,
 
-                              cosmo_G=cosmo_G,
-                              cosmo_H_0=cosmo_H_0,
-                              cosmo_rho_crit=cosmo_rho_crit,
+                                          cosmo_G=cosmo_G,
+                                          cosmo_H_0=cosmo_H_0,
+                                          cosmo_rho_crit=cosmo_rho_crit,
 
-                              host_R_vir=host_R_vir,
-                              host_rho_0=host_rho_0,
-                              host_r_s=host_r_s,
+                                          host_R_vir=host_R_vir,
+                                          host_rho_0=host_rho_0,
+                                          host_r_s=host_r_s,
 
-                              pathname=pathname,
-                              repop_its=repop_its,
-                              repop_print_freq=repop_print_freq,
-                              repop_inc_factor=repop_inc_factor,
+                                          pathname=pathname,
+                                          repop_its=repop_its,
+                                          repop_print_freq=repop_print_freq,
+                                          repop_inc_factor=repop_inc_factor,
 
-                              SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-                              SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-                              SHVF_bb=SHVF_bb,
-                              SHVF_mm=SHVF_mm,
+                                          SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+                                          SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+                                          SHVF_bb=SHVF_bb,
+                                          SHVF_mm=SHVF_mm,
 
-                              Cv_bb=Cv_bb,
-                              Cv_mm=Cv_mm,
-                              Cv_sigma=Cv_sigma,
+                                          Cv_bb=Cv_bb,
+                                          Cv_mm=Cv_mm,
+                                          Cv_sigma=Cv_sigma,
 
-                              srd_args=srd_args,
-                              srd_last_sub=srd_last_sub)
-        repop_DistGC = rej_samp(0, host_R_vir,
-                                Nr_Ntot,
-                                num_subhalos=num_subhalos,
-                                sim_type=sim_type,
-                                res_string=res_string,
+                                          srd_args=srd_args,
+                                          srd_last_sub=srd_last_sub)
+        repop_DistGC = montecarlo_algorithm(0, host_R_vir,
+                                            Nr_Ntot,
+                                            num_subhalos=num_subhalos,
+                                            sim_type=sim_type,
+                                            res_string=res_string,
 
-                                cosmo_G=cosmo_G,
-                                cosmo_H_0=cosmo_H_0,
-                                cosmo_rho_crit=cosmo_rho_crit,
+                                            cosmo_G=cosmo_G,
+                                            cosmo_H_0=cosmo_H_0,
+                                            cosmo_rho_crit=cosmo_rho_crit,
 
-                                host_R_vir=host_R_vir,
-                                host_rho_0=host_rho_0,
-                                host_r_s=host_r_s,
+                                            host_R_vir=host_R_vir,
+                                            host_rho_0=host_rho_0,
+                                            host_r_s=host_r_s,
 
-                                pathname=pathname,
-                                repop_its=repop_its,
-                                repop_print_freq=repop_print_freq,
-                                repop_inc_factor=repop_inc_factor,
+                                            pathname=pathname,
+                                            repop_its=repop_its,
+                                            repop_print_freq=repop_print_freq,
+                                            repop_inc_factor=repop_inc_factor,
 
-                                SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-                                SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-                                SHVF_bb=SHVF_bb,
-                                SHVF_mm=SHVF_mm,
+                                            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+                                            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+                                            SHVF_bb=SHVF_bb,
+                                            SHVF_mm=SHVF_mm,
 
-                                Cv_bb=Cv_bb,
-                                Cv_mm=Cv_mm,
-                                Cv_sigma=Cv_sigma,
+                                            Cv_bb=Cv_bb,
+                                            Cv_mm=Cv_mm,
+                                            Cv_sigma=Cv_sigma,
 
-                                srd_args=srd_args,
-                                srd_last_sub=srd_last_sub)
+                                            srd_args=srd_args,
+                                            srd_last_sub=srd_last_sub)
 
         new_data = calculate_characteristics_subhalo(
             repop_Vmax, repop_DistGC,
@@ -1117,6 +1350,7 @@ def computing_bin_by_bin(num_subs_max, sim_type, res_string,
 def main(inputs):
     sim_type = inputs[0]
     resilient = inputs[1]
+    path_name = inputs[2]
 
     # Calculations ----------------#
 
@@ -1136,14 +1370,6 @@ def main(inputs):
 
     repopulations = data_dict['repopulations']
 
-    path_name = str('outputs/'
-                    + repopulations['id']
-                    + time.strftime(" %Y-%m-%d %H:%M:%S",
-                                    time.gmtime()))
-
-    if not os.path.exists(path_name):
-        os.makedirs(path_name)
-
     # Save input data in a file in the outputs directory
     file_inputs = open(path_name + '/input_data.yml', 'w')
     yaml.dump(data_dict, file_inputs,
@@ -1152,14 +1378,14 @@ def main(inputs):
 
     print(path_name)
 
-    repop_its = repopulations['its']
+    repop_its = 5  # repopulations['its']
     repop_id = repopulations['id']
     num_subs_max = int(float(repopulations['num_subs_max']))
     repop_print_freq = repopulations['print_freq']
     repop_num_brightest = repopulations['num_brightest']
     repop_inc_factor = repopulations['inc_factor']
 
-    SHVF_cts_RangeMin = SHVF_cts['RangeMin']
+    SHVF_cts_RangeMin = 3.  # SHVF_cts['RangeMin']
     SHVF_cts_RangeMax = SHVF_cts['RangeMax']
 
     if resilient is True:
@@ -1226,12 +1452,18 @@ def main(inputs):
 print(time.strftime(" %d-%m-%Y %H:%M:%S", time.gmtime()))
 
 if __name__ == "__main__":
-    p = Pool(2, None)
+    path_name = str('outputs/'
+                    + 'Mont_test'
+                    + time.strftime(" %Y-%m-%d %H:%M:%S",
+                                    time.gmtime()))
+    os.makedirs(path_name)
+
+    p = Pool(4, None)
     p.map(main, [
-        # ['dmo', False],
-        # ['dmo', True],
-        ['hydro', False],
-        ['hydro', True]
+        ['hydro', True, path_name],
+        ['dmo', False, path_name],
+        ['dmo', True, path_name],
+        ['hydro', False, path_name]
     ])
     p.close()
     p.join()
