@@ -443,12 +443,12 @@ def Nr_Ntot(DistGC,
 
     else:
         if sim_type == 'dmo':
-            return (N_subs_fragile(DistGC,
-                                   [1011.38716, 0.4037927, 2.35522213])
+            return (10 ** N_subs_fragile(DistGC,
+                                         [1011.38716, 0.4037927, 2.35522213])
                     * (DistGC >= srd_last_sub))
         if sim_type == 'hydro':
-            return (N_subs_fragile(DistGC,
-                                   [666.49179, 0.75291017, 2.90546523])
+            return (10 ** N_subs_fragile(DistGC,
+                                         [666.49179, 0.75291017, 2.90546523])
                     * (DistGC >= srd_last_sub))
 
 
@@ -1232,6 +1232,6 @@ if __name__ == "__main__":
         # ['dmo', True],
         ['hydro', False],
         ['hydro', True]
-        ])
+    ])
     p.close()
     p.join()
