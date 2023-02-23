@@ -27,12 +27,15 @@ from multiprocessing import Pool
 @njit
 def simpson2(x, y):
     n = len(y) - 1
+    print(x)
+    print(y)
+
     h = np.zeros(n)
     for i in range(n):
         h[i] = x[i + 1] - x[i]
         if h[i] < 1e-5:
-            np.delete(h, i)
-            np.delete(y, i)
+            h = np.delete(h, i)
+            y = np.delete(y, i)
     n = len(h) - 1
     s = 0
     for i in range(1, n, 2):
@@ -47,16 +50,57 @@ def simpson2(x, y):
     print('holi')
 
     if ((n + 1) % 2 == 0):
+        print(n)
+        print(h[n - 1], h[n - 2])
         alpha = h[n - 1] * (3 - h[n - 1] / (h[n - 1] + h[n - 2]))
         print('alpha')
         beta = h[n - 1] * (3 + h[n - 1] / h[n - 2])
         print('beta')
+        print((h[n - 1] + h[n - 2]))
         gamma = -h[n - 1] * h[n - 1] * h[n - 1] / (
-                    h[n - 2] * (h[n - 1] + h[n - 2]))
+                h[n - 2] * (h[n - 1] + h[n - 2]))
         print('gamma')
         return (s + alpha * y[n] + beta * y[n - 1] + gamma * y[n - 2]) / 6
     else:
         return s / 6
+
+
+def tupleset(t, i, value):
+    l = list(t)
+    l[i] = value
+    return tuple(l)
+
+
+def _basic_simpson(y, start, stop, x, dx, axis):
+    nd = len(y.shape)
+    if start is None:
+        start = 0
+    step = 2
+    slice_all = (slice(None),) * nd
+    slice0 = tupleset(slice_all, axis, slice(start, stop, step))
+    slice1 = tupleset(slice_all, axis, slice(start + 1, stop + 1, step))
+    slice2 = tupleset(slice_all, axis, slice(start + 2, stop + 2, step))
+
+    if x is None:  # Even-spaced Simpson's rule.
+        result = np.sum(y[slice0] + 4 * y[slice1] + y[slice2], axis=axis)
+        result *= dx / 3.0
+    else:
+        # Account for possibly different spacings.
+        #    Simpson's rule changes a bit.
+        h = np.diff(x, axis=axis)
+        sl0 = tupleset(slice_all, axis, slice(start, stop, step))
+        sl1 = tupleset(slice_all, axis, slice(start + 1, stop + 1, step))
+        h0 = h[sl0]
+        h1 = h[sl1]
+        hsum = h0 + h1
+        hprod = h0 * h1
+        h0divh1 = h0 / h1
+        tmp = hsum / 6.0 * (y[slice0] * (2 - 1.0 / h0divh1) +
+                            y[slice1] * (hsum * hsum / hprod) +
+                            y[slice2] * (2 - h0divh1))
+        result = np.sum(tmp, axis=axis)
+    return result
+
 
 def simpson(y, x=None, dx=1.0, axis=-1, even='avg'):
     """
@@ -91,16 +135,16 @@ def simpson(y, x=None, dx=1.0, axis=-1, even='avg'):
 
     See Also
     --------
-    quad : adaptive quadrature using QUADPACK
-    romberg : adaptive Romberg quadrature
-    quadrature : adaptive Gaussian quadrature
-    fixed_quad : fixed-order Gaussian quadrature
-    dblquad : double integrals
-    tplquad : triple integrals
-    romb : integrators for sampled data
-    cumulative_trapezoid : cumulative integration for sampled data
-    ode : ODE integrators
-    odeint : ODE integrators
+    quad: adaptive quadrature using QUADPACK
+    romberg: adaptive Romberg quadrature
+    quadrature: adaptive Gaussian quadrature
+    fixed_quad: fixed-order Gaussian quadrature
+    dblquad: double integrals
+    tplquad: triple integrals
+    romb: integrators for sampled data
+    cumulative_trapezoid: cumulative integration for sampled data
+    ode: ODE integrators
+    odeint: ODE integrators
 
     Notes
     -----
@@ -133,8 +177,8 @@ def simpson(y, x=None, dx=1.0, axis=-1, even='avg'):
     if N % 2 == 0:
         val = 0.0
         result = 0.0
-        slice1 = (slice(None),)*nd
-        slice2 = (slice(None),)*nd
+        slice1 = (slice(None),) * nd
+        slice2 = (slice(None),) * nd
         if even not in ['avg', 'last', 'first']:
             raise ValueError("Parameter 'even' must be "
                              "'avg', 'last', or 'first'.")
@@ -144,22 +188,22 @@ def simpson(y, x=None, dx=1.0, axis=-1, even='avg'):
             slice2 = tupleset(slice2, axis, -2)
             if x is not None:
                 last_dx = x[slice1] - x[slice2]
-            val += 0.5*last_dx*(y[slice1]+y[slice2])
-            result = _basic_simpson(y, 0, N-3, x, dx, axis)
+            val += 0.5 * last_dx * (y[slice1] + y[slice2])
+            result = _basic_simpson(y, 0, N - 3, x, dx, axis)
         # Compute using Simpson's rule on last set of intervals
         if even in ['avg', 'last']:
             slice1 = tupleset(slice1, axis, 0)
             slice2 = tupleset(slice2, axis, 1)
             if x is not None:
                 first_dx = x[tuple(slice2)] - x[tuple(slice1)]
-            val += 0.5*first_dx*(y[slice2]+y[slice1])
-            result += _basic_simpson(y, 1, N-2, x, dx, axis)
+            val += 0.5 * first_dx * (y[slice2] + y[slice1])
+            result += _basic_simpson(y, 1, N - 2, x, dx, axis)
         if even == 'avg':
             val /= 2.0
             result /= 2.0
         result = result + val
     else:
-        result = _basic_simpson(y, 0, N-2, x, dx, axis)
+        result = _basic_simpson(y, 0, N - 2, x, dx, axis)
     if returnshape:
         x = x.reshape(saveshape)
     return result
@@ -170,7 +214,6 @@ def memory_usage_psutil():
     process = psutil.Process(os.getpid())
     mem = process.memory_info()[0] / float(10 ** 6)
     return mem
-
 
 
 def read_config_file(ConfigFile):
@@ -482,9 +525,9 @@ def R_s(V, C, cosmo_H_0):
 
 
 @njit
-def R_t(V, C, DistGC, cosmo_H_0, cosmo_G,
-        host_rho_0,
-        host_r_s):
+def R_t(V, C, DistGC,
+        cosmo_H_0, cosmo_G,
+        host_rho_0, host_r_s):
     """
     Calculation of tidal radius (R_t) of a subhalo, following the
     NFW analytical expression for a subhalo density profile.
@@ -538,8 +581,8 @@ def N_subs_resilient(DistGC, args):
 
 @njit()
 def N_subs_fragile(DistGC, args):
-    return (10 ** ((DistGC / args[0]) ** args[1]
-                   * np.exp(-args[2] * (DistGC - args[0]) / args[0])))
+    return ((DistGC / args[0]) ** args[1]
+            * np.exp(-args[2] * (DistGC - args[0]) / args[0]))
 
 
 @njit
@@ -669,16 +712,18 @@ def C200_from_Cv(Cv):
     :return: float or array-like
         c200 of subhalo (concentration definition)
     """
-    if np.shape(Cv) == ():
-        C200_med = newton2(def_Cv, 40.0, Cv[0])
-        C200_med = np.array([C200_med])
-    else:
-        num = np.shape(Cv)[0]
-        C200_med = np.zeros(num)
-
-        for i in range(num):
-            # opt.root(def_Cv, 40, args=Cv[i])['x'][0]
-            C200_med[i] = newton2(def_Cv, 40.0, Cv[i])
+    C200_med = newton2(def_Cv, 40.0, Cv)
+    C200_med = np.array([C200_med])
+    # if np.shape(Cv) == ():
+    #     C200_med = newton2(def_Cv, 40.0, Cv)
+    #     C200_med = np.array([C200_med])
+    # else:
+    #     num = np.shape(Cv)[0]
+    #     C200_med = np.zeros(num)
+    #
+    #     for i in range(num):
+    #         # opt.root(def_Cv, 40, args=Cv[i])['x'][0]
+    #         C200_med[i] = newton2(def_Cv, 40.0, Cv[i])
 
     return C200_med
 
@@ -822,8 +867,10 @@ def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
                          srd_args,
                          srd_last_sub):
     """
-    Rejection sample algorithm. It populates a number of objects
+    Montecarlo sample algorithm. It populates a number of objects
     with a probability distribution defined by the pdf function.
+    Calculates the cdf and relates it to the distribution of
+    parameters.
 
     :param x_min: float
         Minimum value the function can intake.
@@ -838,7 +885,7 @@ def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
         Population following the probability distribution.
     """
     x = np.logspace(np.log10(x_min), np.log10(x_max),
-                    num=1000)
+                    num=2000)
     y = pdf(x,
             sim_type, res_string,
             cosmo_G,
@@ -866,14 +913,12 @@ def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
             srd_args,
             srd_last_sub)
 
-
     cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
-    print(cumul[-1])
     cumul /= cumul[-1]
 
     x_mean = (x[1:] + x[:-1]) / 2.
 
-    x_min = ((np.array(cumul) - 1e-5) < 0).argmin() - 1
+    x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
 
     spline = UnivariateSpline(cumul[x_min:], x_mean[x_min:],
                               s=0, k=1, ext=0)
@@ -881,7 +926,7 @@ def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
     return spline(np.random.random(num_subhalos))
 
 
-@njit
+@jit(forceobj=True)
 def calculate_characteristics_subhalo(Vmax, Distgc,
                                       sim_type, res_string,
                                       cosmo_G,
@@ -934,14 +979,6 @@ def calculate_characteristics_subhalo(Vmax, Distgc,
                         cosmo_G=cosmo_G,
                         cosmo_H_0=cosmo_H_0)
 
-    if res_string == 'fragile':
-        roche = (R_t(Vmax, repop_C, Distgc, cosmo_H_0, cosmo_G,
-                     host_rho_0, host_r_s)
-                 > R_s(Vmax, repop_C, cosmo_H_0))
-
-        repop_Js *= roche
-        repop_J03 *= roche
-
     # Angular size of subhalos (up to R_s)
     repop_Theta = 180 / np.pi * np.arctan(
         R_s(Vmax, repop_C, cosmo_H_0) / repop_DistEarth)
@@ -990,13 +1027,14 @@ def interior_loop(num_subs_max, sim_type, res_string,
     # save memory
     m_min = SHVF_cts_RangeMin
 
+    aaa = 200
+
     while SHVF_Grand2012_int(m_min, SHVF_cts_RangeMax,
                              SHVF_bb, SHVF_mm) > num_subs_max:
 
         m_max = newton(xx, m_min,
                        args=[m_min, SHVF_bb, SHVF_mm, num_subs_max])
-        # print('   %.6f - %.6f %d'
-        #       % (m_min, m_max, SHVF_Grand2012_int(m_min, m_max)))
+
         repop_Vmax = montecarlo_algorithm(m_min, m_max,
                                           SHVF_Grand2012,
                                           num_subhalos=num_subs_max,
@@ -1027,7 +1065,7 @@ def interior_loop(num_subs_max, sim_type, res_string,
 
                                           srd_args=srd_args,
                                           srd_last_sub=srd_last_sub)
-        repop_DistGC = montecarlo_algorithm(0, host_R_vir,
+        repop_DistGC = montecarlo_algorithm(1e-3, host_R_vir,
                                             Nr_Ntot,
                                             num_subhalos=num_subs_max,
                                             sim_type=sim_type,
@@ -1091,20 +1129,43 @@ def interior_loop(num_subs_max, sim_type, res_string,
         bright_Js = np.where(
             np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
 
+        aaa = np.min(((np.min(new_data[:, 2])), aaa))
+        if res_string == 'fragile':
+            while (R_t(new_data[bright_Js, 4],
+                       new_data[bright_Js, 6],
+                       new_data[bright_Js, 2],
+                       cosmo_H_0, cosmo_G,
+                       host_rho_0, host_r_s)
+                   < R_s(new_data[bright_Js, 4],
+                         new_data[bright_Js, 6],
+                         cosmo_H_0)):
+                new_data[bright_Js, 0] = 0.
+                bright_Js = np.where(
+                    np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
+                print('Roche')
+
         if new_data[bright_Js, 0] > brightest_Js[0, 0]:
             brightest_Js[0, 0] = new_data[bright_Js, 0]
             brightest_Js[1:, 0] = new_data[bright_Js, 2:]
 
         bright_J03 = np.where(
-            np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
+            np.max(new_data[:, 1]) == new_data[:, 1])[0][0]
+        if res_string == 'fragile':
+            while (R_t(new_data[bright_J03, 4],
+                       new_data[bright_J03, 6],
+                       new_data[bright_J03, 2],
+                       cosmo_H_0, cosmo_G,
+                       host_rho_0, host_r_s)
+                   < R_s(new_data[bright_J03, 4],
+                         new_data[bright_J03, 6],
+                         cosmo_H_0)):
+                new_data[bright_J03, 0] = 0.
+                bright_J03 = np.where(
+                    np.max(new_data[:, 1]) == new_data[:, 1])[0][0]
         if new_data[bright_J03, 1] > brightest_J03[0, 0]:
             brightest_J03[0, 0] = new_data[bright_J03, 1]
             brightest_J03[1:, 0] = new_data[bright_J03, 2:]
 
-        # print('        %.3f  %s\n' %
-        #       (memory_usage_psutil(),
-        #        time.strftime(" %Y-%m-%d %H:%M:%S",
-        #                      time.gmtime())))
         m_min = m_max
 
     while m_min < SHVF_cts_RangeMax:
@@ -1146,7 +1207,7 @@ def interior_loop(num_subs_max, sim_type, res_string,
 
                                           srd_args=srd_args,
                                           srd_last_sub=srd_last_sub)
-        repop_DistGC = montecarlo_algorithm(0, host_R_vir,
+        repop_DistGC = montecarlo_algorithm(1e-3, host_R_vir,
                                             Nr_Ntot,
                                             num_subhalos=num_subhalos,
                                             sim_type=sim_type,
@@ -1210,12 +1271,39 @@ def interior_loop(num_subs_max, sim_type, res_string,
         bright_Js = np.where(
             np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
 
+        aaa = np.min(((np.min(new_data[:, 2])), aaa))
+        if res_string == 'fragile':
+            while (R_t(new_data[bright_Js, 4],
+                       new_data[bright_Js, 6],
+                       new_data[bright_Js, 2],
+                       cosmo_H_0, cosmo_G,
+                       host_rho_0, host_r_s)
+                   < R_s(new_data[bright_Js, 4],
+                         new_data[bright_Js, 6],
+                         cosmo_H_0)):
+                new_data[bright_Js, 0] = 0.
+                bright_Js = np.where(
+                    np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
+                print('Roche')
+
         if new_data[bright_Js, 0] > brightest_Js[0, 0]:
             brightest_Js[0, 0] = new_data[bright_Js, 0]
             brightest_Js[1:, 0] = new_data[bright_Js, 2:]
 
         bright_J03 = np.where(
             np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
+        if res_string == 'fragile':
+            while (R_t(new_data[bright_J03, 4],
+                       new_data[bright_J03, 6],
+                       new_data[bright_J03, 2],
+                       cosmo_H_0, cosmo_G,
+                       host_rho_0, host_r_s)
+                   < R_s(new_data[bright_J03, 4],
+                         new_data[bright_J03, 6],
+                         cosmo_H_0)):
+                new_data[bright_J03, 0] = 0.
+                bright_J03 = np.where(
+                    np.max(new_data[:, 1]) == new_data[:, 1])[0][0]
         if new_data[bright_J03, 1] > brightest_J03[0, 0]:
             brightest_J03[0, 0] = new_data[bright_J03, 1]
             brightest_J03[1:, 0] = new_data[bright_J03, 2:]
@@ -1226,7 +1314,7 @@ def interior_loop(num_subs_max, sim_type, res_string,
         #       (memory_usage_psutil(),
         #        time.strftime(" %Y-%m-%d %H:%M:%S",
         #                      time.gmtime())))
-
+    # print(aaa)
     return brightest_Js, brightest_J03
 
 
@@ -1288,9 +1376,9 @@ def computing_bin_by_bin(num_subs_max, sim_type, res_string,
     for it in range(repop_its):
 
         if it % repop_print_freq == 0:
-            print('    ', sim_type, ', res: ', res_string,
-                  ', iteration ', it)
-            print('        %.3f' % memory_usage_psutil())
+            print('    %s %s %s: it %d \n' % (
+                time.strftime(" %Y-%m-%d %H:%M:%S", time.gmtime()),
+                sim_type, res_string, it))
             progress = open(pathname + '/progress_' +
                             sim_type + '_'
                             + str(res_string)
@@ -1376,16 +1464,14 @@ def main(inputs):
               default_flow_style=False, allow_unicode=True)
     file_inputs.close()
 
-    print(path_name)
-
-    repop_its = 5  # repopulations['its']
+    repop_its = 50#repopulations['its']
     repop_id = repopulations['id']
     num_subs_max = int(float(repopulations['num_subs_max']))
     repop_print_freq = repopulations['print_freq']
     repop_num_brightest = repopulations['num_brightest']
     repop_inc_factor = repopulations['inc_factor']
 
-    SHVF_cts_RangeMin = 3.  # SHVF_cts['RangeMin']
+    SHVF_cts_RangeMin = 0.5  # SHVF_cts['RangeMin']
     SHVF_cts_RangeMax = SHVF_cts['RangeMax']
 
     if resilient is True:
@@ -1457,13 +1543,18 @@ if __name__ == "__main__":
                     + time.strftime(" %Y-%m-%d %H:%M:%S",
                                     time.gmtime()))
     os.makedirs(path_name)
+    print(path_name)
+    main(['hydro', False, path_name])
+    main(['hydro', True, path_name])
+    main(['dmo', False, path_name])
+    main(['dmo', True, path_name])
 
-    p = Pool(4, None)
-    p.map(main, [
-        ['hydro', True, path_name],
-        ['dmo', False, path_name],
-        ['dmo', True, path_name],
-        ['hydro', False, path_name]
-    ])
-    p.close()
-    p.join()
+    # p = Pool(4, None)
+    # p.map(main, [
+    #     ['hydro', True, path_name],
+    #     ['dmo', False, path_name],
+    #     ['dmo', True, path_name],
+    #     ['hydro', False, path_name]
+    # ])
+    # p.close()
+    # p.join()
