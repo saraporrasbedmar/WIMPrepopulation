@@ -1,4 +1,5 @@
 import os
+import sys
 import math
 import yaml
 import psutil
@@ -16,53 +17,11 @@ from numba.core.errors import NumbaDeprecationWarning, \
     NumbaPendingDeprecationWarning
 import warnings
 
-# simpson_njit = njit()(simpson)
 
 warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
 warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 
 from multiprocessing import Pool
-
-
-@njit
-def simpson2(x, y):
-    n = len(y) - 1
-    print(x)
-    print(y)
-
-    h = np.zeros(n)
-    for i in range(n):
-        h[i] = x[i + 1] - x[i]
-        if h[i] < 1e-5:
-            h = np.delete(h, i)
-            y = np.delete(y, i)
-    n = len(h) - 1
-    s = 0
-    for i in range(1, n, 2):
-        a = h[i] * h[i]
-        b = h[i] * h[i - 1]
-        c = h[i - 1] * h[i - 1]
-        d = h[i] + h[i - 1]
-        alpha = (2 * a + b - c) / h[i]
-        beta = d * d * d / b
-        gamma = (-a + b + 2 * c) / h[i - 1]
-        s += alpha * y[i + 1] + beta * y[i] + gamma * y[i - 1]
-    print('holi')
-
-    if ((n + 1) % 2 == 0):
-        print(n)
-        print(h[n - 1], h[n - 2])
-        alpha = h[n - 1] * (3 - h[n - 1] / (h[n - 1] + h[n - 2]))
-        print('alpha')
-        beta = h[n - 1] * (3 + h[n - 1] / h[n - 2])
-        print('beta')
-        print((h[n - 1] + h[n - 2]))
-        gamma = -h[n - 1] * h[n - 1] * h[n - 1] / (
-                h[n - 2] * (h[n - 1] + h[n - 2]))
-        print('gamma')
-        return (s + alpha * y[n] + beta * y[n - 1] + gamma * y[n - 2]) / 6
-    else:
-        return s / 6
 
 
 def tupleset(t, i, value):
@@ -1314,7 +1273,7 @@ def interior_loop(num_subs_max, sim_type, res_string,
         #       (memory_usage_psutil(),
         #        time.strftime(" %Y-%m-%d %H:%M:%S",
         #                      time.gmtime())))
-    # print(aaa)
+    #print(aaa)
     return brightest_Js, brightest_J03
 
 
@@ -1439,6 +1398,7 @@ def main(inputs):
     sim_type = inputs[0]
     resilient = inputs[1]
     path_name = inputs[2]
+    print(sim_type, resilient, type(resilient))
 
     # Calculations ----------------#
 
@@ -1464,14 +1424,14 @@ def main(inputs):
               default_flow_style=False, allow_unicode=True)
     file_inputs.close()
 
-    repop_its = 50#repopulations['its']
+    repop_its = repopulations['its']
     repop_id = repopulations['id']
     num_subs_max = int(float(repopulations['num_subs_max']))
     repop_print_freq = repopulations['print_freq']
     repop_num_brightest = repopulations['num_brightest']
     repop_inc_factor = repopulations['inc_factor']
 
-    SHVF_cts_RangeMin = 0.5  # SHVF_cts['RangeMin']
+    SHVF_cts_RangeMin = SHVF_cts['RangeMin']
     SHVF_cts_RangeMax = SHVF_cts['RangeMax']
 
     if resilient is True:
@@ -1539,22 +1499,29 @@ print(time.strftime(" %d-%m-%Y %H:%M:%S", time.gmtime()))
 
 if __name__ == "__main__":
     path_name = str('outputs/'
-                    + 'Mont_test'
-                    + time.strftime(" %Y-%m-%d %H:%M:%S",
-                                    time.gmtime()))
-    os.makedirs(path_name)
+                    + 'test'  #sys.argv[3]
+                    #+ time.strftime(" %Y-%m-%d %H:%M:%S",
+                    #                time.gmtime())
+                    )
+    #if not os.path.exists(path_name):
+    #    os.makedirs(path_name)
     print(path_name)
-    main(['hydro', False, path_name])
-    main(['hydro', True, path_name])
-    main(['dmo', False, path_name])
-    main(['dmo', True, path_name])
+    print(sys.argv)
+    if sys.argv[2] == 'True':
+        main([sys.argv[1], True, path_name])
+    if sys.argv[2] == 'False':
+        main([sys.argv[1], False, path_name])
+    #main(['hydro', False, path_name])
+    #main(['hydro', True, path_name])
+    #main(['dmo', False, path_name])
+    #main(['dmo', True, path_name])
 
-    # p = Pool(4, None)
-    # p.map(main, [
-    #     ['hydro', True, path_name],
-    #     ['dmo', False, path_name],
-    #     ['dmo', True, path_name],
-    #     ['hydro', False, path_name]
-    # ])
-    # p.close()
-    # p.join()
+    #p = Pool(4, None)
+    #p.map(main, [
+    #    ['hydro', True, path_name],
+    #    ['dmo', False, path_name],
+    #    ['dmo', True, path_name],
+    #    ['hydro', False, path_name]
+    #])
+    #p.close()
+    #p.join()

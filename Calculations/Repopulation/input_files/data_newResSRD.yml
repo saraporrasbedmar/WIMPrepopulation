@@ -22,7 +22,7 @@ SHVF:
         bb: 5.0796
     
     # Min and max velocities to repopulate [km/s]
-    RangeMin: 0.5
+    RangeMin: 0.1
     RangeMax: 7.
     
     
