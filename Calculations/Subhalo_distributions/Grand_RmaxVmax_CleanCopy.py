@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import scipy.special as spice
 import scipy.optimize as opt
 
+from scipy.optimize import curve_fit
 from scipy.stats import gmean
 
 plt.rcParams['mathtext.fontset'] = 'stix'
@@ -67,11 +68,12 @@ def Cv_Mol2021(V, x, ci=[1.12e5, -0.9512, -0.5538, -0.3221, -1.7828]):
             * (1 + ci[4] * np.log10(x)))
 
 
-def Cv_Mol2021_redshift0(V, ci=[1.75e5, -0.90368, 0.2749, -0.028]):
+def Cv_Mol2021_redshift0(V, c0=1.75e5, c1=-0.90368, c2=0.2749, c3=-0.028):
     # Median subhalo concentration depending on its Vmax and its redshift (here z=0)
     # Moline et al. 2110.02097
     #
     # V - max radial velocity of a bound particle in the subhalo [km/s]
+    ci = [c0, c1, c2, c3]
     return ci[0] * (1 + (sum([ci[i + 1] * np.log10(V) ** (i + 1)
                               for i in range(3)])))
 
@@ -90,17 +92,20 @@ H0 = 70. / 1e3
 def calculate_med(dataset, num_interv, perc_low=20, perc_high=80, nmax=60):
     x_approx = np.logspace(np.log10(dataset[0, 1]), np.log10(nmax),
                            num=num_interv)
-    print(x_approx)
+    # print(x_approx)
 
     ymed = []
     yp20 = []
     yp80 = []
-    print(dataset[:, 1])
+    # print(dataset[:, 1])
 
     for i in range(num_interv - 1):
-        print(len(np.where(dataset[:, 1] > x_approx[i + 1])[0]))
-        if len(np.where(dataset[:, 1] > x_approx[i + 1])[0]) == 0\
-                or len(np.where(dataset[:, 1] > x_approx[i])[0]) == 0:
+        # print(len(np.where(dataset[:, 1] > x_approx[i])[0]),
+        #       len(np.where(dataset[:, 1] > x_approx[i + 1])[0]))
+        if len(np.where(dataset[:, 1] > x_approx[i + 1])[0]) == 0 \
+                or len(np.where(dataset[:, 1] > x_approx[i])[0]) == 0 \
+                or (len(np.where(dataset[:, 1] > x_approx[i])[0])
+                    == len(np.where(dataset[:, 1] > x_approx[i + 1])[0])):
             ymed.append(0)
             yp20.append(0)
             yp80.append(0)
@@ -108,14 +113,20 @@ def calculate_med(dataset, num_interv, perc_low=20, perc_high=80, nmax=60):
             xmin = np.where(dataset[:, 1] > x_approx[i])[0][0]
             xmax = np.where(dataset[:, 1] > x_approx[i + 1])[0][0]
 
+            # print(dataset[:, 0][xmin:xmax])
+
             ymed.append(np.median(dataset[:, 0][xmin:xmax]))
             yp20.append(np.nanpercentile(dataset[:, 0][xmin:xmax], perc_low))
             yp80.append(np.nanpercentile(dataset[:, 0][xmin:xmax], perc_high))
 
     x_approx = (x_approx[:-1] + x_approx[1:]) / 2.
-    print('x_approx, np.array(ymed)')
-    print(x_approx, np.array(ymed))
-    return x_approx, np.array(ymed), np.array(yp20), np.array(yp80)
+    y_ceros = np.array(ymed) > 0.
+    x_approx = x_approx[y_ceros]
+    ymed = np.array(ymed)[y_ceros]
+    yp20 = np.array(yp20)[y_ceros]
+    yp80 = np.array(yp80)[y_ceros]
+
+    return x_approx, ymed, yp20, yp80
 
 
 def calculate_mean(dataset, num_interv, perc_low=20, perc_high=80, nmax=60):
@@ -126,11 +137,10 @@ def calculate_mean(dataset, num_interv, perc_low=20, perc_high=80, nmax=60):
     ymed = []
 
     for i in range(num_interv - 1):
-        print(len(np.where(dataset[:, 1] > x_approx[i + 1])[0]))
-        print(len(np.where(dataset[:, 1] > x_approx[i])[0]))
-
-        if len(np.where(dataset[:, 1] > x_approx[i + 1])[0]) == 0\
-                or len(np.where(dataset[:, 1] > x_approx[i])[0]) == 0:
+        if len(np.where(dataset[:, 1] > x_approx[i + 1])[0]) == 0 \
+                or len(np.where(dataset[:, 1] > x_approx[i])[0]) == 0 \
+                or (len(np.where(dataset[:, 1] > x_approx[i])[0])
+                    == len(np.where(dataset[:, 1] > x_approx[i + 1])[0])):
             ymed.append(0)
         else:
             xmin = np.where(dataset[:, 1] > x_approx[i])[0][0]
@@ -139,7 +149,10 @@ def calculate_mean(dataset, num_interv, perc_low=20, perc_high=80, nmax=60):
             ymed.append(np.mean(dataset[:, 0][xmin:xmax]))
 
     x_approx = (x_approx[:-1] + x_approx[1:]) / 2.
-    return x_approx, np.array(ymed)
+    y_ceros = np.array(ymed) > 0.
+    x_approx = x_approx[y_ceros]
+    ymed = np.array(ymed)[y_ceros]
+    return x_approx, ymed
 
 
 def calculate_gmean(dataset, num_interv, nmax=60):
@@ -147,13 +160,13 @@ def calculate_gmean(dataset, num_interv, nmax=60):
                            num=num_interv)
 
     ymed = []
-
     for i in range(num_interv - 1):
-        print(len(np.where(dataset[:, 1] > x_approx[i + 1])[0]))
-        print(len(np.where(dataset[:, 1] > x_approx[i])[0]))
-
-        if len(np.where(dataset[:, 1] > x_approx[i + 1])[0]) == 0\
-                or len(np.where(dataset[:, 1] > x_approx[i])[0]) == 0:
+        # print(len(np.where(dataset[:, 1] > x_approx[i])[0]),
+        #       len(np.where(dataset[:, 1] > x_approx[i + 1])[0]))
+        if len(np.where(dataset[:, 1] > x_approx[i + 1])[0]) == 0 \
+                or len(np.where(dataset[:, 1] > x_approx[i])[0]) == 0 \
+                or (len(np.where(dataset[:, 1] > x_approx[i])[0])
+                    == len(np.where(dataset[:, 1] > x_approx[i + 1])[0])):
             ymed.append(0)
         else:
             xmin = np.where(dataset[:, 1] > x_approx[i])[0][0]
@@ -162,7 +175,11 @@ def calculate_gmean(dataset, num_interv, nmax=60):
             ymed.append(gmean(dataset[:, 0][xmin:xmax]))
 
     x_approx = (x_approx[:-1] + x_approx[1:]) / 2.
-    return x_approx, np.array(ymed)
+    y_ceros = np.array(ymed) > 0.
+    x_approx = x_approx[y_ceros]
+    ymed = np.array(ymed)[y_ceros]
+
+    return x_approx, ymed
 
 
 def fits2(data, xxx, limit):
@@ -189,10 +206,6 @@ def ff(x):
 
 
 def power_law_from_median(median, perct20, perct80, xx, limit):
-    print(median)
-    print(xx)
-    print(limit)
-
     fitsM, fitsB = fits2(median, xx, limit)
     print('m and b')
     print("%.3f  %.3f" % (fitsM, fitsB))
@@ -225,8 +238,8 @@ def sigma_from_2080(exponents):
 
     # xmax-xmed = n.sigma in a normal distribution
     print('n from sigmas: %.3f and %.3f' % (
-    (-exponents[0] + exponents[1]) / bb20['x'],
-    (-exponents[2] + exponents[0]) / bb80['x']))
+        (-exponents[0] + exponents[1]) / bb20['x'],
+        (-exponents[2] + exponents[0]) / bb80['x']))
 
     return [bb20['x'], bb80['x']]
 
@@ -249,71 +262,65 @@ def C200_from_Cv(yy_med, y20, y80, xx):
 
 
 def Cm_Mol16(M, x, ci=[19.9, -0.195, 0.089, 0.089, -0.54]):
-    # Median subhalo concentration depending on its mass and distance to the host center
+    # Median subhalo concentration depending on its mass and distance
+    # to the host center
     # Moline et al. 1603.04057
     #
     # M - tidal mass of the subhalo [Msun]
     # x - distance from the subh to the halo center [kpc]
     return ci[0] * (
-                1 + (sum([(ci[i + 1] * np.log10(M * 0.7 / 10 ** 8)) ** (i + 1)
-                          for i in range(3)]))) * (
-                       1 + ci[4] * np.log10(x / R200))
+            1 + (sum([(ci[i + 1] * np.log10(M * 0.7 / 10 ** 8)) ** (i + 1)
+                      for i in range(3)]))) * (
+                   1 + ci[4] * np.log10(x / R200))
 
 
 # %% CALCULATE THE MEDIAN VALUES OF THE DISTRIBUTION Rmax-Vmax
-'''
-number_bins_dmo = 20
-number_bins_hydro = 15
+
+number_bins_dmo = 18
+number_bins_hydro = 18
 
 # Limit to the power law tendency
 hydroLimit = 10
-dmoLimit = 12
+dmoLimit = 10
 
-    
 cv_dmo_cloud = Cv_Grand_points(Grand_dmo_raw[:, 1], Grand_dmo_raw[:, 0])
 cv_hydro_cloud = Cv_Grand_points(Grand_hydro_raw[:, 1], Grand_hydro_raw[:, 0])
-
 
 Grand_dmo[:, 0] = cv_dmo_cloud
 Grand_hydro[:, 0] = cv_hydro_cloud
 
-vv_means_dmo, cv_dmo_median, cv_dmo_min, cv_dmo_max = calculate_med(
-        Grand_dmo, number_bins_dmo, perc_low=16, perc_high=84) 
-vv_means_hydro, cv_hydro_median, cv_hydro_min, cv_hydro_max = calculate_med(
-        Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84) 
-
-
+vv_medians_dmo, cv_dmo_median, cv_dmo_min, cv_dmo_max = calculate_med(
+    Grand_dmo, number_bins_dmo, perc_low=16, perc_high=84)
+vv_medians_hydro, cv_hydro_median, cv_hydro_min, cv_hydro_max = calculate_med(
+    Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)
 
 vv_means_dmo, cv_dmo_mean = calculate_mean(
-        Grand_dmo, number_bins_dmo, perc_low=16, perc_high=84) 
+    Grand_dmo, number_bins_dmo, perc_low=16, perc_high=84)
 vv_means_hydro, cv_hydro_mean = calculate_mean(
-        Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)  
-
+    Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)
 
 vv_gmeans_dmo, cv_dmo_gmean = calculate_gmean(
-        Grand_dmo, number_bins_dmo, perc_low=16, perc_high=84) 
+    Grand_dmo, number_bins_dmo)
 vv_gmeans_hydro, cv_hydro_gmean = calculate_gmean(
-        Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)     
-    
-    
-    
-plt.close('all')
+    Grand_hydro, number_bins_hydro)
 
+plt.close('all')
 
 plt.figure()
 plt.ylim(1e3, 2e5)
 
 plt.scatter(Grand_dmo[:, 1], cv_dmo_cloud, color='k', s=3, label='DMO')
-plt.scatter(Grand_hydro[:, 1], cv_hydro_cloud, color='limegreen', label='Hydro', alpha=0.5, s=3)
+plt.scatter(Grand_hydro[:, 1], cv_hydro_cloud, color='limegreen',
+            label='Hydro', alpha=0.5, s=3)
 
-plt.plot(vv_means_dmo, cv_dmo_median, '-k')
-plt.plot(vv_means_hydro, cv_hydro_median, '-g')
+plt.plot(vv_medians_dmo, cv_dmo_median, '-k')
+plt.plot(vv_medians_hydro, cv_hydro_median, '-g')
 
-plt.plot(vv_means_dmo, cv_dmo_max, '--k')
-plt.plot(vv_means_hydro, cv_hydro_max, '--g')
+plt.plot(vv_medians_dmo, cv_dmo_max, '--k')
+plt.plot(vv_medians_hydro, cv_hydro_max, '--g')
 
-plt.plot(vv_means_dmo, cv_dmo_min, '--k')
-plt.plot(vv_means_hydro, cv_hydro_min, '--g')
+plt.plot(vv_medians_dmo, cv_dmo_min, '--k')
+plt.plot(vv_medians_hydro, cv_hydro_min, '--g')
 
 plt.xscale('log')
 plt.yscale('log')
@@ -321,17 +328,13 @@ plt.legend()
 
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
 plt.ylabel(r'c$_\mathrm{V}$', size=28)
-    
 
-
-
-
-
-plt.subplots(12, figsize=(18, 8))
+# FIGURE 2
+plt.subplots(12, figsize=(14, 7))
 ax1 = plt.subplot(121)
 
-plt.plot(vv_means_dmo, cv_dmo_median, '.k', ms=13, label='median')
-plt.plot(vv_means_hydro, cv_hydro_median, '.g', ms=13)
+plt.plot(vv_medians_dmo, cv_dmo_median, '.k', ms=13, label='median')
+plt.plot(vv_medians_hydro, cv_hydro_median, '.g', ms=13)
 
 plt.plot(vv_means_dmo, cv_dmo_mean, 'xk', ms=13, label='mean')
 plt.plot(vv_means_hydro, cv_hydro_mean, 'xg', ms=13)
@@ -339,13 +342,11 @@ plt.plot(vv_means_hydro, cv_hydro_mean, 'xg', ms=13)
 plt.plot(vv_gmeans_dmo, cv_dmo_gmean, '+k', ms=13, label='gmean')
 plt.plot(vv_gmeans_hydro, cv_hydro_gmean, '+g', ms=13)
 
-plt.plot(vv_means_dmo, cv_dmo_max, '--k')
-plt.plot(vv_means_hydro, cv_hydro_max, '--g')
+plt.plot(vv_medians_dmo, cv_dmo_max, '--k')
+plt.plot(vv_medians_hydro, cv_hydro_max, '--g')
 
-plt.plot(vv_means_dmo, cv_dmo_min, '--k')
-plt.plot(vv_means_hydro, cv_hydro_min, '--g')
-
-
+plt.plot(vv_medians_dmo, cv_dmo_min, '--k')
+plt.plot(vv_medians_hydro, cv_hydro_min, '--g')
 
 plt.ylabel(r'c$_\mathrm{V}$', size=28)
 
@@ -355,73 +356,129 @@ plt.legend()
 
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
 
-
-
 plt.subplot(122, sharex=ax1, sharey=ax1)
 
 print('Median--------------')
-print('DMO') 
-fitsM_dmo, exps_dmo = power_law_from_median(cv_dmo_median, cv_dmo_min, cv_dmo_max, vv_means_dmo, dmoLimit)
-print('Scatter: %.3f and %.3f' %(exps_dmo[0]-exps_dmo[1], exps_dmo[2]-exps_dmo[0]))
-
-
-print()
-print('Hydro') 
-fitsM_hydro, exps_hydro = power_law_from_median(cv_hydro_median, cv_hydro_min, cv_hydro_max, vv_means_hydro, hydroLimit)
-print('Scatter: %.3f and %.3f' %(exps_hydro[0]-exps_hydro[1], exps_hydro[2]-exps_hydro[0]))
-print()
-print()
-
-print('Mean--------------')
-print('DMO') 
-fitsM_dmo_mean, exps_dmo_mean = power_law_from_median(cv_dmo_mean, cv_dmo_min, cv_dmo_max, vv_means_dmo, dmoLimit)
-print('Scatter: %.3f and %.3f' %(exps_dmo_mean[0]-exps_dmo_mean[1], exps_dmo_mean[2]-exps_dmo_mean[0]))
-
+print('DMO')
+fitsM_dmo, exps_dmo = power_law_from_median(cv_dmo_median, cv_dmo_min,
+                                            cv_dmo_max, vv_medians_dmo,
+                                            dmoLimit)
+print('Scatter: %.3f and %.3f' % (
+    exps_dmo[0] - exps_dmo[1], exps_dmo[2] - exps_dmo[0]))
 
 print()
-print('Hydro') 
-fitsM_hydro_mean, exps_hydro_mean = power_law_from_median(cv_hydro_mean, cv_hydro_min, cv_hydro_max, 
-                                                          vv_means_hydro, hydroLimit)
-print('Scatter: %.3f and %.3f' %(exps_hydro_mean[0]-exps_hydro_mean[1], exps_hydro_mean[2]-exps_hydro_mean[0]))
+print('Hydro')
+fitsM_hydro, exps_hydro = power_law_from_median(cv_hydro_median,
+                                                cv_hydro_min, cv_hydro_max,
+                                                vv_medians_hydro, hydroLimit)
+print('Scatter: %.3f and %.3f' % (exps_hydro[0] - exps_hydro[1],
+                                  exps_hydro[2] - exps_hydro[0]))
+print()
+print()
 
-print()
-print()
+# print('Mean--------------')
+# print('DMO')
+# fitsM_dmo_mean, exps_dmo_mean = power_law_from_median(
+#     cv_dmo_mean, cv_dmo_min, cv_dmo_max, vv_means_dmo, dmoLimit)
+# print('Scatter: %.3f and %.3f' % (exps_dmo_mean[0] - exps_dmo_mean[1],
+#                                   exps_dmo_mean[2] - exps_dmo_mean[0]))
+#
+# print()
+# print('Hydro')
+# fitsM_hydro_mean, exps_hydro_mean = power_law_from_median(
+#     cv_hydro_mean, cv_hydro_min, cv_hydro_max, vv_means_hydro, hydroLimit)
+# print('Scatter: %.3f and %.3f' % (exps_hydro_mean[0] - exps_hydro_mean[1],
+#                                   exps_hydro_mean[2] - exps_hydro_mean[0]))
+#
+# print()
+# print()
 
 print('Gmean--------------')
-print('DMO') 
-fitsM_dmo_gmean, exps_dmo_gmean = power_law_from_median(cv_dmo_gmean, cv_dmo_min, cv_dmo_max, vv_gmeans_dmo, dmoLimit)
-print('Scatter: %.3f and %.3f' %(exps_dmo_gmean[0]-exps_dmo_gmean[1], exps_dmo_gmean[2]-exps_dmo_gmean[0]))
-
+print('DMO')
+fitsM_dmo_gmean, exps_dmo_gmean = power_law_from_median(
+    cv_dmo_gmean, cv_dmo_min, cv_dmo_max, vv_gmeans_dmo, dmoLimit)
+print('Scatter: %.3f and %.3f' % (exps_dmo_gmean[0] - exps_dmo_gmean[1],
+                                  exps_dmo_gmean[2] - exps_dmo_gmean[0]))
 
 print()
-print('Hydro') 
-fitsM_hydro_gmean, exps_hydro_gmean = power_law_from_median(cv_hydro_gmean, cv_hydro_min, cv_hydro_max, 
-                                                          vv_gmeans_hydro, hydroLimit)
-print('Scatter: %.3f and %.3f' %(exps_hydro_gmean[0]-exps_hydro_gmean[1], exps_hydro_gmean[2]-exps_hydro_gmean[0]))
+print('Hydro')
+fitsM_hydro_gmean, exps_hydro_gmean = power_law_from_median(
+    cv_hydro_gmean, cv_hydro_min, cv_hydro_max, vv_gmeans_hydro, hydroLimit)
+print('Scatter: %.3f and %.3f' % (exps_hydro_gmean[0] - exps_hydro_gmean[1],
+                                  exps_hydro_gmean[2] - exps_hydro_gmean[0]))
 
+xx_plot = np.logspace(np.log10(vv_medians_dmo[0]), np.log10(60))
 
-xx_plot = np.logspace(np.log10(vv_means_dmo[0]), np.log10(60))
+plt.plot(xx_plot, 10 ** exps_dmo[0] * xx_plot ** fitsM_dmo, '-k', linewidth=3,
+         label='median')
+plt.plot(xx_plot, 10 ** exps_hydro[0] * xx_plot ** fitsM_hydro, '-g',
+         linewidth=3)
 
-plt.plot(xx_plot, 10**exps_dmo  [0]*xx_plot**fitsM_dmo,   '-k', linewidth=3, label='median')
-plt.plot(xx_plot, 10**exps_hydro[0]*xx_plot**fitsM_hydro, '-g', linewidth=3)
+# plt.plot(xx_plot, 10 ** exps_dmo_mean[0] * xx_plot ** fitsM_dmo_mean, '--k',
+#          linewidth=3, label='mean')
+# plt.plot(xx_plot, 10 ** exps_hydro_mean[0] * xx_plot ** fitsM_hydro_mean,
+#          '--g',
+#          linewidth=3)
 
-plt.plot(xx_plot, 10**exps_dmo_mean  [0]*xx_plot**fitsM_dmo_mean,   '--k', linewidth=3, label='mean')
-plt.plot(xx_plot, 10**exps_hydro_mean[0]*xx_plot**fitsM_hydro_mean, '--g', linewidth=3)
+plt.plot(xx_plot, 10 ** exps_dmo_gmean[0] * xx_plot ** fitsM_dmo_gmean, ':k',
+         linewidth=3, label='gmean')
+plt.plot(xx_plot, 10 ** exps_hydro_gmean[0] * xx_plot ** fitsM_hydro_gmean,
+         ':g',
+         linewidth=3)
 
-plt.plot(xx_plot, 10**exps_dmo_gmean  [0]*xx_plot**fitsM_dmo_gmean,   ':k', linewidth=3, label='gmean')
-plt.plot(xx_plot, 10**exps_hydro_gmean[0]*xx_plot**fitsM_hydro_gmean, ':g', linewidth=3)
+plt.plot(vv_medians_dmo, cv_dmo_median, '.k', ms=13)
+plt.plot(vv_medians_hydro, cv_hydro_median, '.g', ms=13)
 
-
-plt.plot(vv_means_dmo, cv_dmo_median, '.k', label='DMO', ms=13)
-plt.plot(vv_means_hydro, cv_hydro_median, '.g', label='Hydro', ms=13)
-
-plt.plot(vv_means_dmo, cv_dmo_mean, 'xk', ms=13)
-plt.plot(vv_means_hydro, cv_hydro_mean, 'xg', ms=13)
-
+# plt.plot(vv_means_dmo, cv_dmo_mean, 'xk', ms=13)
+# plt.plot(vv_means_hydro, cv_hydro_mean, 'xg', ms=13)
 
 plt.axvline(dmoLimit, linestyle='-', color='k', alpha=0.3, linewidth=2)
 plt.axvline(hydroLimit, linestyle='-', color='g', alpha=0.3, linewidth=2)
 
+plt.plot(xx_plot, Cv_Mol2021_redshift0(xx_plot), color='red',
+         label='Moliné+21', alpha=0.5, linewidth=3)
+
+
+# fit to moline21
+def log10MOline21(V, c0, c1, c2, c3):
+    return np.log10(Cv_Mol2021_redshift0(V, c0, c1, c2, c3))
+
+
+moline_fits = curve_fit(log10MOline21,
+                        xdata=vv_medians_dmo[vv_medians_dmo > dmoLimit],
+                        ydata=np.log10(
+                            cv_dmo_median[vv_medians_dmo > dmoLimit]),
+                        p0=[1.75e5, -0.90368, 0.2749, -0.028],
+                        bounds=([-np.inf, -5, -5, -5],
+                                [+np.inf, 5, 5, 5]))
+
+print(moline_fits)
+
+plt.plot(xx_plot, Cv_Mol2021_redshift0(V=xx_plot,
+                                       c0=moline_fits[0][0],
+                                       c1=moline_fits[0][1],
+                                       c2=moline_fits[0][2],
+                                       c3=moline_fits[0][3]),
+         color='k',
+         label='Moliné+21 fit', alpha=0.5, linewidth=3)
+
+moline_fits = curve_fit(log10MOline21,
+                        xdata=vv_medians_hydro[vv_medians_hydro > hydroLimit],
+                        ydata=np.log10(
+                            cv_hydro_median[vv_medians_hydro > hydroLimit]),
+                        p0=[1.75e5, -0.90368, 0.2749, -0.028],
+                        bounds=([-np.inf, -np.inf, -np.inf, -np.inf],
+                                [5e5, +np.inf, +np.inf, +np.inf]))
+
+print(moline_fits)
+
+plt.plot(xx_plot, Cv_Mol2021_redshift0(V=xx_plot,
+                                       c0=moline_fits[0][0],
+                                       c1=moline_fits[0][1],
+                                       c2=moline_fits[0][2],
+                                       c3=moline_fits[0][3]),
+         color='g',
+         alpha=0.5, linewidth=3)
 
 plt.xscale('log')
 plt.yscale('log')
@@ -429,42 +486,41 @@ plt.legend()
 
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
 
+# plt.figure()
+#
+# xmin = np.where(Grand_dmo_raw[:,1]>=10)[0][0]
+# xmax = np.where(Grand_dmo_raw[:,1]>20)[0][0]
+#
+# median_dmo = np.median(Grand_dmo_raw[xmin:xmax, 0])
+# mean_dmo = np.mean(Grand_dmo_raw[xmin:xmax, 0])
+# gmean_dmo = gmean(Grand_dmo_raw[xmin:xmax, 0])
+#
+# plt.hist(Grand_dmo_raw[xmin:xmax, 0], log=True, color='k', alpha=0.5,
+#          bins=np.logspace(np.log10(np.min(Grand_dmo_raw[xmin:xmax, 0])),
+#                           np.log10(np.max(Grand_dmo_raw[xmin:xmax, 0])), num=15))
+#
+# plt.axvline(median_dmo, linestyle='-', color='k', label='median')
+# plt.axvline(mean_dmo, linestyle='--', color='k', label='mean')
+# plt.axvline(gmean_dmo, linestyle=':', color='k', label='gmean')
+#
+# plt.xscale('log')
+# #---------------------
+# xmin = np.where(Grand_hydro_raw[:,1]>=10)[0][0]
+# xmax = np.where(Grand_hydro_raw[:,1]>20)[0][0]
+#
+# median_dmo = np.median(Grand_hydro_raw[xmin:xmax, 0])
+# mean_dmo = np.mean(Grand_hydro_raw[xmin:xmax, 0])
+# gmean_dmo = gmean(Grand_hydro_raw[xmin:xmax, 0])
+#
+# plt.hist(Grand_hydro_raw[xmin:xmax, 0], log=True, color='limegreen', alpha=0.5,
+#          bins=np.logspace(np.log10(np.min(Grand_hydro_raw[xmin:xmax, 0])), np.log10(np.max(Grand_hydro_raw[xmin:xmax, 0])), num=15))
+#
+# plt.axvline(median_dmo, linestyle='-', color='limegreen')
+# plt.axvline(mean_dmo, linestyle='--', color='limegreen')
+# plt.axvline(gmean_dmo, linestyle=':', color='limegreen')
+#
+# plt.legend()
 
-plt.figure()
-
-xmin = np.where(Grand_dmo_raw[:,1]>=10)[0][0]
-xmax = np.where(Grand_dmo_raw[:,1]>20)[0][0]
-
-median_dmo = np.median(Grand_dmo_raw[xmin:xmax, 0])
-mean_dmo = np.mean(Grand_dmo_raw[xmin:xmax, 0])
-gmean_dmo = gmean(Grand_dmo_raw[xmin:xmax, 0])
-
-plt.hist(Grand_dmo_raw[xmin:xmax, 0], log=True, color='k', alpha=0.5,
-         bins=np.logspace(np.log10(np.min(Grand_dmo_raw[xmin:xmax, 0])),
-                          np.log10(np.max(Grand_dmo_raw[xmin:xmax, 0])), num=15))
-
-plt.axvline(median_dmo, linestyle='-', color='k', label='median')
-plt.axvline(mean_dmo, linestyle='--', color='k', label='mean')
-plt.axvline(gmean_dmo, linestyle=':', color='k', label='gmean')
-
-plt.xscale('log')
-#---------------------
-xmin = np.where(Grand_hydro_raw[:,1]>=10)[0][0]
-xmax = np.where(Grand_hydro_raw[:,1]>20)[0][0]
-
-median_dmo = np.median(Grand_hydro_raw[xmin:xmax, 0])
-mean_dmo = np.mean(Grand_hydro_raw[xmin:xmax, 0])
-gmean_dmo = gmean(Grand_hydro_raw[xmin:xmax, 0])
-
-plt.hist(Grand_hydro_raw[xmin:xmax, 0], log=True, color='limegreen', alpha=0.5,
-         bins=np.logspace(np.log10(np.min(Grand_hydro_raw[xmin:xmax, 0])), np.log10(np.max(Grand_hydro_raw[xmin:xmax, 0])), num=15))
-
-plt.axvline(median_dmo, linestyle='-', color='limegreen')
-plt.axvline(mean_dmo, linestyle='--', color='limegreen')
-plt.axvline(gmean_dmo, linestyle=':', color='limegreen')
-
-plt.legend()
-'''
 
 # SEPARATE Cv IN RADIAL DISTANCE (TWO BINS ONLY, IN 0.3 R200)
 print()
@@ -478,7 +534,6 @@ for i in range(1, 3):
         Grand_hydro = Grand_hydro_raw[Grand_hydro_raw[:, 2] < 0.3 * 220, :]
         Grand_hydro[:, 0] = Cv_Grand_points(Grand_hydro[:, 1],
                                             Grand_hydro[:, 0])
-        nsum = 60
 
     if i == 2:
         Grand_dmo = Grand_dmo_raw[Grand_dmo_raw[:, 2] > 0.3 * 220, :]
@@ -486,7 +541,6 @@ for i in range(1, 3):
         Grand_hydro = Grand_hydro_raw[Grand_hydro_raw[:, 2] > 0.3 * 220, :]
         Grand_hydro[:, 0] = Cv_Grand_points(Grand_hydro[:, 1],
                                             Grand_hydro[:, 0])
-        nsum = 60
 
     ax1 = plt.subplot(2, 2, i)
     plt.plot(Grand_dmo[:, 1], Grand_dmo[:, 0], '.k', label='DMO', markersize=3)
@@ -499,18 +553,17 @@ for i in range(1, 3):
 
     plt.ylim(5e3, 3e5)
 
-    number_bins_dmo = 20
-    number_bins_hydro = 20
+    number_bins_dmo = 18
+    number_bins_hydro = 18
 
     xx_dmo, yy_dmo, y20_dmo, y80_dmo = calculate_med(
         Grand_dmo, number_bins_dmo, perc_low=16, perc_high=84)
     xx_hydro, yy_hydro, y20_hydro, y80_hydro = calculate_med(
-        Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84, nmax=nsum)
-    print(xx_hydro, yy_hydro, y20_hydro, y80_hydro)
+        Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)
 
     xx_dmo_mean, yy_dmo_mean = calculate_gmean(Grand_dmo, number_bins_dmo)
     xx_hydro_mean, yy_hydro_mean = calculate_gmean(
-        Grand_hydro, number_bins_hydro, nmax=nsum)
+        Grand_hydro, number_bins_hydro)
 
     # Limit to the power law tendency
     hydroLimit = 10
@@ -523,16 +576,16 @@ for i in range(1, 3):
     fitsM_dmo, exps_dmo = power_law_from_median(yy_dmo, y20_dmo, y80_dmo,
                                                 xx_dmo, dmoLimit)
     print('Scatter: %.3f and %.3f' % (
-    exps_dmo[0] - exps_dmo[1], exps_dmo[2] - exps_dmo[0]))
+        exps_dmo[0] - exps_dmo[1], exps_dmo[2] - exps_dmo[0]))
     print()
     print()
+
     print('Hydro')
-    print(yy_hydro, xx_hydro, hydroLimit)
     fitsM_hydro, exps_hydro = power_law_from_median(yy_hydro, y20_hydro,
                                                     y80_hydro, xx_hydro,
                                                     hydroLimit)
     print('Scatter: %.3f and %.3f' % (
-    exps_hydro[0] - exps_hydro[1], exps_hydro[2] - exps_hydro[0]))
+        exps_hydro[0] - exps_hydro[1], exps_hydro[2] - exps_hydro[0]))
 
     print()
     print('Mean')
@@ -541,7 +594,8 @@ for i in range(1, 3):
                                                           y80_dmo, xx_dmo_mean,
                                                           dmoLimit)
     print('Scatter: %.3f and %.3f' % (
-    exps_dmo_mean[0] - exps_dmo_mean[1], exps_dmo_mean[2] - exps_dmo_mean[0]))
+        exps_dmo_mean[0] - exps_dmo_mean[1],
+        exps_dmo_mean[2] - exps_dmo_mean[0]))
     print()
     print()
     print('Hydro')
@@ -594,7 +648,7 @@ for i in range(1, 3):
 
     plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
 
-    plt.annotate('- median \n -- mean', (20, 2670))
+    plt.annotate('- median \n -- gmean', (20, 6500))
 
     # plt.xlim(1.3, 53)
 
