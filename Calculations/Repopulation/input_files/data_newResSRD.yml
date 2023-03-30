@@ -10,12 +10,6 @@ cosmo_constants:
     H_0: 71.1   # Hubble constant [km/s/Mpc]
     rho_crit: 135.73 # == 0.7 * 0.7 * 277  [Msun / kpc**3]
 
-# DRACO CONSTANTS
-draco:
-    D_D: 80. # D_GC of Draco
-    M_D: 2.0e8 # mass of Draco
-    C_D: 19 # concentration of Draco
-
 
 # SUBHALO POPULATION FUNCTIONS ------------------------
 SHVF:
@@ -40,6 +34,7 @@ SRD:
     dmo:
         resilient:
             args: [ 0.54343928, -2.17672138]  #[ 0.54343928, -2.17672138]
+            last_subhalo: 0
     
         fragile:
             args: [1011.38716, 0.4037927,  2.35522213] # R0, aa, bb
@@ -48,6 +43,7 @@ SRD:
     hydro:
         resilient:
             args: [ 0.97254648, -3.08584275]  # [ 0.97254648, -3.08584275]
+            last_subhalo: 0
     
         fragile:
             args: [666.49179, 0.75291017, 2.90546523] # R0, aa, bb
@@ -68,13 +64,14 @@ Cv:
 # REPOPULATION
 repopulations:
     its: 500
-    id: 'Test_physnet'
-    print_freq: 100
+    id: 'Test_functions'
+    num_subs_max: 5e5
+    print_freq: 10
     num_brightest: 1
-    inc_factor: 1.02
+    inc_factor: 1.5
     
     type:
-        1: ['dmo', True]
         2: ['dmo', False]
-        3: ['hydro', True]
         4: ['hydro', False]
+        1: ['dmo', True]
+        3: ['hydro', True]
