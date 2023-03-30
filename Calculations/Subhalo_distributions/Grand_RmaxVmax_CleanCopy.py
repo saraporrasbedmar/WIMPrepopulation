@@ -30,10 +30,15 @@ plt.rc('xtick.major', size=7, width=1.5, top=True)
 plt.rc('ytick.major', size=7, width=1.5, right=True)
 plt.rc('xtick.minor', size=4, width=1)
 plt.rc('ytick.minor', size=4, width=1)
+#
+# #        Rmax        Vmax      Radius
+# Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
+# Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
 
 #        Rmax        Vmax      Radius
-Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
-Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
+Grand_dmo = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
+Grand_hydro = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
+
 
 Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > 1e-4, :]
 
@@ -277,11 +282,11 @@ def Cm_Mol16(M, x, ci=[19.9, -0.195, 0.089, 0.089, -0.54]):
 # %% CALCULATE THE MEDIAN VALUES OF THE DISTRIBUTION Rmax-Vmax
 
 number_bins_dmo = 18
-number_bins_hydro = 18
+number_bins_hydro = 20
 
 # Limit to the power law tendency
-hydroLimit = 10
-dmoLimit = 10
+hydroLimit = 11
+dmoLimit = 11
 
 cv_dmo_cloud = Cv_Grand_points(Grand_dmo_raw[:, 1], Grand_dmo_raw[:, 0])
 cv_hydro_cloud = Cv_Grand_points(Grand_hydro_raw[:, 1], Grand_hydro_raw[:, 0])
@@ -466,7 +471,7 @@ moline_fits = curve_fit(log10MOline21,
                         xdata=vv_medians_hydro[vv_medians_hydro > hydroLimit],
                         ydata=np.log10(
                             cv_hydro_median[vv_medians_hydro > hydroLimit]),
-                        p0=[1.75e5, -0.90368, 0.2749, -0.028],
+                        p0=[1.e4, -0.90368, 0.2749, -0.028],
                         bounds=([-np.inf, -np.inf, -np.inf, -np.inf],
                                 [5e5, +np.inf, +np.inf, +np.inf]))
 
@@ -553,7 +558,7 @@ for i in range(1, 3):
 
     plt.ylim(5e3, 3e5)
 
-    number_bins_dmo = 18
+    number_bins_dmo = 20
     number_bins_hydro = 18
 
     xx_dmo, yy_dmo, y20_dmo, y80_dmo = calculate_med(
@@ -566,8 +571,8 @@ for i in range(1, 3):
         Grand_hydro, number_bins_hydro)
 
     # Limit to the power law tendency
-    hydroLimit = 10
-    dmoLimit = 10
+    hydroLimit = 11
+    dmoLimit = 11
 
     # ------- Calculations of power laws assuming m from median value -----------------------
     print()
@@ -640,6 +645,83 @@ for i in range(1, 3):
     plt.plot(xx_dmo_mean, yy_dmo_mean, 'xk', ms=13)
     plt.plot(xx_hydro_mean, yy_hydro_mean, 'xg', ms=13)
 
+    # xx_dmo, yy_dmo, y20_dmo, y80_dmo
+
+    moline_fits = curve_fit(log10MOline21,
+                            xdata=xx_dmo[xx_dmo > dmoLimit],
+                            ydata=np.log10(
+                                yy_dmo[xx_dmo > dmoLimit]),
+                            p0=[1.75e5, -0.90368, 0.2749, -0.028],
+                            bounds=([-np.inf, -np.inf, -np.inf, -np.inf],
+                                    [+np.inf, +np.inf, +np.inf, +np.inf]))
+
+    print(moline_fits)
+
+    plt.plot(xx_plot, Cv_Mol2021_redshift0(V=xx_plot,
+                                           c0=moline_fits[0][0],
+                                           c1=moline_fits[0][1],
+                                           c2=moline_fits[0][2],
+                                           c3=moline_fits[0][3]),
+             color='k',
+             label='Moliné+21 fit', alpha=0.5, linewidth=3)
+
+    moline_fits = curve_fit(log10MOline21,
+                            xdata=xx_hydro[
+                                xx_hydro > hydroLimit],
+                            ydata=np.log10(
+                                yy_hydro[
+                                    xx_hydro > hydroLimit]),
+                            p0=[1.e4, -0.90368, 0.2749, -0.028],
+                            bounds=([-np.inf, -np.inf, -np.inf, -np.inf],
+                                    [9e4, +np.inf, +np.inf, +np.inf]))
+
+
+    plt.plot(xx_plot, Cv_Mol2021_redshift0(V=xx_plot,
+                                           c0=moline_fits[0][0],
+                                           c1=moline_fits[0][1],
+                                           c2=moline_fits[0][2],
+                                           c3=moline_fits[0][3]),
+             color='g',
+             alpha=0.5, linewidth=3)
+
+    # GMEAN
+    # moline_fits = curve_fit(log10MOline21,
+    #                         xdata=xx_dmo_mean[xx_dmo_mean > dmoLimit],
+    #                         ydata=np.log10(
+    #                             yy_dmo_mean[xx_dmo_mean > dmoLimit]),
+    #                         p0=[1.75e5, -0.90368, 0.2749, -0.028],
+    #                         bounds=([-np.inf, -np.inf, -np.inf, -np.inf],
+    #                                 [+np.inf, +np.inf, +np.inf, +np.inf]))
+    #
+    #
+    # plt.plot(xx_plot, Cv_Mol2021_redshift0(V=xx_plot,
+    #                                        c0=moline_fits[0][0],
+    #                                        c1=moline_fits[0][1],
+    #                                        c2=moline_fits[0][2],
+    #                                        c3=moline_fits[0][3]),
+    #          color='k', linestyle='--',
+    #          alpha=0.5, linewidth=3)
+
+    # moline_fits = curve_fit(log10MOline21,
+    #                         xdata=xx_hydro_mean[
+    #                             xx_hydro_mean > hydroLimit],
+    #                         ydata=np.log10(
+    #                             yy_hydro_mean[
+    #                                 xx_hydro_mean > hydroLimit]),
+    #                         p0=moline_fits[0],
+    #                         bounds=([-np.inf, -np.inf, -np.inf, -np.inf],
+    #                                 [+np.inf, +np.inf, +np.inf, +np.inf]))
+    #
+    # print(moline_fits)
+    #
+    # plt.plot(xx_plot, Cv_Mol2021_redshift0(V=xx_plot,
+    #                                        c0=moline_fits[0][0],
+    #                                        c1=moline_fits[0][1],
+    #                                        c2=moline_fits[0][2],
+    #                                        c3=moline_fits[0][3]),
+    #          color='g', linestyle='--',
+    #          alpha=0.5, linewidth=3)
+
     plt.axvline(dmoLimit, linestyle='-', color='k', alpha=0.3, linewidth=2)
     plt.axvline(hydroLimit, linestyle='-', color='g', alpha=0.3, linewidth=2)
 
@@ -654,7 +736,7 @@ for i in range(1, 3):
 
 plt.subplot(221)
 plt.title('Subs < 0.3 * 220')
-plt.ylabel(r'$R_\mathrm{max}$ [kpc]', size=22)
+plt.ylabel(r'c$_\mathrm{V}$', size=28)
 
 plt.subplot(222)
 plt.title('Subs > 0.3 * 220')

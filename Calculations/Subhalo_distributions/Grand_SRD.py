@@ -336,8 +336,8 @@ print('%.5f ----- %r' % (yy_hyd[0][0] * yy_hyd[0][1] / yy_hyd[0][2],
                              Grand_hydro[Grand_hydro[:, 2]
                                          <= peak_hyd / 1e3, :])[0]))
 
-
 # FIGURE: ATTEMPT AT HAVING A MONTECARLO ALGORITHM TO POPULATE THE HOST
+'''
 plt.figure()
 
 plt.plot(x_kpc, srd_dmo_sinVol, '-', color='k')
@@ -350,7 +350,6 @@ plt.plot(xxx * 1e3,
          fragile(xxx * 1e3, [[1011.38716, 0.4037927, 2.35522213]], 13.6))
 plt.plot(xxx * 1e3,
          fragile(xxx * 1e3, [[666.49179, 0.75291017, 2.90546523]], 6.61))
-
 
 plt.axvline(8.5, linestyle='--', alpha=1, color='Sandybrown')
 plt.annotate('Earth', (8.6, 35), color='Sandybrown', rotation=45)
@@ -370,4 +369,66 @@ plt.xlabel('r [kpc]', size=26)
 plt.xscale('log')
 plt.yscale('log')
 # plt.xlim(6, 300)
+'''
+
+plt.figure(3, figsize=(10, 8))
+
+plt.plot(x_kpc, srd_dmo_sinVol, '-', color='k')
+plt.plot(x_kpc, srd_dmo_sinVol, color='k', marker='.', ms=10, label='DMO')
+
+plt.plot(x_kpc, srd_hydro_sinVol, '-', color='g')
+plt.plot(x_kpc, srd_hydro_sinVol, color='g', marker='.', ms=10, label='Hydro')
+
+xmin = 6
+xmax = 11
+linear_tend_dmo = np.polyfit(np.log10(x_kpc[xmin:xmax]),
+                             np.log10(srd_dmo_sinVol[xmin:xmax]), 1)
+print('max res dmo log-log')
+print(linear_tend_dmo)
+
+xmin = 6
+xmax = 11
+linear_tend_hydro = np.polyfit(np.log10(x_kpc[xmin:xmax]),
+                               np.log10(srd_hydro_sinVol[xmin:xmax]), 1)
+print('max res hydro log-log')
+print(linear_tend_hydro)
+
+plt.plot(x_kpc, x_kpc ** linear_tend_dmo[0] * 10 ** linear_tend_dmo[1],
+         '--', color='grey', alpha=0.7, label='res_maximum N/Ntot')
+plt.plot(x_kpc, x_kpc ** linear_tend_hydro[0] * 10 ** linear_tend_hydro[1],
+         '--', color='limegreen', alpha=0.7)
+
+vol = 4 / 3 * np.pi * (bins[1:] ** 3 - bins[:-1] ** 3)
+plt.plot(x_kpc, (np.log10(x_kpc) * log_tend_dmo[0] + log_tend_dmo[1]) * vol,
+         '-', marker='+', ms=10,
+         color='grey', alpha=0.7, label='res_maximum density')
+plt.plot(x_kpc,
+         (np.log10(x_kpc) * log_tend_hydro[0] + log_tend_hydro[1]) * vol,
+         '-', marker='+', ms=10,
+         color='limegreen', alpha=0.7)
+
+
+def N_Dgc_Cosmic_slide(R, R0, aa, bb):
+    # Number of subhalos (NOT DM DENSITY) at a distance to the GC R.
+    return R0 + aa * R ** bb
+
+
+# cts_dmo = opt.curve_fit(N_Dgc_Cosmic_slide, x_kpc, np.log10(srd_dmo_sinVol),
+#                         p0=[-5, 0.5, 0.3])
+# print(cts_dmo)
+#
+# plt.plot(x_kpc, N_Dgc_Cosmic_slide(x_kpc,
+#                                    cts_dmo[0][0], cts_dmo[0][1],
+#                                    cts_dmo[0][2]))
+
+plt.axvline(R_max * 1e3, alpha=0.5, label='220 kpc')
+
+plt.ylabel(r'n(r) = $\frac{N(r)}{N_{Tot}}$')
+plt.xlabel('r [kpc]', size=24)
+
+plt.legend(framealpha=1)
+
+# plt.xscale('log')
+plt.yscale('log')
+
 plt.show()

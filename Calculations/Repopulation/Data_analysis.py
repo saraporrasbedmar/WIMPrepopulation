@@ -32,30 +32,31 @@ plt.rc('ytick.minor', size=4, width=1)
 
 
 
-path_name = 'outputs/Test_functions 2023-02-11 15:52:00'
+path_name = '/home/porrassa/Desktop/WIMPS_project/Physnet_outputs_repops' \
+            '/test01'
 #
-datos_Js_frag_hyd = np.loadtxt(path_name + '/Js_hydro_ResFalse_results.txt')
-datos_Js_frag_dmo = np.loadtxt(path_name + '/Js_dmo_ResFalse_results.txt')
+datos_Js_frag_hyd = np.loadtxt(path_name + '/Js_hydro_fragile_results.txt')
+datos_Js_frag_dmo = np.loadtxt(path_name + '/Js_dmo_fragile_results.txt')
 
-datos_J03_frag_hyd = np.loadtxt(path_name + '/J03_hydro_ResFalse_results.txt')
-datos_J03_frag_dmo = np.loadtxt(path_name + '/J03_dmo_ResFalse_results.txt')
+datos_J03_frag_hyd = np.loadtxt(path_name + '/J03_hydro_fragile_results.txt')
+datos_J03_frag_dmo = np.loadtxt(path_name + '/J03_dmo_fragile_results.txt')
 
-datos_Js_resi_hyd = np.loadtxt(path_name + '/Js_hydro_ResTrue_results.txt')
-datos_Js_resi_dmo = np.loadtxt(path_name + '/Js_dmo_ResTrue_results.txt')
+datos_Js_resi_hyd = np.loadtxt(path_name + '/Js_hydro_resilient_results.txt')
+datos_Js_resi_dmo = np.loadtxt(path_name + '/Js_dmo_resilient_results.txt')
 
-datos_J03_resi_hyd = np.loadtxt(path_name + '/J03_hydro_ResTrue_results.txt')
-datos_J03_resi_dmo = np.loadtxt(path_name + '/J03_dmo_ResTrue_results.txt')
-
-
+datos_J03_resi_hyd = np.loadtxt(path_name + '/J03_hydro_resilient_results.txt')
+datos_J03_resi_dmo = np.loadtxt(path_name + '/J03_dmo_resilient_results.txt')
 
 
-# constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
-# constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')
-# sigmav_bb_2204 = np.loadtxt('../Constraints_2204/sigmav_bb.txt')
-# sigmav_tau_2204 = np.loadtxt('../Constraints_2204/sigmav_tau.txt')
-#
-# sigmav_bb_2204 = sigmav_bb_2204[sigmav_bb_2204[:,0].argsort()[::], :]
-# sigmav_tau_2204 = sigmav_tau_2204[sigmav_tau_2204[:,0].argsort()[::], :]
+
+
+constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
+constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')
+sigmav_bb_2204 = np.loadtxt('../Constraints_2204/sigmav_bb.txt')
+sigmav_tau_2204 = np.loadtxt('../Constraints_2204/sigmav_tau.txt')
+
+sigmav_bb_2204 = sigmav_bb_2204[sigmav_bb_2204[:,0].argsort()[::], :]
+sigmav_tau_2204 = sigmav_tau_2204[sigmav_tau_2204[:,0].argsort()[::], :]
 
 J03_min95_2204 = 18.9208 # From digitalizing
 Js_min95_2204  = 19.4642 # From digitalizing
@@ -76,7 +77,7 @@ maxx = np.max((np.max(np.log10(datos_Js_frag_dmo[:,0])), np.max(np.log10(datos_J
                np.max(np.log10(datos_Js_resi_dmo[:,0])), np.max(np.log10(datos_J03_resi_dmo[:,0])),
                np.max(np.log10(datos_Js_resi_hyd[:,0])), np.max(np.log10(datos_J03_resi_hyd[:,0]))))
 
-bines = np.linspace(minn, maxx, 15)
+bines = np.linspace(minn, maxx, 40)
 
 
 
@@ -84,6 +85,7 @@ ax1 = plt.subplot(221)
 
 #plt.xlim(17.5,21)
 plt.xlim(minn, maxx)
+plt.yscale('log')
 
 plt.title('DMO', size=18)
 
@@ -108,6 +110,7 @@ plt.legend(title=r'J$_\mathrm{S}$')
 
 plt.subplot(222, sharex=ax1, sharey=ax1)
 plt.title('Hydro', size=18)
+plt.yscale('log')
 
 
 plt.hist(np.log10(datos_Js_frag_hyd[:,0]), log=False, label=r'Frag', color='yellowgreen', alpha=0.6,
@@ -141,6 +144,7 @@ J0395_frag_dmo = np.log10(np.percentile(datos_J03_frag_dmo[:,0], 5))
 J0395_resi_dmo = np.log10(np.percentile(datos_J03_resi_dmo[:,0], 5))
 print('J03, DMO')
 print(J0395_frag_dmo, J0395_resi_dmo)
+plt.yscale('log')
 
 plt.axvline(J0395_frag_dmo, color='teal')#, alpha=0.6)
 plt.axvline(J0395_resi_dmo, color='k')#, alpha=0.5)
@@ -170,6 +174,7 @@ plt.axvline(J0395_resi_hyd, color=darkgreen)#, alpha=0.6)
 #plt.annotate(r'J$_S$ 95%', (Js95_resi_hyd, 20), rotation=90, color='k')
 #plt.annotate(r'J$_{03}$ 95%', (J0395_resi_hyd, 20), rotation=90, color='g', horizontalalignment='right')
 
+plt.yscale('log')
 plt.xlabel(r'log$_{10}$ (J$_\mathrm{factor}$ [GeV$^2$ cm$^{-5}$])', fontsize=20)
 plt.legend(title=r'J$_{03}$')
 
@@ -298,7 +303,7 @@ c2.set_label(r'D$_\mathrm{Earth}$ [kpc]', fontsize=20)
 
 
 #%%
-'''
+
 plt.subplots(1,2, figsize=(14,6))
 
 ax1 = plt.subplot(121)
@@ -376,7 +381,7 @@ print()
 print('Js')
 print('%.2f' %Js_min95_2204)
 print('%.2f  %.2f  %.2f  %.2f' %(Js95_resi_dmo, Js95_resi_hyd, Js95_frag_dmo, Js95_frag_hyd))
-'''
+
 
 fig, _ = plt.subplots(2,2, figsize=(12,9))
 
@@ -400,6 +405,7 @@ locc=2
 
 ax1 = plt.subplot(221)
 plt.xlim(0.5,70)
+plt.yscale('log')
 
 plt.title('DMO', size=18)
 
@@ -416,6 +422,7 @@ plt.xscale('log')
 
 plt.subplot(222, sharex=ax1, sharey=ax1)
 plt.title('Hydro', size=18)
+plt.yscale('log')
 
 plt.hist((datos_Js_frag_hyd[:,column]), log=False, label=r'Frag', color='yellowgreen', alpha=0.6,
          bins=bines)
@@ -435,6 +442,7 @@ plt.hist((datos_J03_resi_dmo[:,column]), log=False, label=r'Res', color='k', alp
 
 plt.axvline(8.5, color='Sandybrown', alpha=1, linestyle='--')
 
+plt.yscale('log')
 plt.xlabel(xxlabel, fontsize=20)
 plt.legend(title=r'J$_{03}$', loc=locc)
 
@@ -449,6 +457,7 @@ plt.hist((datos_J03_resi_hyd[:,column]), log=False, label=r'Res', color=darkgree
 
 plt.axvline(8.5, color='orange', alpha=1, linestyle='--')
 
+plt.yscale('log')
 plt.xlabel(xxlabel, fontsize=20)
 plt.legend(title=r'J$_{03}$', loc=locc)
 

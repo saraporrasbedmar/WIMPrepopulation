@@ -27,12 +27,12 @@ plt.rc('xtick.minor', size=4, width=1)
 plt.rc('ytick.minor', size=4, width=1)
 
 #        Rmax[kpc]        Vmax[km/s]      Radius[Mpc]
-# Grand_dmo = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
-# Grand_hydro = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
+Grand_dmo = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
+Grand_hydro = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
 
 # #        Rmax        Vmax      Radius
-Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
-Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
+# Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
+# Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
 
 Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > 1e-4, :]
 Grand_dmo[:, 2] *= 1e3
