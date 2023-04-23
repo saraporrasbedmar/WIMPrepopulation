@@ -3,24 +3,20 @@ import sys
 import math
 import yaml
 import psutil
+import inspect
 import numpy as np
-import random as rdm
 import time
 
 from scipy.optimize import newton
-# from scipy.integrate import simpson
 from scipy.interpolate import UnivariateSpline
 
 from numba import njit, jit
-from numba.typed import List
 from numba.core.errors import NumbaDeprecationWarning, \
     NumbaPendingDeprecationWarning
 import warnings
 
 warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
 warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
-
-from multiprocessing import Pool
 
 
 def tupleset(t, i, value):
@@ -474,7 +470,7 @@ def Mhost_encapsulated(R,
                - R / (host_r_s + R)))
 
 
-@njit()
+@jit()
 def N_subs_resilient(DistGC, args):
     return DistGC ** args[0] * 10 ** args[1]
 
@@ -524,20 +520,16 @@ def Nr_Ntot(DistGC,
     """
     if res_string == 'resilient':
         if sim_type == 'dmo':
-            return N_subs_resilient(DistGC,
-                                    [0.54343928, -2.17672138])
+            return N_subs_resilient(DistGC, srd_args)
         if sim_type == 'hydro':
-            return N_subs_resilient(DistGC,
-                                    [0.97254648, -3.08584275])
+            return N_subs_resilient(DistGC, srd_args)
 
     else:
         if sim_type == 'dmo':
-            return (10 ** N_subs_fragile(DistGC,
-                                         [1011.38716, 0.4037927, 2.35522213])
+            return (10 ** N_subs_fragile(DistGC, srd_args)
                     * (DistGC >= srd_last_sub))
         if sim_type == 'hydro':
-            return (10 ** N_subs_fragile(DistGC,
-                                         [666.49179, 0.75291017, 2.90546523])
+            return (10 ** N_subs_fragile(DistGC, srd_args)
                     * (DistGC >= srd_last_sub))
 
 
@@ -751,8 +743,7 @@ def calculate_characteristics_subhalo(
         Cv_sigma,
 
         srd_args,
-        srd_last_sub
-):
+        srd_last_sub):
     # Random distribution of subhalos around the celestial sphere
     num_subs = len(Vmax)
     repop_theta = 2 * math.pi * np.random.random(num_subs)
@@ -856,11 +847,6 @@ def interior_loop_singularbrightest(
             m_max = np.minimum(m_min * repop_inc_factor,
                                SHVF_cts_RangeMax)
             new_mmin = m_min * repop_inc_factor
-
-        print('%.4f - %.4f %d' % (m_min, m_max, SHVF_Grand2012_int(m_min,
-                                                                   m_max,
-                                                                   SHVF_bb,
-                                                                   SHVF_mm)))
 
         repop_Vmax = montecarlo_algorithm(
             m_min, m_max,
@@ -988,8 +974,8 @@ def interior_loop_singularbrightest(
                     bright_J03 = np.argmax(new_data[:, 1])
 
             brightest_Js[
-            repop_num_brightest + new_sub, :] = new_data[bright_Js,
-                                                         [0, 2, 3, 4, 5, 6]]
+            repop_num_brightest + new_sub, :] = new_data[
+                bright_Js, [0, 2, 3, 4, 5, 6]]
             new_data[bright_Js, 0] = 0.
 
             brightest_J03[
@@ -1337,9 +1323,9 @@ def repopulation_bin_by_bin(num_subs_max, sim_type, res_string,
 
 def main(inputs):
     sim_type = inputs[0]
-    resilient = inputs[1]
+    res_string = inputs[1]
     path_name = inputs[2]
-    print(sim_type, resilient)
+    print(sim_type, res_string)
     print(path_name)
 
     # Calculations ----------------#
@@ -1362,12 +1348,15 @@ def main(inputs):
 
     # Save input data in a file in the outputs directory
     file_inputs = open(path_name + '/input_data.yml', 'w')
+    data_dict['SRD']['formula']['resilient'] = inspect.getsource(
+        N_subs_resilient)
+    data_dict['SRD']['formula']['fragile'] = inspect.getsource(
+        N_subs_fragile)
     yaml.dump(data_dict, file_inputs,
               default_flow_style=False, allow_unicode=True)
     file_inputs.close()
 
     repop_its = repopulations['its']
-    repop_id = repopulations['id']
     num_subs_max = int(float(repopulations['num_subs_max']))
     repop_print_freq = repopulations['print_freq']
     repop_num_brightest = int(repopulations['num_brightest'])
@@ -1375,11 +1364,6 @@ def main(inputs):
 
     SHVF_cts_RangeMin = SHVF_cts['RangeMin']
     SHVF_cts_RangeMax = SHVF_cts['RangeMax']
-
-    if resilient is True:
-        res_string = 'resilient'
-    else:
-        res_string = 'fragile'
 
     if sim_type == 'dmo':
         SHVF_bb = SHVF_cts['dmo']['bb']
@@ -1390,7 +1374,6 @@ def main(inputs):
         Cv_sigma = cv_cts['dmo']['sigma']
 
         srd_args = srd_cts['dmo'][res_string]['args']
-        srd_args = List(srd_args)
         srd_last_sub = srd_cts['dmo'][res_string]['last_subhalo']
 
     if sim_type == 'hydro':
@@ -1404,8 +1387,6 @@ def main(inputs):
         srd_args = srd_cts['hydro'][res_string]['args']
         srd_last_sub = srd_cts['hydro'][res_string]['last_subhalo']
 
-    # for i in [5e6, 1e6, 5e5, 1e5, 1e4]:
-    #     num_subs_max = int(i)
     print(SHVF_cts_RangeMin,
           SHVF_cts_RangeMax)
     print('    Max. number of repop subhalos: %i' %
@@ -1447,16 +1428,11 @@ def main(inputs):
                             )
 
 
-print(time.strftime(" %d-%m-%Y %H:%M:%S", time.gmtime()))
-
 if __name__ == "__main__":
     path_name = str('outputs/'
                     + 'test'
                     )
 
+    print(time.strftime("%d-%m-%Y %H:%M:%S", time.gmtime()))
     print(path_name)
-    print(sys.argv)
-    if sys.argv[2] == 'True':
-        main([sys.argv[1], True, path_name])
-    if sys.argv[2] == 'False':
-        main([sys.argv[1], False, path_name])
+    main([sys.argv[1], sys.argv[2], path_name])
