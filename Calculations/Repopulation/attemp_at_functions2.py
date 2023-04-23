@@ -183,10 +183,9 @@ def read_config_file(ConfigFile):
     return parsed_yaml
 
 
-@njit(forceobj=True)
+@njit()
 def ff(c):
     return np.log(1. + c) - c / (1. + c)
-    # return c
 
 
 # SHVF --------------------------------------
@@ -314,7 +313,8 @@ def J_abs_vel(V, D_earth, C,
         -> [Msun**2 / kpc**5] with change_units=False
         -> [GeV**2 / cm**5] with change_units=True
     """
-    yy = (2.163 ** 3. / D_earth ** 2. / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)) ** 2
+    yy = (2.163 ** 3. / D_earth ** 2.
+          / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)) ** 2
           * cosmo_H_0 / 12 / np.pi / float(cosmo_G) ** 2
           * np.sqrt(C / 2) * V ** 3
           * 1e-3)
@@ -418,11 +418,11 @@ def R_s(V, C, cosmo_H_0):
     return R_max(V, C, cosmo_H_0) / 2.163
 
 
-@njit()
+@jit(forceobj=True)
 def R_t(V, C, DistGC,
         cosmo_H_0, cosmo_G,
         host_rho_0, host_r_s,
-        repop_num_brightest):
+        singular_case=True):
     """
     Calculation of tidal radius (R_t) of a subhalo, following the
     NFW analytical expression for a subhalo density profile.
@@ -441,18 +441,12 @@ def R_t(V, C, DistGC,
         Tidal radius of the subhalo given by the inputs.
     """
     Rmax = R_max(V, C, cosmo_H_0)
-    print(repop_num_brightest)
-    print(C)
-    print(type(repop_num_brightest))
-    print(int(repop_num_brightest)<2)
 
-    if  2==1:
+    if singular_case:
         c200 = C200_from_Cv_float(C)
     else:
         c200 = C200_from_Cv_array(C)
-    print(c200)
-    print(V)
-    print(Rmax)
+
     M = mass_from_Vmax(V, Rmax, c200, cosmo_G)
 
     return (((M / (3 * Mhost_encapsulated(
@@ -582,7 +576,8 @@ def def_Cv(c200, Cv):
         The output will be 0 when you find the c200 for a
         specific Cv.
     """
-    return 200 * (np.log(1. + 2.163) - 2.163 / (1. + 2.163)) / ff(c200) * (c200 / 2.163) ** 3 - Cv
+    return (200 * (np.log(1. + 2.163) - 2.163 / (1. + 2.163))
+            / ff(c200) * (c200 / 2.163) ** 3 - Cv)
 
 
 @njit
@@ -607,7 +602,7 @@ def newton2(fun, x0, args):
     return x
 
 
-@njit()
+@jit()
 def C200_from_Cv_array(Cv):
     """
     Function to find c200 knowing Cv.
@@ -622,10 +617,10 @@ def C200_from_Cv_array(Cv):
     for i in Cv:
         C200_med.append(newton2(def_Cv, 40.0, i))
 
-    return C200_med
+    return np.array(C200_med)
 
 
-@njit(nopython=True)
+@njit()
 def C200_from_Cv_float(Cv):
     """
     Function to find c200 knowing Cv.
@@ -783,21 +778,14 @@ def calculate_characteristics_subhalo(
                         cosmo_G=cosmo_G,
                         cosmo_H_0=cosmo_H_0)
 
-    init_time = time.process_time()
-    if res_string == 'fragile' and (repop_num_brightest > 10):
+    if res_string == 'fragile' and (repop_num_brightest > 100):
         roche = (R_t(Vmax, repop_C, Distgc,
                      cosmo_H_0, cosmo_G, host_rho_0, host_r_s,
-                     repop_num_brightest=repop_num_brightest)
+                     singular_case=False)
                  < R_s(Vmax, repop_C, cosmo_H_0))[0]
-
-        print('%.2f calculate roche' % (time.process_time()
-                                        - init_time))
-        init_time = time.process_time()
 
         repop_Js[roche] = 0.
         repop_J03[roche] = 0.
-        print('%.2f apply roche' % (time.process_time()
-                                    - init_time))
 
     # Angular size of subhalos (up to R_s)
     repop_Theta = 180 / np.pi * np.arctan(
@@ -810,6 +798,12 @@ def calculate_characteristics_subhalo(
 @njit
 def xx(mmax, mmin, SHVF_bb, SHVF_mm, root):
     return SHVF_Grand2012_int(mmin, mmax, SHVF_bb, SHVF_mm) - root
+
+
+@njit
+def xxx(mmax, params):
+    return (SHVF_Grand2012_int(params[0], mmax,
+                               params[1], params[2]) - params[3])
 
 
 @jit(forceobj=True)
@@ -974,7 +968,7 @@ def interior_loop_singularbrightest(
                            new_data[bright_Js, 2],
                            cosmo_H_0, cosmo_G,
                            host_rho_0, host_r_s,
-                           repop_num_brightest=repop_num_brightest)
+                           singular_case=True)
                        < R_s(new_data[bright_Js, 4],
                              new_data[bright_Js, 6],
                              cosmo_H_0)):
@@ -986,7 +980,7 @@ def interior_loop_singularbrightest(
                            new_data[bright_J03, 2],
                            cosmo_H_0, cosmo_G,
                            host_rho_0, host_r_s,
-                           repop_num_brightest=repop_num_brightest)
+                           singular_case=True)
                        < R_s(new_data[bright_J03, 4],
                              new_data[bright_J03, 6],
                              cosmo_H_0)):
@@ -1004,9 +998,7 @@ def interior_loop_singularbrightest(
 
         # We take the brightest subhalos only
         brightest_Js = brightest_Js[np.argsort(brightest_Js[:, 0])[::-1], :]
-        brightest_J03 = brightest_J03[np.argsort(brightest_J03[:, 1])[::-1], :]
-
-        # print(brightest_Js)
+        brightest_J03 = brightest_J03[np.argsort(brightest_J03[:, 0])[::-1], :]
 
         m_min = new_mmin
 
@@ -1052,8 +1044,6 @@ def interior_loop_manybrigthest(
     m_min = SHVF_cts_RangeMin
 
     while m_min < SHVF_cts_RangeMax:
-        # print(SHVF_Grand2012_int(m_min, m_min * repop_inc_factor,
-        #                          SHVF_bb, SHVF_mm))
 
         if SHVF_Grand2012_int(m_min, m_min * repop_inc_factor,
                               SHVF_bb, SHVF_mm) > num_subs_max:
@@ -1174,7 +1164,7 @@ def interior_loop_manybrigthest(
         brightest_J03 = np.append(brightest_J03, new_data[:, 1:], axis=0)
 
         brightest_J03 = brightest_J03[np.argsort(
-            brightest_J03[:, 1])[::-1], :]
+            brightest_J03[:, 0])[::-1], :]
         brightest_J03 = brightest_J03[:repop_num_brightest, :]
 
         m_min = new_mmin
@@ -1209,26 +1199,38 @@ def repopulation_bin_by_bin(num_subs_max, sim_type, res_string,
                             srd_args,
                             srd_last_sub):
     headerS = (('#\n# Vmin: [' + str(SHVF_cts_RangeMin) + ', '
-                + str(SHVF_cts_RangeMax) + '], resilient: '
+                + str(SHVF_cts_RangeMax) + '], '
                 + str(res_string) + '; '
-                + str(repop_its) +
-                (' iterations \n# Js (<r_s) (GeV^2 cm^-5)'
-                 '       Dgc (kpc)'
-                 '           D_Earth (kpc)'
-                 '               Vmax (km/s)'
-                 '                ang size (deg)'
-                 '               Cv \n#\n')))
+                + str(repop_its)
+                + ' iterations, ' + str(repop_num_brightest)
+                + ' brightest\n# Read the individual iterations with: '
+                  'np.loadtxt().reshape('
+                + str(repop_its) + ', '
+                + str(repop_num_brightest) + ', '
+                + str(6) + ')\n'
+                           '# Js (<r_s) (GeV^2 cm^-5)'
+                           '       Dgc (kpc)'
+                           '           D_Earth (kpc)'
+                           '               Vmax (km/s)'
+                           '                ang size (deg)'
+                           '               Cv \n#\n'))
 
     header03 = (('#\n# Vmin: [' + str(SHVF_cts_RangeMin) + ', '
                  + str(SHVF_cts_RangeMax) + '], resilient: '
                  + str(res_string) + '; '
                  + str(repop_its) +
-                 (' iterations \n# J03 (<0.3deg) (GeV^2 cm^-5)'
-                  '       Dgc (kpc)'
-                  '           D_Earth (kpc)'
-                  '               Vmax (km/s)'
-                  '               ang size (deg)'
-                  '               Cv \n#\n')))
+                 ' iterations, ' + str(repop_num_brightest)
+                 + ' brightest\n# Read the individual iterations with: '
+                   'np.loadtxt().reshape('
+                 + str(repop_its) + ', '
+                 + str(repop_num_brightest) + ', '
+                 + str(6) + ')\n'
+                            '# J03 (<0.3deg) (GeV^2 cm^-5)'
+                            '       Dgc (kpc)'
+                            '           D_Earth (kpc)'
+                            '               Vmax (km/s)'
+                            '               ang size (deg)'
+                            '               Cv \n#\n'))
 
     file_Js = open(pathname + '/Js_' + sim_type + '_'
                    + str(res_string) + '_results.txt', 'w')
@@ -1458,4 +1460,3 @@ if __name__ == "__main__":
         main([sys.argv[1], True, path_name])
     if sys.argv[2] == 'False':
         main([sys.argv[1], False, path_name])
-
