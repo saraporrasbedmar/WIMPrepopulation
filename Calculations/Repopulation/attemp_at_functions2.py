@@ -210,7 +210,8 @@ def SHVF_Grand2012(V,
                    Cv_mm,
                    Cv_sigma,
 
-                   srd_args,
+                   srd_args_repop,
+                   srd_args_visible,
                    srd_last_sub):
     """
     SubHalo Velocity Function (SHVF) - number of subhalos as a
@@ -422,7 +423,7 @@ def R_t(V, C, DistGC,
     """
     Calculation of tidal radius (R_t) of a subhalo, following the
     NFW analytical expression for a subhalo density profile.
-    
+
     Definition of R_t: 1603.04057 King radius pg 14
 
     :param V: float or array-like [km/s]
@@ -451,16 +452,14 @@ def R_t(V, C, DistGC,
 
 
 @njit
-def Mhost_encapsulated(R,
-                       host_rho_0,
-                       host_r_s):
+def Mhost_encapsulated(R, host_rho_0, host_r_s):
     """
     Host mass encapsulated up to a certain radius. We are following
     a NFW density profile for the host.
-    
+
     :param R: float or array-like [kpc]
         Radius up to which we integrate the density profile.
-        
+
     :return: float or array-like [Msun]
         Host mass encapsulated up to R.
     """
@@ -470,7 +469,7 @@ def Mhost_encapsulated(R,
                - R / (host_r_s + R)))
 
 
-@jit()
+@jit(forceobj=False)
 def N_subs_resilient(DistGC, args):
     return DistGC ** args[0] * 10 ** args[1]
 
@@ -482,32 +481,67 @@ def N_subs_fragile(DistGC, args):
 
 
 @njit
-def Nr_Ntot(DistGC,
-            sim_type, res_string,
-            cosmo_G,
-            cosmo_H_0,
-            cosmo_rho_crit,
+def Nr_Ntot_visible(
+        DistGC,
+        sim_type, res_string,
+        cosmo_G,
+        cosmo_H_0,
+        cosmo_rho_crit,
 
-            host_R_vir,
-            host_rho_0,
-            host_r_s,
+        host_R_vir,
+        host_rho_0,
+        host_r_s,
 
-            pathname,
-            repop_its,
-            repop_print_freq,
-            repop_inc_factor,
+        pathname,
+        repop_its,
+        repop_print_freq,
+        repop_inc_factor,
 
-            SHVF_cts_RangeMin,
-            SHVF_cts_RangeMax,
-            SHVF_bb,
-            SHVF_mm,
+        SHVF_cts_RangeMin,
+        SHVF_cts_RangeMax,
+        SHVF_bb,
+        SHVF_mm,
 
-            Cv_bb,
-            Cv_mm,
-            Cv_sigma,
+        Cv_bb,
+        Cv_mm,
+        Cv_sigma,
 
-            srd_args,
-            srd_last_sub):
+        srd_args_repop,
+        srd_args_visible,
+        srd_last_sub):
+    return (10 ** N_subs_fragile(DistGC, srd_args_visible)
+            * (DistGC >= srd_last_sub))
+
+
+@njit
+def Nr_Ntot_repop(
+        DistGC,
+        sim_type, res_string,
+        cosmo_G,
+        cosmo_H_0,
+        cosmo_rho_crit,
+
+        host_R_vir,
+        host_rho_0,
+        host_r_s,
+
+        pathname,
+        repop_its,
+        repop_print_freq,
+        repop_inc_factor,
+
+        SHVF_cts_RangeMin,
+        SHVF_cts_RangeMax,
+        SHVF_bb,
+        SHVF_mm,
+
+        Cv_bb,
+        Cv_mm,
+        Cv_sigma,
+
+        srd_args_repop,
+        srd_args_visible,
+        srd_last_sub):
     """
     Proportion of subhalo numbers at a certain distance of the GC.
 
@@ -519,18 +553,11 @@ def Nr_Ntot(DistGC,
         Number of subhalos at a certain distance of the GC.
     """
     if res_string == 'resilient':
-        if sim_type == 'dmo':
-            return N_subs_resilient(DistGC, srd_args)
-        if sim_type == 'hydro':
-            return N_subs_resilient(DistGC, srd_args)
+        return N_subs_resilient(DistGC, srd_args_repop)
 
     else:
-        if sim_type == 'dmo':
-            return (10 ** N_subs_fragile(DistGC, srd_args)
-                    * (DistGC >= srd_last_sub))
-        if sim_type == 'hydro':
-            return (10 ** N_subs_fragile(DistGC, srd_args)
-                    * (DistGC >= srd_last_sub))
+        return (10 ** N_subs_fragile(DistGC, srd_args_repop)
+                * (DistGC >= srd_last_sub))
 
 
 @njit
@@ -653,7 +680,8 @@ def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
                          Cv_mm,
                          Cv_sigma,
 
-                         srd_args,
+                         srd_args_repop,
+                         srd_args_visible,
                          srd_last_sub):
     """
     Montecarlo sample algorithm. It populates a number of objects
@@ -699,7 +727,8 @@ def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
             Cv_mm,
             Cv_sigma,
 
-            srd_args,
+            srd_args_repop,
+            srd_args_visible,
             srd_last_sub)
 
     cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
@@ -742,7 +771,8 @@ def calculate_characteristics_subhalo(
         Cv_mm,
         Cv_sigma,
 
-        srd_args,
+        srd_args_repop,
+        srd_args_visible,
         srd_last_sub):
     # Random distribution of subhalos around the celestial sphere
     num_subs = len(Vmax)
@@ -799,7 +829,8 @@ def xxx(mmax, params):
 
 @jit(forceobj=True)
 def interior_loop_singularbrightest(
-        num_subs_max, sim_type, res_string,
+        num_subs_max,
+        sim_type, res_string,
         cosmo_G,
         cosmo_H_0,
         cosmo_rho_crit,
@@ -823,8 +854,10 @@ def interior_loop_singularbrightest(
         Cv_mm,
         Cv_sigma,
 
-        srd_args,
-        srd_last_sub):
+        srd_args_repop,
+        srd_args_visible,
+        srd_last_sub,
+        Vmax_completion):
     # We have 6 variables we want to save in our files,
     # change this number if necessary
     # (output from 'calculate_characteristics_subhalo()')
@@ -877,12 +910,13 @@ def interior_loop_singularbrightest(
             Cv_mm=Cv_mm,
             Cv_sigma=Cv_sigma,
 
-            srd_args=srd_args,
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
 
-        repop_DistGC = montecarlo_algorithm(
+        repop_DistGC_lower = montecarlo_algorithm(
             1e-3, host_R_vir,
-            Nr_Ntot,
+            Nr_Ntot_repop,
             num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
             sim_type=sim_type,
             res_string=res_string,
@@ -909,8 +943,45 @@ def interior_loop_singularbrightest(
             Cv_mm=Cv_mm,
             Cv_sigma=Cv_sigma,
 
-            srd_args=srd_args,
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
+
+        repop_DistGC_upper = montecarlo_algorithm(
+            1e-3, host_R_vir,
+            Nr_Ntot_visible,
+            num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
+            sim_type=sim_type,
+            res_string=res_string,
+
+            cosmo_G=cosmo_G,
+            cosmo_H_0=cosmo_H_0,
+            cosmo_rho_crit=cosmo_rho_crit,
+
+            host_R_vir=host_R_vir,
+            host_rho_0=host_rho_0,
+            host_r_s=host_r_s,
+
+            pathname=pathname,
+            repop_its=repop_its,
+            repop_print_freq=repop_print_freq,
+            repop_inc_factor=repop_inc_factor,
+
+            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+            SHVF_bb=SHVF_bb,
+            SHVF_mm=SHVF_mm,
+
+            Cv_bb=Cv_bb,
+            Cv_mm=Cv_mm,
+            Cv_sigma=Cv_sigma,
+
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
+            srd_last_sub=srd_last_sub)
+
+        repop_DistGC = (repop_DistGC_lower * (repop_Vmax <= Vmax_completion)
+                        + repop_DistGC_upper * (repop_Vmax > Vmax_completion))
 
         new_data = calculate_characteristics_subhalo(
             repop_Vmax, repop_DistGC,
@@ -940,7 +1011,8 @@ def interior_loop_singularbrightest(
             Cv_mm=Cv_mm,
             Cv_sigma=Cv_sigma,
 
-            srd_args=srd_args,
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
 
         for new_sub in range(repop_num_brightest):
@@ -994,7 +1066,8 @@ def interior_loop_singularbrightest(
 
 @jit(forceobj=True)
 def interior_loop_manybrigthest(
-        num_subs_max, sim_type, res_string,
+        num_subs_max,
+        sim_type, res_string,
         cosmo_G,
         cosmo_H_0,
         cosmo_rho_crit,
@@ -1018,8 +1091,10 @@ def interior_loop_manybrigthest(
         Cv_mm,
         Cv_sigma,
 
-        srd_args,
-        srd_last_sub):
+        srd_args_repop,
+        srd_args_visible,
+        srd_last_sub,
+        Vmax_completion):
     # We have 6 variables we want to save in our files,
     # change this number if necessary
     # (output from 'calculate_characteristics_subhalo()')
@@ -1072,12 +1147,13 @@ def interior_loop_manybrigthest(
             Cv_mm=Cv_mm,
             Cv_sigma=Cv_sigma,
 
-            srd_args=srd_args,
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
 
-        repop_DistGC = montecarlo_algorithm(
+        repop_DistGC_lower = montecarlo_algorithm(
             1e-3, host_R_vir,
-            Nr_Ntot,
+            Nr_Ntot_repop,
             num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
             sim_type=sim_type,
             res_string=res_string,
@@ -1104,8 +1180,45 @@ def interior_loop_manybrigthest(
             Cv_mm=Cv_mm,
             Cv_sigma=Cv_sigma,
 
-            srd_args=srd_args,
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
+
+        repop_DistGC_upper = montecarlo_algorithm(
+            1e-3, host_R_vir,
+            Nr_Ntot_visible,
+            num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
+            sim_type=sim_type,
+            res_string=res_string,
+
+            cosmo_G=cosmo_G,
+            cosmo_H_0=cosmo_H_0,
+            cosmo_rho_crit=cosmo_rho_crit,
+
+            host_R_vir=host_R_vir,
+            host_rho_0=host_rho_0,
+            host_r_s=host_r_s,
+
+            pathname=pathname,
+            repop_its=repop_its,
+            repop_print_freq=repop_print_freq,
+            repop_inc_factor=repop_inc_factor,
+
+            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+            SHVF_bb=SHVF_bb,
+            SHVF_mm=SHVF_mm,
+
+            Cv_bb=Cv_bb,
+            Cv_mm=Cv_mm,
+            Cv_sigma=Cv_sigma,
+
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
+            srd_last_sub=srd_last_sub)
+
+        repop_DistGC = (repop_DistGC_lower * (repop_Vmax <= Vmax_completion)
+                        + repop_DistGC_upper * (repop_Vmax > Vmax_completion))
 
         new_data = calculate_characteristics_subhalo(
             repop_Vmax, repop_DistGC,
@@ -1135,7 +1248,8 @@ def interior_loop_manybrigthest(
             Cv_mm=Cv_mm,
             Cv_sigma=Cv_sigma,
 
-            srd_args=srd_args,
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
 
         # We take the brightest subhalos only
@@ -1182,8 +1296,10 @@ def repopulation_bin_by_bin(num_subs_max, sim_type, res_string,
                             Cv_mm,
                             Cv_sigma,
 
-                            srd_args,
-                            srd_last_sub):
+                            srd_args_repop,
+                            srd_args_visible,
+                            srd_last_sub,
+                            Vmax_completion):
     headerS = (('#\n# Vmin: [' + str(SHVF_cts_RangeMin) + ', '
                 + str(SHVF_cts_RangeMax) + '], '
                 + str(res_string) + '; '
@@ -1274,8 +1390,10 @@ def repopulation_bin_by_bin(num_subs_max, sim_type, res_string,
                 Cv_mm=Cv_mm,
                 Cv_sigma=Cv_sigma,
 
-                srd_args=srd_args,
-                srd_last_sub=srd_last_sub)
+                srd_args_repop=srd_args_repop,
+                srd_args_visible=srd_args_visible,
+                srd_last_sub=srd_last_sub,
+                Vmax_completion=Vmax_completion)
         else:
             brightest_Js, brightest_J03 = interior_loop_manybrigthest(
                 num_subs_max=num_subs_max,
@@ -1305,8 +1423,10 @@ def repopulation_bin_by_bin(num_subs_max, sim_type, res_string,
                 Cv_mm=Cv_mm,
                 Cv_sigma=Cv_sigma,
 
-                srd_args=srd_args,
-                srd_last_sub=srd_last_sub)
+                srd_args_repop=srd_args_repop,
+                srd_args_visible=srd_args_visible,
+                srd_last_sub=srd_last_sub,
+                Vmax_completion=Vmax_completion)
 
         np.savetxt(file_Js, brightest_Js)
         np.savetxt(file_J03, brightest_J03)
@@ -1365,6 +1485,8 @@ def main(inputs):
     SHVF_cts_RangeMin = SHVF_cts['RangeMin']
     SHVF_cts_RangeMax = SHVF_cts['RangeMax']
 
+    Vmax_completion = SHVF_cts['Vmax_completion']
+
     if sim_type == 'dmo':
         SHVF_bb = SHVF_cts['dmo']['bb']
         SHVF_mm = SHVF_cts['dmo']['mm']
@@ -1373,7 +1495,8 @@ def main(inputs):
         Cv_mm = cv_cts['dmo']['mm']
         Cv_sigma = cv_cts['dmo']['sigma']
 
-        srd_args = srd_cts['dmo'][res_string]['args']
+        srd_args_repop = srd_cts['dmo'][res_string]['args']
+        srd_args_visible = srd_cts['dmo']['fragile']['args']
         srd_last_sub = srd_cts['dmo'][res_string]['last_subhalo']
 
     if sim_type == 'hydro':
@@ -1384,7 +1507,8 @@ def main(inputs):
         Cv_mm = cv_cts['hydro']['mm']
         Cv_sigma = cv_cts['hydro']['sigma']
 
-        srd_args = srd_cts['hydro'][res_string]['args']
+        srd_args_repop = srd_cts['hydro'][res_string]['args']
+        srd_args_visible = srd_cts['hydro']['fragile']['args']
         srd_last_sub = srd_cts['hydro'][res_string]['last_subhalo']
 
     print(SHVF_cts_RangeMin,
@@ -1396,41 +1520,44 @@ def main(inputs):
               SHVF_bb,
               SHVF_mm)
           )
-    repopulation_bin_by_bin(num_subs_max=num_subs_max,
-                            sim_type=sim_type,
-                            res_string=res_string,
+    repopulation_bin_by_bin(
+        num_subs_max=num_subs_max,
+        sim_type=sim_type,
+        res_string=res_string,
 
-                            cosmo_G=cosmo_G,
-                            cosmo_H_0=cosmo_H_0,
-                            cosmo_rho_crit=cosmo_rho_crit,
+        cosmo_G=cosmo_G,
+        cosmo_H_0=cosmo_H_0,
+        cosmo_rho_crit=cosmo_rho_crit,
 
-                            host_R_vir=host_R_vir,
-                            host_rho_0=host_rho_0,
-                            host_r_s=host_r_s,
+        host_R_vir=host_R_vir,
+        host_rho_0=host_rho_0,
+        host_r_s=host_r_s,
 
-                            pathname=path_name,
-                            repop_its=repop_its,
-                            repop_print_freq=repop_print_freq,
-                            repop_inc_factor=repop_inc_factor,
-                            repop_num_brightest=repop_num_brightest,
+        pathname=path_name,
+        repop_its=repop_its,
+        repop_print_freq=repop_print_freq,
+        repop_inc_factor=repop_inc_factor,
+        repop_num_brightest=repop_num_brightest,
 
-                            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-                            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-                            SHVF_bb=SHVF_bb,
-                            SHVF_mm=SHVF_mm,
+        SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+        SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+        SHVF_bb=SHVF_bb,
+        SHVF_mm=SHVF_mm,
 
-                            Cv_bb=Cv_bb,
-                            Cv_mm=Cv_mm,
-                            Cv_sigma=Cv_sigma,
+        Cv_bb=Cv_bb,
+        Cv_mm=Cv_mm,
+        Cv_sigma=Cv_sigma,
 
-                            srd_args=srd_args,
-                            srd_last_sub=srd_last_sub
-                            )
+        srd_args_repop=srd_args_repop,
+        srd_args_visible=srd_args_visible,
+        srd_last_sub=srd_last_sub,
+        Vmax_completion=Vmax_completion
+    )
 
 
 if __name__ == "__main__":
     path_name = str('outputs/'
-                    + 'test'
+                    + 'test2'
                     )
 
     print(time.strftime("%d-%m-%Y %H:%M:%S", time.gmtime()))
