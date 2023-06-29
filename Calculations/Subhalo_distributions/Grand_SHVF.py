@@ -27,12 +27,12 @@ plt.rc('xtick.minor', size=4, width=1)
 plt.rc('ytick.minor', size=4, width=1)
 
 #        Rmax[kpc]        Vmax[km/s]      Radius[Mpc]
-Grand_dmo = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
-Grand_hydro = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
+# Grand_dmo = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
+# Grand_hydro = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
 
 # #        Rmax        Vmax      Radius
-# Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
-# Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
+Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
+Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
 
 Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > 1e-4, :]
 Grand_dmo[:, 2] *= 1e3
@@ -379,7 +379,7 @@ fig.text(0.06, 0.5, 'Limite superior', ha='center', va='center',
 
 number_bins = np.arange(15, 35)
 
-numbers = 7
+numbers = 3
 limit_infG = np.linspace(6, 10, num=numbers)
 limit_supG = np.linspace(30, 70, num=numbers)
 
@@ -429,13 +429,13 @@ for nbin, bin_i in enumerate(number_bins):
             ax3.errorbar(x=bin_i + 0.45 * np.random.random(1)
                            * (-1) ** (np.random.random() < 0.5),
                          y=-fitsM_Hydro,
-                         yerr=fitsM_Hydro_std,
+                         # yerr=fitsM_Hydro_std,
                          color=(red_array[ninf], 0, blue_array[nsup]),
                          linestyle='', marker='x', capsize=6, markersize=6)
             ax2.errorbar(x=bin_i + 0.45 * np.random.random(1)
                            * (-1) ** (np.random.random() < 0.5),
                          y=-fitsM_DMO,
-                         yerr=fitsM_DMO_std,
+                         # yerr=fitsM_DMO_std,
                          color=(red_array[ninf], 0, blue_array[nsup]),
                          linestyle='', marker='x',
                          capsize=6, markersize=6)
@@ -443,13 +443,13 @@ for nbin, bin_i in enumerate(number_bins):
             ax3.errorbar(x=bin_i + 0.45 * np.random.random(1)
                            * (-1) ** (np.random.random() < 0.5),
                          y=fitsB_Hydro,
-                         yerr=fitsB_Hydro_std,
+                         # yerr=fitsB_Hydro_std,
                          color=(0, red_array[ninf], blue_array[nsup]),
                          linestyle='', marker='o', capsize=6, markersize=3)
             ax2.errorbar(x=bin_i + 0.45 * np.random.random(1)
                            * (-1) ** (np.random.random() < 0.5),
                          y=fitsB_DMO,
-                         yerr=fitsB_DMO_std,
+                         # yerr=fitsB_DMO_std,
                          color=(0, red_array[ninf], blue_array[nsup]),
                          linestyle='', marker='o', capsize=6, markersize=3)
 

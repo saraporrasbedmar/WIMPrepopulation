@@ -30,12 +30,12 @@ plt.rc('xtick.minor', size=4, width=1)
 plt.rc('ytick.minor', size=4, width=1)
 
 #        Rmax[kpc]        Vmax[km/s]      Radius[Mpc]
-Grand_dmo = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
-Grand_hydro = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
+# Grand_dmo = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
+# Grand_hydro = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
 
 # #        Rmax        Vmax      Radius
-# Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
-# Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
+Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
+Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
 
 # Grand_hydro = Grand_hydro[Grand_hydro[:,1]>1e-4, :]
 Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > np.min(Grand_dmo[:, 1]), :]
@@ -78,6 +78,7 @@ def encontrar_SRD(data):
     n_final = []
     a = 0
     for delta in range(len(bins) - 2):
+        # print(delta, bins[delta])
         X1limit = np.where(data[:, 2] >= bins[delta])[0][0]
         X2limit = np.where(data[:, 2] > bins[delta + 1])[0][0]
 
@@ -373,8 +374,10 @@ plt.axvline(peak_hyd, alpha=0.5, color='limegreen')
 plt.axvline(6.61, alpha=0.5, color='k', linestyle='dotted')
 plt.axvline(13.6, alpha=0.5, color='limegreen', linestyle='dotted')
 
-def func_radialexpcutoff(R,a,b):
-    return b*np.exp(a/R)
+
+def func_radialexpcutoff(R, a, b):
+    return b * np.exp(a / R)
+
 
 xxx = np.linspace(3e-3, R200 * 1e3, num=100)
 p0 = [-4, 1.4]
@@ -386,11 +389,10 @@ plt.plot(xxx, func_radialexpcutoff(xxx,
                                    cts_dmo[0][0], cts_dmo[0][1]),
          '--k', label='exp fragile')
 
-
 p0 = [-4, 1.4]
 cts_hydro = opt.curve_fit(func_radialexpcutoff, x_kpc[:X_max],
-                        (srd_hydro_sinVol[:X_max]),
-                        p0=p0)
+                          (srd_hydro_sinVol[:X_max]),
+                          p0=p0)
 print('Attempt at exp of dmo:   ', cts_hydro[0])
 plt.plot(xxx, func_radialexpcutoff(xxx,
                                    cts_hydro[0][0], cts_hydro[0][1]),
@@ -417,8 +419,6 @@ print('Attempt at sqrt of dmo: ', cts_dmo[0])
 #          'r')
 
 
-
-
 plt.axvline(R_max * 1e3, alpha=0.5, label='220 kpc')
 
 plt.ylabel(r'n(r) = $\frac{N(r)}{N_{Tot}}$')
@@ -428,8 +428,6 @@ plt.legend(framealpha=1)
 
 # plt.xscale('log')
 plt.yscale('log')
-
-
 
 plt.figure(4, figsize=(10, 8))
 
@@ -470,6 +468,8 @@ plt.plot(x_kpc, np.log10((np.log10(x_kpc) * log_tend_dmo[0] + log_tend_dmo[
 #          color='limegreen', alpha=0.7)
 
 plt.axvline(peak_dmo, alpha=0.5, color='k')
+
+
 # plt.axvline(peak_hyd, alpha=0.5, color='limegreen')
 
 
@@ -477,18 +477,20 @@ def N_Dgc_Cosmic_slide(R, R0, aa, bb):
     # Number of subhalos (NOT DM DENSITY) at a distance to the GC R.
     return R0 + aa * R ** bb
 
+
 xxx = np.linspace(3e-3, R200 * 1e3, num=200)
 
 p0 = cts_dmo[0]
 plt.plot(xxx, np.log10(N_Dgc_Cosmic_slide(xxx,
-                                         p0[0], p0[1], p0[2])))
+                                          p0[0], p0[1], p0[2])))
 
 p0 = [-4, 1.4, 0.15]
 plt.plot(xxx, (N_Dgc_Cosmic_slide(xxx,
-                                         p0[0], p0[1], p0[2])), 'k')
+                                  p0[0], p0[1], p0[2])), 'k')
 
-def func_radialexpcutoff(R,a,b):
-    return b*np.exp(a/R)
+
+def func_radialexpcutoff(R, a, b):
+    return b * np.exp(a / R)
 
 
 p0 = [-4, 1.4]
@@ -496,7 +498,6 @@ cts_dmo = opt.curve_fit(func_radialexpcutoff, x_kpc[:X_max],
                         (srd_dmo_sinVol[:X_max]),
                         p0=p0)
 print('Attempt at sqrt of dmo: ', cts_dmo[0])
-
 
 plt.plot(xxx, func_radialexpcutoff(xxx,
                                    cts_dmo[0][0], cts_dmo[0][1]),
@@ -522,5 +523,117 @@ plt.legend(framealpha=1)
 
 # plt.xscale('log')
 # plt.yscale('log')
+
+
+# NEW POSSIBILITY LALALALA
+
+plt.figure(figsize=(12, 7))
+num_bins = 15
+
+bins = np.linspace(0, R200, num=num_bins)
+x_med = (bins[:-1] + bins[1:]) / 2.
+
+# v_cut = [2., 4., 5., 6., 7., 10.]
+v_cut = np.linspace(2, 12, num=11)
+for ni, ii in enumerate(v_cut):
+    print('v_cut: ', ii, ni)
+    print((1 + ni * (0.1 - 1.) / (len(v_cut))))
+    Grand_dmo_over = Grand_dmo[Grand_dmo[:, 1] > ii, :]
+    Grand_dmo_below = Grand_dmo[Grand_dmo[:, 1] <= ii, :]
+    Grand_hydro_over = Grand_hydro[Grand_hydro[:, 1] > ii, :]
+    Grand_hydro_below = Grand_hydro[Grand_hydro[:, 1] <= ii, :]
+
+    srd_dmo_over = (np.array(encontrar_SRD(Grand_dmo_over))
+                    / len(Grand_dmo_over))
+    srd_dmo_below = (np.array(encontrar_SRD(Grand_dmo_below))
+                     / len(Grand_dmo_below))
+    srd_hydro_over = (np.array(encontrar_SRD(Grand_hydro_over))
+                      / len(Grand_hydro_over))
+    srd_hydro_below = (np.array(encontrar_SRD(Grand_hydro_below))
+                       / len(Grand_hydro_below))
+
+    plt.plot(x_med * 1e3, srd_dmo_over, '-', color='k', ms=10,
+             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))), label='%.1f' % ii)
+
+    plt.plot(x_med * 1e3, srd_hydro_over, '-', color='limegreen', ms=10,
+             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))))
+
+    plt.plot(x_med * 1e3, srd_dmo_below, '--', color='k', ms=10,
+             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))))#, marker='x')
+
+    plt.plot(x_med * 1e3, srd_hydro_below, '--', color='limegreen', ms=10,
+             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))))#, marker='x')
+
+
+plt.axvline(R_max * 1e3, alpha=0.7, linestyle='--')  # , label='220 kpc')
+plt.annotate(r'R$_\mathrm{vir}$', (170, 1), color='b', rotation=45, alpha=0.7)
+
+plt.axvline(8.5, linestyle='--', alpha=1, color='Sandybrown')
+plt.annotate('Earth', (8.6, 1), color='Sandybrown', rotation=45)
+
+plt.ylabel(r'n(r) = $\frac{N(r)}{N_{Tot}\,Volumen}$ [Mpc$^{-3}$]', size=24)
+plt.xlabel('r [kpc]', size=26)
+
+legend_elements = [Line2D([0], [0], marker='o', color='w', label='Frag',
+                          markerfacecolor='k', markersize=8),
+                   Line2D([0], [0], marker='o', color='w', label='Res',
+                          markerfacecolor='limegreen', markersize=8)]
+legend1 = plt.legend(legend_elements, ['DMO', 'Hydro'], loc=8,
+                     handletextpad=0.2)  # ,handlelength=1)
+leg = plt.legend(framealpha=1, loc=1)
+plt.gca().add_artist(legend1)
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(6, 300)
+
+# plt.ylim(0, 60)
+
+# ------------------------ N(r)/Ntot figure ------------------------------
+print()
+print('N/Ntot figures')
+
+plt.figure(figsize=(10, 8))
+
+for ni, ii in enumerate(v_cut):
+    Grand_dmo_over = Grand_dmo[Grand_dmo[:, 1] > ii, :]
+    Grand_dmo_below = Grand_dmo[Grand_dmo[:, 1] <= ii, :]
+    Grand_hydro_over = Grand_hydro[Grand_hydro[:, 1] > ii, :]
+    Grand_hydro_below = Grand_hydro[Grand_hydro[:, 1] <= ii, :]
+
+    srd_dmo_over = (np.array(encontrar_SRD_sinVol(Grand_dmo_over))
+                    / len(Grand_dmo_over))
+    srd_dmo_below = (np.array(encontrar_SRD_sinVol(Grand_dmo_below))
+                     / len(Grand_dmo_below))
+    srd_hydro_over = (np.array(encontrar_SRD_sinVol(Grand_hydro_over))
+                      / len(Grand_hydro_over))
+    srd_hydro_below = (np.array(encontrar_SRD_sinVol(Grand_hydro_below))
+                       / len(Grand_hydro_below))
+
+    plt.plot(x_med * 1e3, srd_dmo_over, '-', color='k', #ms=10,
+             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))), label='%.1f' % ii)
+
+    plt.plot(x_med * 1e3, srd_hydro_over, '-', color='limegreen',# ms=10,
+             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))))
+
+    plt.plot(x_med * 1e3, srd_dmo_below, '--', color='k',# ms=10,
+             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))))
+
+    plt.plot(x_med * 1e3, srd_hydro_below, '--', color='limegreen',# ms=10,
+             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))))
+
+
+plt.axvline(peak_dmo, alpha=0.5, color='k')
+plt.axvline(peak_hyd, alpha=0.5, color='limegreen')
+
+plt.axvline(R_max * 1e3, alpha=0.5, label='220 kpc')
+
+plt.ylabel(r'n(r) = $\frac{N(r)}{N_{Tot}}$')
+plt.xlabel('r [kpc]', size=24)
+
+plt.legend(framealpha=1)
+
+plt.xscale('log')
+plt.yscale('log')
 
 plt.show()
