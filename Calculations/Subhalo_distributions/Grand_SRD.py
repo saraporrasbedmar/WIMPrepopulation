@@ -499,8 +499,8 @@ cts_dmo = opt.curve_fit(func_radialexpcutoff, x_kpc[:X_max],
                         p0=p0)
 print('Attempt at sqrt of dmo: ', cts_dmo[0])
 
-plt.plot(xxx, func_radialexpcutoff(xxx,
-                                   cts_dmo[0][0], cts_dmo[0][1]),
+plt.plot(xxx, np.log10(func_radialexpcutoff(xxx,
+                                   cts_dmo[0][0], cts_dmo[0][1])),
          'r')
 #
 # cts_dmo = opt.curve_fit(N_Dgc_Cosmic_slide, x_kpc[:X_max],
@@ -528,16 +528,23 @@ plt.legend(framealpha=1)
 # NEW POSSIBILITY LALALALA
 
 plt.figure(figsize=(12, 7))
+plt.title('DMO')
 num_bins = 15
+print(bins)
+print(x_med)
 
 bins = np.linspace(0, R200, num=num_bins)
 x_med = (bins[:-1] + bins[1:]) / 2.
 
-# v_cut = [2., 4., 5., 6., 7., 10.]
-v_cut = np.linspace(2, 12, num=11)
+v_cut = [2., 12.]
+v_cut = np.linspace(2, 10, num=25)
+cm_subsection = np.linspace(0, 1, 25)
+from matplotlib import cm
+colors = [ cm.jet(x) for x in cm_subsection ]
+
 for ni, ii in enumerate(v_cut):
     print('v_cut: ', ii, ni)
-    print((1 + ni * (0.1 - 1.) / (len(v_cut))))
+    print((1))
     Grand_dmo_over = Grand_dmo[Grand_dmo[:, 1] > ii, :]
     Grand_dmo_below = Grand_dmo[Grand_dmo[:, 1] <= ii, :]
     Grand_hydro_over = Grand_hydro[Grand_hydro[:, 1] > ii, :]
@@ -547,23 +554,32 @@ for ni, ii in enumerate(v_cut):
                     / len(Grand_dmo_over))
     srd_dmo_below = (np.array(encontrar_SRD(Grand_dmo_below))
                      / len(Grand_dmo_below))
+
     srd_hydro_over = (np.array(encontrar_SRD(Grand_hydro_over))
                       / len(Grand_hydro_over))
     srd_hydro_below = (np.array(encontrar_SRD(Grand_hydro_below))
                        / len(Grand_hydro_below))
+    # (abs(ni * (0.1 - 1.) / (len(v_cut))))
+    plt.plot(x_med * 1e3, srd_dmo_over, '-', color=colors[ni], ms=10,
+             alpha=(1), label='%.1f' % ii)
 
-    plt.plot(x_med * 1e3, srd_dmo_over, '-', color='k', ms=10,
-             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))), label='%.1f' % ii)
+    # plt.plot(x_med * 1e3, srd_hydro_over, '-', color=colors[ni], ms=10,
+    #          alpha=(1), label='%.1f' % ii)
 
-    plt.plot(x_med * 1e3, srd_hydro_over, '-', color='limegreen', ms=10,
-             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))))
+    plt.plot(x_med * 1e3, srd_dmo_below, '--', color=colors[ni], ms=10,
+             alpha=(1))#, marker='x')
 
-    plt.plot(x_med * 1e3, srd_dmo_below, '--', color='k', ms=10,
-             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))))#, marker='x')
+    # plt.plot(x_med * 1e3, srd_hydro_below, '--', color=colors[ni], ms=10,
+    #          alpha=(1))#, marker='x')
 
-    plt.plot(x_med * 1e3, srd_hydro_below, '--', color='limegreen', ms=10,
-             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))))#, marker='x')
+srd_dmo = (np.array(encontrar_SRD(Grand_dmo))
+                    / len(Grand_dmo))
 
+srd_hydro = (np.array(encontrar_SRD(Grand_hydro))
+                      / len(Grand_hydro))
+plt.plot(x_med * 1e3, srd_dmo, '-', color='k', ms=10, linewidth=5,
+         label='total')
+# plt.plot(x_med * 1e3, srd_hydro, '--', color='k', ms=10)
 
 plt.axvline(R_max * 1e3, alpha=0.7, linestyle='--')  # , label='220 kpc')
 plt.annotate(r'R$_\mathrm{vir}$', (170, 1), color='b', rotation=45, alpha=0.7)
@@ -574,13 +590,13 @@ plt.annotate('Earth', (8.6, 1), color='Sandybrown', rotation=45)
 plt.ylabel(r'n(r) = $\frac{N(r)}{N_{Tot}\,Volumen}$ [Mpc$^{-3}$]', size=24)
 plt.xlabel('r [kpc]', size=26)
 
-legend_elements = [Line2D([0], [0], marker='o', color='w', label='Frag',
-                          markerfacecolor='k', markersize=8),
-                   Line2D([0], [0], marker='o', color='w', label='Res',
-                          markerfacecolor='limegreen', markersize=8)]
-legend1 = plt.legend(legend_elements, ['DMO', 'Hydro'], loc=8,
+legend_elements = [Line2D([0], [0], color='k',
+                           markersize=8),
+                   Line2D([0], [0], color='k', ls='--',
+                          markersize=8)]
+legend1 = plt.legend(legend_elements, ['Over', 'Below'], loc=8,
                      handletextpad=0.2)  # ,handlelength=1)
-leg = plt.legend(framealpha=1, loc=1)
+leg = plt.legend(framealpha=1, loc=1, fontsize=10)
 plt.gca().add_artist(legend1)
 
 plt.xscale('log')
@@ -594,8 +610,11 @@ print()
 print('N/Ntot figures')
 
 plt.figure(figsize=(10, 8))
+plt.title('DMO')
 
 for ni, ii in enumerate(v_cut):
+    print('v_cut: ', ii, ni)
+    print((1))
     Grand_dmo_over = Grand_dmo[Grand_dmo[:, 1] > ii, :]
     Grand_dmo_below = Grand_dmo[Grand_dmo[:, 1] <= ii, :]
     Grand_hydro_over = Grand_hydro[Grand_hydro[:, 1] > ii, :]
@@ -609,19 +628,35 @@ for ni, ii in enumerate(v_cut):
                       / len(Grand_hydro_over))
     srd_hydro_below = (np.array(encontrar_SRD_sinVol(Grand_hydro_below))
                        / len(Grand_hydro_below))
+    print(encontrar_SRD_sinVol(Grand_dmo_below))
+    print(len(Grand_dmo_below))
+    print(srd_dmo_below)
+    print(Grand_dmo_below[:10, 2])
+    print()
+    print()
 
-    plt.plot(x_med * 1e3, srd_dmo_over, '-', color='k', #ms=10,
-             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))), label='%.1f' % ii)
+    plt.plot(x_med * 1e3, srd_dmo_over, '-', color=colors[ni], #ms=10,
+             alpha=(1), label='%.1f' % ii)
 
-    plt.plot(x_med * 1e3, srd_hydro_over, '-', color='limegreen',# ms=10,
-             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))))
+    # plt.plot(x_med * 1e3, srd_hydro_over, '-', color=colors[ni],# ms=10,
+    #          alpha=(1), label='%.1f' % ii)
 
-    plt.plot(x_med * 1e3, srd_dmo_below, '--', color='k',# ms=10,
-             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))))
+    plt.plot(x_med * 1e3, srd_dmo_below, '--', color=colors[ni],# ms=10,
+             alpha=(1))
 
-    plt.plot(x_med * 1e3, srd_hydro_below, '--', color='limegreen',# ms=10,
-             alpha=(1 + ni * (0.1 - 1.) / (len(v_cut))))
+    # plt.plot(x_med * 1e3, srd_hydro_below, '--', color=colors[ni],# ms=10,
+    #          alpha=(1))
 
+
+
+srd_dmo = (np.array(encontrar_SRD_sinVol(Grand_dmo))
+                    / len(Grand_dmo))
+
+srd_hydro = (np.array(encontrar_SRD_sinVol(Grand_hydro))
+                      / len(Grand_hydro))
+plt.plot(x_med * 1e3, srd_dmo, '-', color='k', ms=10, label='total',
+         linewidth=5)
+# plt.plot(x_med * 1e3, srd_hydro, '--', color='k', ms=10)
 
 plt.axvline(peak_dmo, alpha=0.5, color='k')
 plt.axvline(peak_hyd, alpha=0.5, color='limegreen')
@@ -631,9 +666,18 @@ plt.axvline(R_max * 1e3, alpha=0.5, label='220 kpc')
 plt.ylabel(r'n(r) = $\frac{N(r)}{N_{Tot}}$')
 plt.xlabel('r [kpc]', size=24)
 
-plt.legend(framealpha=1)
 
 plt.xscale('log')
 plt.yscale('log')
+
+legend_elements = [Line2D([0], [0], color='k',
+                           markersize=8),
+                   Line2D([0], [0], color='k', ls='--',
+                          markersize=8)]
+legend1 = plt.legend(legend_elements, ['Over', 'Below'], loc=8,
+                     handletextpad=0.2)  # ,handlelength=1)
+
+plt.legend(framealpha=1, fontsize=10, loc=4)
+plt.gca().add_artist(legend1)
 
 plt.show()
