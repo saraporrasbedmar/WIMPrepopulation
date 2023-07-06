@@ -31,14 +31,16 @@ plt.rc('ytick.major', size=7, width=1.5, right=True)
 plt.rc('xtick.minor', size=4, width=1)
 plt.rc('ytick.minor', size=4, width=1)
 #
-# #        Rmax        Vmax      Radius
-Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
-Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
+#        Rmax[kpc]        Vmax[km/s]      Radius[Mpc]
+try:
+    Grand_dmo = np.loadtxt(
+        '../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
+    Grand_hydro = np.loadtxt(
+        '../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
 
-#        Rmax        Vmax      Radius
-# Grand_dmo = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
-# Grand_hydro = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
-
+except:
+    Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
+    Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
 
 Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > 1e-4, :]
 
@@ -449,6 +451,11 @@ def log10MOline21(V, c0, c1, c2, c3):
     return np.log10(Cv_Mol2021_redshift0(V, c0, c1, c2, c3))
 
 
+def log10MOline21_normalization(V, c0):
+    return np.log10(Cv_Mol2021_redshift0(V, c0, c1=-0.90368,
+                                         c2=0.2749, c3=-0.028))
+
+
 moline_fits = curve_fit(log10MOline21,
                         xdata=vv_medians_dmo[vv_medians_dmo > dmoLimit],
                         ydata=np.log10(
@@ -615,7 +622,7 @@ for i in [1, 2]:
     plt.subplot(2, 2, i + 2, sharex=ax1, sharey=ax1)
 
     # xx_plot = np.logspace(np.log10(xx_dmo[0]), np.log10(xx_dmo[-1]))
-    xx_plot = np.logspace(np.log10(xx_dmo[0]), np.log10(60))
+    xx_plot = np.logspace(np.log10(xx_dmo[0]), np.log10(100))
 
     '''
     plt.fill_between(xx_plot, 10**exps_dmo[1]*xx_plot**fitsM_dmo,
@@ -629,15 +636,15 @@ for i in [1, 2]:
     plt.plot(xx_plot, Cv_Mol2021_redshift0(xx_plot), color='red',
              label='Moliné+21', alpha=0.5, linewidth=3)
 
-    plt.plot(xx_plot, 10 ** exps_dmo[0] * xx_plot ** fitsM_dmo, '-k',
-             linewidth=3, alpha=0.5)
-    plt.plot(xx_plot, 10 ** exps_hydro[0] * xx_plot ** fitsM_hydro, '-g',
-             linewidth=3, alpha=0.5)
-
-    plt.plot(xx_plot, 10 ** exps_dmo_mean[0] * xx_plot ** fitsM_dmo_mean,
-             '--k', linewidth=3, alpha=0.5)
-    plt.plot(xx_plot, 10 ** exps_hydro_mean[0] * xx_plot ** fitsM_hydro_mean,
-             '--g', linewidth=3, alpha=0.5)
+    # plt.plot(xx_plot, 10 ** exps_dmo[0] * xx_plot ** fitsM_dmo, '-k',
+    #          linewidth=3, alpha=0.5)
+    # plt.plot(xx_plot, 10 ** exps_hydro[0] * xx_plot ** fitsM_hydro, '-g',
+    #          linewidth=3, alpha=0.5)
+    #
+    # plt.plot(xx_plot, 10 ** exps_dmo_mean[0] * xx_plot ** fitsM_dmo_mean,
+    #          '--k', linewidth=3, alpha=0.5)
+    # plt.plot(xx_plot, 10 ** exps_hydro_mean[0] * xx_plot ** fitsM_hydro_mean,
+    #          '--g', linewidth=3, alpha=0.5)
 
     plt.plot(xx_dmo, yy_dmo, '.k', label='DMO', ms=13)
     plt.plot(xx_hydro, yy_hydro, '.g', label='Hydro', ms=13)
@@ -652,17 +659,42 @@ for i in [1, 2]:
                                 xdata=xx_dmo[xx_dmo > dmoLimit],
                                 ydata=np.log10(
                                     yy_dmo[xx_dmo > dmoLimit]),
-                                p0=[1.75e5, -0.90368, 0.2749, -0.028],
-                                bounds=([-np.inf, -np.inf, -np.inf, -np.inf],
-                                        [3e5, +np.inf, +np.inf, +np.inf]))
-
-        print(moline_fits)
+                                p0=[1.75e5, -0.95368, 0.2749, -0.028],
+                                bounds=([-np.inf, -0.99, 0.2, -0.03],
+                                        [5e5, +np.inf, +np.inf, +np.inf]))
+        # bounds=([-np.inf, -np.inf, -np.inf, -np.inf],
+        #         [3e5, +np.inf, +np.inf, +np.inf]))
 
         plt.plot(xx_plot, Cv_Mol2021_redshift0(V=xx_plot,
                                                c0=moline_fits[0][0],
                                                c1=moline_fits[0][1],
                                                c2=moline_fits[0][2],
                                                c3=moline_fits[0][3]),
+                 '--', color='k',
+                 label='Moliné+21 fit', alpha=1, linewidth=3)
+        print(moline_fits)
+        print()
+        moline_fits = curve_fit(log10MOline21_normalization,
+                                xdata=xx_dmo[xx_dmo > dmoLimit],
+                                ydata=np.log10(
+                                    yy_dmo[xx_dmo > dmoLimit]),
+                                p0=[1.75e5],
+                                bounds=(-np.inf, 5e7))
+        print('aaaaaaaaaa')
+        print(moline_fits[0][0], moline_fits[1][0]**0.5)
+        moline_fits = curve_fit(Cv_Mol2021_redshift0,
+                                xdata=xx_dmo[xx_dmo > dmoLimit],
+                                ydata=yy_dmo[xx_dmo > dmoLimit],
+                                p0=[1.75e5],
+                                bounds=(-np.inf, 5e7))
+        print('aaaaaaaaaa')
+        print(moline_fits[0][0], moline_fits[1][0][0]**0.5)
+
+        plt.plot(xx_plot, Cv_Mol2021_redshift0(V=xx_plot,
+                                               c0=moline_fits[0][0],
+                                               c1=-0.90368,
+                                               c2=0.2749,
+                                               c3=-0.028),
                  color='k',
                  label='Moliné+21 fit', alpha=1, linewidth=3)
 
@@ -673,16 +705,43 @@ for i in [1, 2]:
                                     yy_hydro[
                                         xx_hydro > hydroLimit]),
                                 p0=[1.e4, -0.90368, 0.2749, -0.028],
-                                bounds=([-np.inf, -np.inf, -np.inf, -np.inf],
-                                        [9e4, +np.inf, +np.inf, +np.inf]))
+                                bounds=([-np.inf, -5, 0.245, -np.inf],
+                                        [3e5, -0.9, +np.inf, 0.025]))
+
 
         plt.plot(xx_plot, Cv_Mol2021_redshift0(V=xx_plot,
                                                c0=moline_fits[0][0],
                                                c1=moline_fits[0][1],
                                                c2=moline_fits[0][2],
                                                c3=moline_fits[0][3]),
+                 '--', color='g',
+                 alpha=1, linewidth=3)
+        print(moline_fits)
+        print()
+        moline_fits = curve_fit(log10MOline21_normalization,
+                                xdata=xx_hydro[xx_hydro > hydroLimit],
+                                ydata=np.log10(
+                                    yy_hydro[xx_hydro > hydroLimit]),
+                                p0=[1.75e5],
+                                bounds=(-np.inf, 5e7))
+        print('aaaaaaaaaa')
+        print(moline_fits[0][0], moline_fits[1][0]**0.5)
+        moline_fits = curve_fit(Cv_Mol2021_redshift0,
+                                xdata=xx_hydro[xx_hydro > hydroLimit],
+                                ydata=yy_hydro[xx_hydro > hydroLimit],
+                                p0=[1.75e5],
+                                bounds=(-np.inf, 5e7))
+        print('aaaaaaaaaa')
+        print(moline_fits[0][0], moline_fits[1][0][0]**0.5)
+
+        plt.plot(xx_plot, Cv_Mol2021_redshift0(V=xx_plot,
+                                               c0=moline_fits[0][0],
+                                               c1=-0.90368,
+                                               c2=0.2749,
+                                               c3=-0.028),
                  color='g',
                  alpha=1, linewidth=3)
+
 
     # GMEAN
     # moline_fits = curve_fit(log10MOline21,
@@ -730,7 +789,7 @@ for i in [1, 2]:
 
     plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
 
-    plt.annotate('- median \n -- gmean', (20, 6500))
+    plt.annotate('- 1 param \n -- 4 params', (20, 6500))
 
     # plt.xlim(1.3, 53)
 

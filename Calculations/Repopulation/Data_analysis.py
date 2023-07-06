@@ -29,9 +29,9 @@ plt.rc('ytick.major', size=7, width=1.5, right=True, pad=7)
 plt.rc('xtick.minor', size=4, width=1)
 plt.rc('ytick.minor', size=4, width=1)
 
-path_name = '/home/saraporras/Desktop/WIMPSproject/WIMPrepopulation/' \
-            'Calculations/Repopulation/outputs' \
-            '/test'
+
+path_name = 'outputs/' \
+            'Test_physnet 2023-02-10 10:39:20'
 #
 datos_Js_frag_hyd = np.loadtxt(path_name + '/Js_hydro_fragile_results.txt')
 datos_Js_frag_dmo = np.loadtxt(path_name + '/Js_dmo_fragile_results.txt')
@@ -45,10 +45,10 @@ datos_Js_resi_dmo = np.loadtxt(path_name + '/Js_dmo_resilient_results.txt')
 datos_J03_resi_hyd = np.loadtxt(path_name + '/J03_hydro_resilient_results.txt')
 datos_J03_resi_dmo = np.loadtxt(path_name + '/J03_dmo_resilient_results.txt')
 
-constraints_bb_2204 = np.loadtxt('Constraints_2204/Limit_bb.txt')
-constraints_tau_2204 = np.loadtxt('Constraints_2204/Limit_tau.txt')
-sigmav_bb_2204 = np.loadtxt('Constraints_2204/sigmav_bb.txt')
-sigmav_tau_2204 = np.loadtxt('Constraints_2204/sigmav_tau.txt')
+constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
+constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')
+sigmav_bb_2204 = np.loadtxt('../Constraints_2204/sigmav_bb.txt')
+sigmav_tau_2204 = np.loadtxt('../Constraints_2204/sigmav_tau.txt')
 
 sigmav_bb_2204 = sigmav_bb_2204[sigmav_bb_2204[:, 0].argsort()[::], :]
 sigmav_tau_2204 = sigmav_tau_2204[sigmav_tau_2204[:, 0].argsort()[::], :]
