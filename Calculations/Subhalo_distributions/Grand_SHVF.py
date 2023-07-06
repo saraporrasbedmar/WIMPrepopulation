@@ -56,7 +56,7 @@ plt.close('all')
 # %%
 
 x_cumul = np.logspace(np.log10(Grand_hydro[0, 1]),
-                      np.log10(Grand_hydro[-1, 1]), num=25)
+                      np.log10(Grand_hydro[-1, 1]), num=26)
 
 
 def calcular_dNdV(Vmax):
