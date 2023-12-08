@@ -22,7 +22,7 @@ SHVF:
         bb: 5.0796
     
     # Min and max velocities to repopulate [km/s]
-    RangeMin: 6.
+    RangeMin: 8.
     RangeMax: 60.
 
     # Vmax at which the simulation is complete
@@ -68,7 +68,7 @@ Cv:
 # REPOPULATION
 repopulations:
     print_freq: 1
-    its: 3
+    its: 100
     num_subs_max: 5e5
     num_brightest: 20
     inc_factor: 1.5

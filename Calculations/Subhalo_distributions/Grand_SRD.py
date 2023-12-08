@@ -11,23 +11,27 @@ import matplotlib.pyplot as plt
 
 import scipy.optimize as opt
 from scipy import integrate
+from scipy.interpolate import UnivariateSpline
 from matplotlib.lines import Line2D
 
+all_size = 26
 plt.rcParams['mathtext.fontset'] = 'stix'
 plt.rcParams['font.family'] = 'STIXGeneral'
-plt.rc('font', size=20)
-plt.rc('axes', titlesize=16)
-plt.rc('axes', labelsize=16)
-plt.rc('xtick', labelsize=21)
-plt.rc('ytick', labelsize=22)
-plt.rc('legend', fontsize=20)
-plt.rc('figure', titlesize=17)
+plt.rcParams['axes.labelsize'] = all_size
+plt.rcParams['lines.markersize'] = 10
+plt.rc('font', size=all_size)
+plt.rc('axes', titlesize=all_size)
+plt.rc('axes', labelsize=all_size)
+plt.rc('xtick', labelsize=all_size)
+plt.rc('ytick', labelsize=all_size)
+plt.rc('legend', fontsize=22)
+plt.rc('figure', titlesize=all_size)
 plt.rc('xtick', top=True, direction='in')
 plt.rc('ytick', right=True, direction='in')
-plt.rc('xtick.major', size=7, width=1.5, top=True)
-plt.rc('ytick.major', size=7, width=1.5, right=True)
-plt.rc('xtick.minor', size=4, width=1)
-plt.rc('ytick.minor', size=4, width=1)
+plt.rc('xtick.major', size=10, width=2, top=True, pad=10)
+plt.rc('ytick.major', size=10, width=2, right=True, pad=10)
+plt.rc('xtick.minor', size=7, width=1.5)
+plt.rc('ytick.minor', size=7, width=1.5)
 
 #        Rmax[kpc]        Vmax[km/s]      Radius[Mpc]
 try:
@@ -211,6 +215,9 @@ plt.axvline(peak_hyd, alpha=0.5, color='limegreen')
 # color='limegreen')
 print('Hydro frag:', yy_hyd[0])
 
+print('first subhalos dmo', np.min(Grand_dmo[:, 2]))
+print('first subhalos hydro', np.min(Grand_hydro[:, 2]))
+
 plt.axvline(R_max * 1e3, alpha=0.7, linestyle='--')  # , label='220 kpc')
 plt.annotate(r'R$_\mathrm{vir}$', (170, 32), color='b', rotation=45, alpha=0.7)
 
@@ -246,14 +253,18 @@ srd_hydro_sinVol = (np.array(encontrar_SRD_sinVol(Grand_hydro))
                     / len(Grand_hydro))
 
 x_kpc = x_med * 1e3
+xxx = np.geomspace(4, 260, num=300)
 
-plt.figure(2, figsize=(10, 8))
+fig = plt.figure(2, figsize=(11, 10))
+ax1 = fig.gca()
 
-plt.plot(x_kpc, srd_dmo_sinVol, '-', color='k')
-plt.plot(x_kpc, srd_dmo_sinVol, color='k', marker='.', ms=10, label='DMO')
+# plt.plot(x_kpc, srd_dmo_sinVol, '-', color='k')
+plt.plot(x_kpc, srd_dmo_sinVol, color='k', marker='.', ms=15,
+         label='Data', linestyle='')
 
-plt.plot(x_kpc, srd_hydro_sinVol, '-', color='g')
-plt.plot(x_kpc, srd_hydro_sinVol, color='g', marker='.', ms=10, label='Hydro')
+# plt.plot(x_kpc, srd_hydro_sinVol, '-', color='g')
+plt.plot(x_kpc, srd_hydro_sinVol, color='limegreen', marker='.', ms=15,
+         linestyle='')
 
 xmin = 6
 xmax = 11
@@ -266,67 +277,80 @@ xmax = 11
 linear_tend_hydro = np.polyfit(np.log10(x_kpc[xmin:xmax]),
                                np.log10(srd_hydro_sinVol[xmin:xmax]), 1)
 print('max res hydro log-log: ', linear_tend_hydro)
+plt.plot(xxx, xxx ** linear_tend_dmo[0] * 10 ** linear_tend_dmo[1],
+         linestyle='dotted', color='k', alpha=1, label='Resilient fit',
+         lw=2)
+plt.plot(xxx, xxx ** linear_tend_hydro[0] * 10 ** linear_tend_hydro[1],
+         linestyle='dotted', color='limegreen', alpha=1, lw=2)
 
-plt.plot(x_kpc, x_kpc ** linear_tend_dmo[0] * 10 ** linear_tend_dmo[1],
-         '--', color='grey', alpha=0.7, label='res_maximum N/Ntot')
-plt.plot(x_kpc, x_kpc ** linear_tend_hydro[0] * 10 ** linear_tend_hydro[1],
-         '--', color='limegreen', alpha=0.7)
+# vol = 4 / 3 * np.pi * (bins[1:] ** 3 - bins[:-1] ** 3)
+# plt.plot(x_kpc, (np.log10(x_kpc) * log_tend_dmo[0] + log_tend_dmo[1]) * vol,
+#          '-', marker='+', ms=10,
+#          color='grey', alpha=0.7, label='res_maximum density')
+# plt.plot(x_kpc,
+#          (np.log10(x_kpc) * log_tend_hydro[0] + log_tend_hydro[1]) * vol,
+#          '-', marker='+', ms=10,
+#          color='limegreen', alpha=0.7)
 
-vol = 4 / 3 * np.pi * (bins[1:] ** 3 - bins[:-1] ** 3)
-plt.plot(x_kpc, (np.log10(x_kpc) * log_tend_dmo[0] + log_tend_dmo[1]) * vol,
-         '-', marker='+', ms=10,
-         color='grey', alpha=0.7, label='res_maximum density')
-plt.plot(x_kpc,
-         (np.log10(x_kpc) * log_tend_hydro[0] + log_tend_hydro[1]) * vol,
-         '-', marker='+', ms=10,
-         color='limegreen', alpha=0.7)
+xxx = np.geomspace(4, 220, num=300)
+x_xpc_long = np.append(x_kpc[:X_max], 220.)
+srd_dmo_sinVol_long = np.append(srd_dmo_sinVol[:X_max],
+                                srd_dmo_sinVol[:X_max][-1])
+srd_hydro_sinVol_long = np.append(srd_hydro_sinVol[:X_max],
+                                srd_hydro_sinVol[:X_max][-1])
+spline_dmo1 = UnivariateSpline(np.log10(x_xpc_long),
+                               np.log10(srd_dmo_sinVol_long),
+                               k=1, s=0, ext=0)
+plt.plot(xxx, 10 ** spline_dmo1(np.log10(xxx))
+         * (xxx > np.min(Grand_dmo[:, 2]*1e3)),
+         '--', color='k', label='Fragile fit', lw=2)
 
-plt.axvline(peak_dmo, alpha=0.5, color='k')
-plt.axvline(peak_hyd, alpha=0.5, color='limegreen')
+spline_hydro1 = UnivariateSpline(np.log10(x_xpc_long),
+                                 np.log10(srd_hydro_sinVol_long),
+                                 k=1, s=0, ext=0)
+plt.plot(xxx, 10 ** spline_hydro1(np.log10(xxx))
+         * (xxx > np.min(Grand_hydro[:, 2]*1e3)),
+         '--', color='limegreen', lw=2)
 
-# def N_Dgc_Cosmic_slide(R, R0, aa, bb):
-#     # Number of subhalos (NOT DM DENSITY) at a distance to the GC R.
-#     return 10**((R / R0) ** aa * np.exp(-bb * (R - R0) / R0))
-# cts_dmo = opt.curve_fit(N_Dgc_Cosmic_slide, x_kpc, srd_dmo_sinVol,
-#                         p0=[450, 0.5, 1e-5])
-# print(cts_dmo)
-
-
-# plt.plot(x_kpc, N_Dgc_Cosmic_slide(x_kpc,
-#                              cts_dmo[0][0], cts_dmo[0][1], cts_dmo[0][2]))
-
-# xmin = 6
-# xmax = 11
-# linear_tend_dmo = np.polyfit((x_kpc[xmin:xmax]),
-#                              np.log10(srd_dmo_sinVol[xmin:xmax]), 1)
-# print('max res dmo lin-log')
-# print(linear_tend_dmo)
-#
-# xmin = 6
-# xmax = 11
-# linear_tend_hydro = np.polyfit((x_kpc[xmin:xmax]),
-#                                np.log10(srd_hydro_sinVol[xmin:xmax]), 1)
-# print('max res hydro lin-log')
-# print(linear_tend_hydro)
-#
-# plt.plot(x_kpc, 10 ** (x_kpc * linear_tend_dmo[0] + linear_tend_dmo[1]),
-#          '-', color='grey', alpha=0.7, label='res_maximum lineal')
-# plt.plot(x_kpc, 10 ** (x_kpc * linear_tend_hydro[0] + linear_tend_hydro[1]),
-#          '-', color='limegreen', alpha=0.7)
-#
+plt.axvline(np.min(Grand_dmo[:, 2])*1e3, alpha=0.8, color='k',
+            label='Inner subhalo', linestyle='-', lw=1)
+plt.axvline(np.min(Grand_hydro[:, 2])*1e3, alpha=0.8,
+            color='limegreen', linestyle='-', lw=1)
 
 
-# plt.axvline(peak_dmo, alpha=0.5, color='k')
-# plt.axvline(peak_hyd, alpha=0.5, color='g')
-plt.axvline(R_max * 1e3, alpha=0.5, label='220 kpc')
+plt.axvline(R_max * 1e3, alpha=0.7, linestyle='-', lw=2)  # , label='220 kpc')
+plt.annotate(r'R$_\mathrm{vir}$', (160, 0.04), color='b', rotation=45,
+             alpha=1)
 
-plt.ylabel(r'n(r) = $\frac{N(r)}{N_{Tot}}$')
-plt.xlabel('r [kpc]', size=24)
+plt.axvline(8.5, linestyle='-', alpha=1, color='Sandybrown', lw=2)
+plt.annotate('Earth', (8.6, 0.1), color='Sandybrown', rotation=45)
 
-plt.legend(framealpha=1)
+plt.ylabel(r'n(r) = $\frac{N(r)}{N_{Tot}}$', size=26)
+plt.xlabel('r [kpc]', size=26)
+
+
+legend11 = plt.legend(loc=4, framealpha=1)
+
+colors = ['k', 'limegreen']
+legend33 = plt.legend([plt.Line2D([], [],
+                                  linestyle='', marker='o',
+                                  color=colors[i])
+                       for i in range(2)],
+                      ['DMO', 'Hydro'],
+                      loc=1, title='Simulation', framealpha=1,
+                      bbox_to_anchor=(0.99, 0.6)
+                      )
+
+ax1.add_artist(legend11)
+ax1.add_artist(legend33)
+
+# plt.legend(framealpha=1)
 
 plt.xscale('log')
 plt.yscale('log')
+
+plt.savefig('Outputs/srd_num.png', bbox_inches='tight')
+plt.savefig('Outputs/srd_num.pdf', bbox_inches='tight')
 
 print()
 print('Place of [Mpc] and number of subs below the resilient-disrupted cut:')
@@ -338,14 +362,14 @@ print('%.5f ----- %r' % (yy_hyd[0][0] * yy_hyd[0][1] / yy_hyd[0][2],
                          np.shape(
                              Grand_hydro[Grand_hydro[:, 2]
                                          <= peak_hyd / 1e3, :])[0]))
+'''
+# ----------------------- FIG 3 -----------------------------------------
+fig = plt.figure(3, figsize=(13, 10))
+ax1 = plt.gca()
 
-plt.figure(3, figsize=(10, 8))
-
-plt.plot(x_kpc, srd_dmo_sinVol, '-', color='k')
-plt.plot(x_kpc, srd_dmo_sinVol, color='k', marker='.', ms=10, label='DMO')
-
-plt.plot(x_kpc, srd_hydro_sinVol, '-', color='g')
-plt.plot(x_kpc, srd_hydro_sinVol, color='g', marker='.', ms=10, label='Hydro')
+plt.plot(x_kpc, srd_dmo_sinVol, color='k', marker='o', linestyle='-',
+          label='Data')
+plt.plot(x_kpc, srd_hydro_sinVol, color='g', marker='o', linestyle='-')
 
 xmin = 6
 xmax = 11
@@ -371,36 +395,65 @@ vol = 4 / 3 * np.pi * (bins[1:] ** 3 - bins[:-1] ** 3)
 #          '-', marker='+', ms=10,
 #          color='limegreen', alpha=0.7)
 
-plt.axvline(peak_dmo, alpha=0.5, color='k')
-plt.axvline(peak_hyd, alpha=0.5, color='limegreen')
-
-plt.axvline(6.61, alpha=0.5, color='k', linestyle='dotted')
-plt.axvline(13.6, alpha=0.5, color='limegreen', linestyle='dotted')
-
 
 def func_radialexpcutoff(R, a, b):
     return b * np.exp(a / R)
 
 
-xxx = np.linspace(3e-3, R200 * 1e3, num=100)
+xxx = np.linspace(3e-3, R200 * 1e3, num=200)
 p0 = [-4, 1.4]
 cts_dmo = opt.curve_fit(func_radialexpcutoff, x_kpc[:X_max],
                         (srd_dmo_sinVol[:X_max]),
                         p0=p0)
-print('Attempt at sqrt of dmo: ', cts_dmo[0])
 plt.plot(xxx, func_radialexpcutoff(xxx,
                                    cts_dmo[0][0], cts_dmo[0][1]),
-         '--k', label='exp fragile')
+         '--k')
+print('Attempt at exp of dmo: ', cts_dmo[0])
 
 p0 = [-4, 1.4]
 cts_hydro = opt.curve_fit(func_radialexpcutoff, x_kpc[:X_max],
                           (srd_hydro_sinVol[:X_max]),
                           p0=p0)
-print('Attempt at exp of dmo:   ', cts_hydro[0])
 plt.plot(xxx, func_radialexpcutoff(xxx,
                                    cts_hydro[0][0], cts_hydro[0][1]),
          '--g')
 print('Attempt at exp of hydro: ', cts_hydro[0])
+print(x_kpc[:X_max])
+print(np.log10(srd_dmo_sinVol[:X_max]))
+
+x_xpc_long = np.append(x_kpc[:X_max], 220.)
+srd_dmo_sinVol_long = np.append(srd_dmo_sinVol[:X_max],
+                                srd_dmo_sinVol[:X_max][-1])
+srd_hydro_sinVol_long = np.append(srd_hydro_sinVol[:X_max],
+                                srd_hydro_sinVol[:X_max][-1])
+print(x_xpc_long)
+print(srd_dmo_sinVol_long)
+print(srd_hydro_sinVol_long)
+
+spline_dmo1 = UnivariateSpline(np.log10(x_xpc_long),
+                               np.log10(srd_dmo_sinVol_long),
+                               k=1, s=0, ext=0)
+plt.plot(xxx, 10 ** spline_dmo1(np.log10(xxx)),
+         color='orange',
+         linestyle='dotted')
+
+spline_hydro1 = UnivariateSpline(np.log10(x_xpc_long),
+                                 np.log10(srd_hydro_sinVol_long),
+                                 k=1, s=0, ext=0)
+plt.plot(xxx, 10 ** spline_hydro1(np.log10(xxx)),
+         color='orange', linestyle='dotted')
+
+spline_dmo1 = UnivariateSpline(np.log10(x_xpc_long),
+                               np.log10(srd_dmo_sinVol_long),
+                               k=3, s=0, ext=0)
+plt.plot(xxx, 10 ** spline_dmo1(np.log10(xxx)),
+         color='r', linestyle='dotted')
+
+spline_hydro1 = UnivariateSpline(np.log10(x_xpc_long),
+                                 np.log10(srd_hydro_sinVol_long),
+                                 k=3, s=0, ext=0)
+plt.plot(xxx, 10 ** spline_hydro1(np.log10(xxx)),
+         color='r', linestyle='dotted')
 
 
 def N_Dgc_Cosmic_slide(R, R0, aa, bb):
@@ -422,16 +475,50 @@ print('Attempt at sqrt of dmo: ', cts_dmo[0])
 #          'r')
 
 
-plt.axvline(R_max * 1e3, alpha=0.5, label='220 kpc')
+plt.axvline(R_max * 1e3, alpha=1, label='220 kpc')
+
+plt.axvline(6.61, alpha=1, color='k', linestyle='dotted',
+            label='Last subhalo', lw=2)
+plt.axvline(13.6, alpha=1, color='limegreen', linestyle='dotted', lw=2)
+
+plt.axvline(8.5, alpha=1, color='orange', lw=2, label='Earth')
 
 plt.ylabel(r'n(r) = $\frac{N(r)}{N_{Tot}}$')
 plt.xlabel('r [kpc]', size=24)
 
-plt.legend(framealpha=1)
+linestyles = ['dotted', 'dotted', '--']
+colors = ['r', 'orange', 'k']
+markers = [None, None, None]
+legend22 = plt.legend([plt.Line2D([], [],
+                                  linestyle=linestyles[i],
+                                  color=colors[i],
+                                  marker=markers[i], ms=14)
+                       for i in range(3)],
+                      ['Spline k=3', 'Spline k=1', 'Exponential function'],
+                      loc=4, title='Functions', framealpha=1)
+
+legend11 = plt.legend(loc=8, framealpha=1)
+
+colors = ['k', 'g']
+legend33 = plt.legend([plt.Line2D([], [],
+                                  linestyle='-',
+                                  color=colors[i])
+                       for i in range(2)],
+                      ['DMO', 'Hydro'],
+                      loc=5, title='Colors', framealpha=1)
+
+
+ax1.add_artist(legend22)
+ax1.add_artist(legend11)
+ax1.add_artist(legend33)
 
 # plt.xscale('log')
 plt.yscale('log')
 
+plt.ylim(5e-5, 0.5)
+
+
+# --------------------------- FIG 4 ------------------------------------
 plt.figure(4, figsize=(10, 8))
 
 plt.plot(x_kpc, np.log10(srd_dmo_sinVol), '-', color='k')
@@ -682,5 +769,5 @@ legend1 = plt.legend(legend_elements, ['Over', 'Below'], loc=8,
 
 plt.legend(framealpha=1, fontsize=10, loc=4)
 plt.gca().add_artist(legend1)
-
+'''
 plt.show()

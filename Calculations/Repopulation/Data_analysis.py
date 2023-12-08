@@ -31,19 +31,31 @@ plt.rc('ytick.minor', size=4, width=1)
 
 
 path_name = 'outputs/' \
-            'Test_physnet 2023-02-10 10:39:20'
+            'test_srds_and_Cv'
 #
 datos_Js_frag_hyd = np.loadtxt(path_name + '/Js_hydro_fragile_results.txt')
 datos_Js_frag_dmo = np.loadtxt(path_name + '/Js_dmo_fragile_results.txt')
+datos_Js_frag_hyd = datos_Js_frag_hyd.reshape((250, 55805, 6))[:, 0, :]
+datos_Js_frag_dmo = datos_Js_frag_dmo.reshape((250, 55805, 6))[:, 0, :]
 
 datos_J03_frag_hyd = np.loadtxt(path_name + '/J03_hydro_fragile_results.txt')
 datos_J03_frag_dmo = np.loadtxt(path_name + '/J03_dmo_fragile_results.txt')
+datos_J03_frag_hyd = datos_J03_frag_hyd.reshape((250, 55805, 6))[:, 0, :]
+datos_J03_frag_dmo = datos_J03_frag_dmo.reshape((250, 55805, 6))[:, 0, :]
 
 datos_Js_resi_hyd = np.loadtxt(path_name + '/Js_hydro_resilient_results.txt')
 datos_Js_resi_dmo = np.loadtxt(path_name + '/Js_dmo_resilient_results.txt')
+datos_Js_resi_hyd = datos_Js_resi_hyd.reshape((250, 55805, 6))[:, 0, :]
+datos_Js_resi_dmo = datos_Js_resi_dmo.reshape((250, 55805, 6))[:, 0, :]
 
 datos_J03_resi_hyd = np.loadtxt(path_name + '/J03_hydro_resilient_results.txt')
 datos_J03_resi_dmo = np.loadtxt(path_name + '/J03_dmo_resilient_results.txt')
+
+
+
+
+datos_J03_resi_hyd = datos_J03_resi_hyd.reshape((250, 55805, 6))[:, 0, :]
+datos_J03_resi_dmo = datos_J03_resi_dmo.reshape((250, 55805, 6))[:, 0, :]
 
 constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
 constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')
@@ -104,7 +116,7 @@ plt.axvline(Js95_frag_dmo, color='teal')  # , alpha=0.6)
 plt.axvline(Js95_resi_dmo, color='k')  # , alpha=0.5)
 
 plt.xlim(minn, maxx)
-plt.ylim(0.9, 15)
+plt.ylim(0.9, None)
 
 plt.yscale('log')
 
@@ -199,6 +211,8 @@ fig.text(0.06, 0.5, 'Number of repops', ha='center',
 
 ax4.tick_params(labelleft=False)
 
+plt.savefig(path_name + '/J_hist.png', bbox_inches='tight')
+plt.savefig(path_name + '/J_hist.pdf', bbox_inches='tight')
 # %%
 
 
@@ -215,7 +229,7 @@ legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
                    Line2D([0], [0], marker='o', color='w', label='Res',
                           markerfacecolor='k', markersize=8)]
 vminn = 0
-vmaxx = 10 ** 1.5
+vmaxx = 100  #10 ** 1.5
 
 plt.subplot(221)
 
@@ -312,7 +326,8 @@ cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 c2 = plt.colorbar(im, cax=cax, **kw)
 c2.set_label(r'D$_\mathrm{Earth}$ [kpc]', fontsize=20)
 
-
+plt.savefig(path_name + '/VmaxJs.png', bbox_inches='tight')
+plt.savefig(path_name + '/VmaxJs.pdf', bbox_inches='tight')
 
 # %%
 
@@ -410,6 +425,12 @@ print('%.2f' % Js_min95_2204)
 print('%.2f  %.2f  %.2f  %.2f' % (Js95_resi_dmo, Js95_resi_hyd,
                                   Js95_frag_dmo, Js95_frag_hyd))
 
+
+plt.savefig(path_name + '/Cross.png', bbox_inches='tight')
+plt.savefig(path_name + '/Cross.pdf', bbox_inches='tight')
+
+
+
 fig, _ = plt.subplots(2, 2, figsize=(12, 9))
 
 plt.subplots_adjust(wspace=0, hspace=0)
@@ -435,7 +456,7 @@ maxx = np.max((np.max(datos_Js_frag_dmo[:, column]),
                np.max(datos_J03_resi_hyd[:, column])))
 
 # bines = np.linspace(minn, maxx, 25)
-bines = np.logspace(np.log10(minn), np.log10(maxx), 60)
+bines = np.logspace(np.log10(minn), np.log10(maxx), 30)
 locc = 2
 
 ax1 = plt.subplot(221)
@@ -527,5 +548,8 @@ print(np.shape(np.where(datos_J03_frag_dmo[:, column] < num_min))[1],
       np.shape(np.where(datos_J03_resi_dmo[:, column] < num_min))[1], '---',
       np.shape(np.where(datos_J03_frag_hyd[:, column] < num_min))[1],
       np.shape(np.where(datos_J03_resi_hyd[:, column] < num_min))[1])
+
+plt.savefig(path_name + '/Dgc_hist.png', bbox_inches='tight')
+plt.savefig(path_name + '/Dgc_hist.pdf', bbox_inches='tight')
 
 plt.show()
