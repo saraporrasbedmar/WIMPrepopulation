@@ -31,31 +31,28 @@ plt.rc('ytick.minor', size=4, width=1)
 
 
 path_name = 'outputs/' \
-            'test_srds_and_Cv'
+            'test'
 #
 datos_Js_frag_hyd = np.loadtxt(path_name + '/Js_hydro_fragile_results.txt')
 datos_Js_frag_dmo = np.loadtxt(path_name + '/Js_dmo_fragile_results.txt')
-datos_Js_frag_hyd = datos_Js_frag_hyd.reshape((250, 55805, 6))[:, 0, :]
-datos_Js_frag_dmo = datos_Js_frag_dmo.reshape((250, 55805, 6))[:, 0, :]
+datos_Js_frag_hyd = datos_Js_frag_hyd.reshape((100, 20, 6))[:, 0, :]
+datos_Js_frag_dmo = datos_Js_frag_dmo.reshape((100, 20, 6))[:, 0, :]
 
 datos_J03_frag_hyd = np.loadtxt(path_name + '/J03_hydro_fragile_results.txt')
 datos_J03_frag_dmo = np.loadtxt(path_name + '/J03_dmo_fragile_results.txt')
-datos_J03_frag_hyd = datos_J03_frag_hyd.reshape((250, 55805, 6))[:, 0, :]
-datos_J03_frag_dmo = datos_J03_frag_dmo.reshape((250, 55805, 6))[:, 0, :]
+datos_J03_frag_hyd = datos_J03_frag_hyd.reshape((100, 20, 6))[:, 0, :]
+datos_J03_frag_dmo = datos_J03_frag_dmo.reshape((100, 20, 6))[:, 0, :]
 
 datos_Js_resi_hyd = np.loadtxt(path_name + '/Js_hydro_resilient_results.txt')
 datos_Js_resi_dmo = np.loadtxt(path_name + '/Js_dmo_resilient_results.txt')
-datos_Js_resi_hyd = datos_Js_resi_hyd.reshape((250, 55805, 6))[:, 0, :]
-datos_Js_resi_dmo = datos_Js_resi_dmo.reshape((250, 55805, 6))[:, 0, :]
+datos_Js_resi_hyd = datos_Js_resi_hyd.reshape((100, 20, 6))[:, 0, :]
+datos_Js_resi_dmo = datos_Js_resi_dmo.reshape((100, 20, 6))[:, 0, :]
 
 datos_J03_resi_hyd = np.loadtxt(path_name + '/J03_hydro_resilient_results.txt')
 datos_J03_resi_dmo = np.loadtxt(path_name + '/J03_dmo_resilient_results.txt')
 
-
-
-
-datos_J03_resi_hyd = datos_J03_resi_hyd.reshape((250, 55805, 6))[:, 0, :]
-datos_J03_resi_dmo = datos_J03_resi_dmo.reshape((250, 55805, 6))[:, 0, :]
+datos_J03_resi_hyd = datos_J03_resi_hyd.reshape((100, 20, 6))[:, 0, :]
+datos_J03_resi_dmo = datos_J03_resi_dmo.reshape((100, 20, 6))[:, 0, :]
 
 constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
 constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')

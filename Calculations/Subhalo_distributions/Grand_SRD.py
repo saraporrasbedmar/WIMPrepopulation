@@ -8,11 +8,12 @@ Created on Thu Mar  3 20:37:40 2022
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.lines import Line2D
 
 import scipy.optimize as opt
 from scipy import integrate
 from scipy.interpolate import UnivariateSpline
-from matplotlib.lines import Line2D
 
 all_size = 26
 plt.rcParams['mathtext.fontset'] = 'stix'
@@ -705,10 +706,10 @@ plt.xlim(6, 300)
 print()
 print('N/Ntot figures')
 
-# plt.figure(figsize=(10, 8))
-# ax1 = plt.gca()
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8))
-plt.subplot(121)
+plt.figure(figsize=(8, 8))
+ax1 = plt.gca()
+# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8))
+# plt.subplot(121)
 
 v_cut = [8.0]  # np.linspace(6, 10, num=10)
 cm_subsection = np.linspace(0, 1, 25)
@@ -720,23 +721,25 @@ num_bins = 15
 bins = np.linspace(0, R200, num=num_bins)
 bins_mean = (bins[:-1] + bins[1:]) / 2. * 1e3
 
-xxx = np.linspace(3e-3, R_max, num=200) * 1e3
+xxx = np.linspace(3e-3, R_max+0.02, num=200) * 1e3
 
 for ni, ii in enumerate(v_cut):
     print('v_cut: ', ii, ni)
-    Grand_dmo_over = Grand_dmo[Grand_dmo[:, 1] > ii, :]
-    Grand_hydro_over = Grand_hydro[Grand_hydro[:, 1] > ii, :]
+    Grand_dmo_over = Grand_dmo[Grand_dmo[:, 1] >= ii, :]
+    Grand_hydro_over = Grand_hydro[Grand_hydro[:, 1] >= ii, :]
 
     srd_dmo_over = (np.array(encontrar_SRD_sinVol(Grand_dmo_over))
                     / len(Grand_dmo_over))
     srd_hydro_over = (np.array(encontrar_SRD_sinVol(Grand_hydro_over))
                       / len(Grand_hydro_over))
 
-    plt.plot(bins_mean, srd_dmo_over, '.-', color='k', ms=10,
-             alpha=(1), label='Data')
+    plt.plot(bins_mean, srd_dmo_over, ls='', color='k',
+             ms=15, marker='.',
+             alpha=1, zorder=15, label='Data')
 
-    plt.plot(bins_mean, srd_hydro_over, '.-', color='limegreen', ms=10,
-             alpha=(1))
+    plt.plot(bins_mean, srd_hydro_over, ls='', color='forestgreen',
+             ms=15, marker='.',
+             alpha=1, zorder=15)
 
 
 def funct_ale(Dgc, a, b):
@@ -748,28 +751,34 @@ cts_dmo = opt.curve_fit(funct_ale, xdata=bins_mean,
                         p0=[-20, 0.1])
 print('Funct Ale: ', cts_dmo[0])
 
-plt.plot(bins_mean, np.ones(len(bins_mean)) * cts_dmo[0][1],
-         marker='*', linestyle='dotted', color='k', label='resilient possible')
-
-plt.plot(xxx, funct_ale(xxx, cts_dmo[0][0], cts_dmo[0][1]),
-         'k', linestyle='--', label='exp cutoff fit')
-plt.plot(bins_mean, funct_ale(bins_mean, cts_dmo[0][0], cts_dmo[0][1]),
-         ls='', marker='+', ms=10, color='k', alpha=1)
-
 cts_hydro = opt.curve_fit(funct_ale, xdata=bins_mean,
                         ydata=srd_hydro_over,
                         p0=[-20, 0.1])
 print('Funct Ale: ', cts_hydro[0])
 
-plt.plot(bins_mean, np.ones(len(bins_mean)) * cts_hydro[0][1],
-         marker='*', linestyle='dotted', color='limegreen')
 
+plt.plot(xxx, funct_ale(xxx, cts_dmo[0][0], cts_dmo[0][1]),
+         'k', linestyle='--', lw=2, alpha=0.7,
+         label='Fragile fit', zorder=5)
 plt.plot(xxx, funct_ale(xxx, cts_hydro[0][0], cts_hydro[0][1]),
-         'limegreen', linestyle='--')
-plt.plot(bins_mean, funct_ale(bins_mean, cts_hydro[0][0], cts_hydro[0][1]),
-         ls='', marker='+', ms=10, color='limegreen', alpha=1)
+         'limegreen', linestyle='--', lw=2, zorder=5)
 
-plt.axvline(R_max * 1e3, alpha=0.5, label='220 kpc')
+plt.plot(xxx, np.ones(len(xxx)) * cts_dmo[0][1],
+         marker=None, linestyle='dotted', color='k', lw=4, alpha=0.7,
+         label='Resilient fit')
+plt.plot(xxx, np.ones(len(xxx)) * cts_hydro[0][1],
+         marker=None, linestyle='dotted', color='limegreen', lw=4)
+
+
+
+plt.axvline(R_max * 1e3, alpha=0.7, linestyle='-.')
+plt.annotate(r'R$_\mathrm{vir}$', (190, 2e-2), color='b', rotation=45,
+             alpha=0.7, zorder=0)
+
+plt.axvline(8.5, linestyle='-.', alpha=1, color='Sandybrown')
+plt.annotate('Earth', (8, 0.055), color='Saddlebrown', rotation=45,
+             fontsize=18, zorder=0)
+
 
 plt.ylabel(r'n(r) = $\frac{N(r)}{N_{Tot}}$')
 plt.xlabel('r [kpc]', size=24)
@@ -780,6 +789,12 @@ plt.yscale('log')
 plt.ylim(1e-3, 2e-1)
 
 # plt.legend(framealpha=1, fontsize=10, loc=4)
+handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
+           mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)
+           )
+
+legend_colors = plt.legend(handles=handles, bbox_to_anchor=(0.13, 0.2),
+                           fontsize=20)
 
 
 legend11 = plt.legend(loc=4, framealpha=1)
@@ -795,7 +810,9 @@ legend11 = plt.legend(loc=4, framealpha=1)
 #                       )
 
 ax1.add_artist(legend11)
-# ax1.add_artist(legend33)
+ax1.add_artist(legend_colors)
+plt.savefig('outputs/srd_compar_log.png', bbox_inches='tight')
+plt.savefig('outputs/srd_compar_log.pdf', bbox_inches='tight')
 
 # -------------------------------------------------------------------------
 print('Density figure')

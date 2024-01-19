@@ -9,22 +9,27 @@ Created on Thu Mar  3 20:34:39 2022
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colorbar as colorbarr
+import matplotlib.patches as mpatches
 
+
+all_size = 24
 plt.rcParams['mathtext.fontset'] = 'stix'
 plt.rcParams['font.family'] = 'STIXGeneral'
-plt.rc('font', size=20)
-plt.rc('axes', titlesize=16)
-plt.rc('axes', labelsize=16)
-plt.rc('xtick', labelsize=21)
-plt.rc('ytick', labelsize=20)
-plt.rc('legend', fontsize=20)
-plt.rc('figure', titlesize=17)
+plt.rcParams['axes.labelsize'] = all_size
+plt.rcParams['lines.markersize'] = 10
+plt.rc('font', size=all_size)
+plt.rc('axes', titlesize=all_size)
+plt.rc('axes', labelsize=all_size)
+plt.rc('xtick', labelsize=all_size)
+plt.rc('ytick', labelsize=all_size)
+plt.rc('legend', fontsize=16)
+plt.rc('figure', titlesize=all_size)
 plt.rc('xtick', top=True, direction='in')
 plt.rc('ytick', right=True, direction='in')
-plt.rc('xtick.major', size=7, width=1.5, top=True)
-plt.rc('ytick.major', size=7, width=1.5, right=True)
-plt.rc('xtick.minor', size=4, width=1)
-plt.rc('ytick.minor', size=4, width=1)
+plt.rc('xtick.major', size=10, width=2, top=False, pad=10)
+plt.rc('ytick.major', size=10, width=2, right=True, pad=10)
+plt.rc('xtick.minor', size=7, width=1.5, top=False)
+plt.rc('ytick.minor', size=7, width=1.5)
 
 #        Rmax[kpc]        Vmax[km/s]      Radius[Mpc]
 try:
@@ -88,7 +93,7 @@ x_cumul = (x_cumul[:-1] + x_cumul[1:]) / 2.
 
 
 def find_PowerLaw(xx, yy, lim_inf, lim_sup, plot=True, color='k', label='',
-                  style='-'):
+                  style=''):
     X1limit = np.where(xx >= lim_inf)[0][0]
     X2limit = np.where(xx >= lim_sup)[0][0]
 
@@ -109,11 +114,12 @@ def find_PowerLaw(xx, yy, lim_inf, lim_sup, plot=True, color='k', label='',
 
     if plot:
         plt.plot(xx, yy, label=label, color=color, linestyle=style)
-        plt.plot(xx, yy, '.', color=color)
+        plt.plot(xx, yy, '.', color=color, zorder=10)
 
         xxx = np.logspace(np.log10(2), np.log10(xx[-1]), 100)
-        plt.plot(xxx, 10 ** fits[1] * xxx ** fits[0], color=color, alpha=0.5,
-                 linestyle='--')
+        plt.plot(xxx, 10 ** fits[1] * xxx ** fits[0],
+                 color=color, alpha=0.7,
+                 linestyle='-', lw=2)
 
     return fits[0], fits[1], perr[0], perr[1]
 
@@ -168,8 +174,6 @@ Vmax = 201.033  # from VLII website
 plt.xscale('log')
 plt.yscale('log')
 
-plt.axvline(limit_infG, color='grey', alpha=0.3)
-plt.axvline(limit_supG, color='grey', alpha=0.3)
 
 plt.xlabel(r'$V_{\mathrm{max}}$ [km s$^{-1}$]', size=24)
 plt.ylabel(r'$\frac{dN(V_{\mathrm{max}})}{dV_{\mathrm{max}}}$', size=27)
@@ -177,6 +181,20 @@ plt.ylabel(r'$\frac{dN(V_{\mathrm{max}})}{dV_{\mathrm{max}}}$', size=27)
 # fig.set_xticklabels( )
 
 plt.legend()
+plt.axvline(limit_infG, linestyle='-.', color='k', alpha=0.3,
+            linewidth=2, label='Fit limits')
+plt.axvline(limit_supG, linestyle='-.', color='k', alpha=0.3,
+            linewidth=2)
+
+handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
+           mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)
+           )
+
+legend11 = plt.legend(handles=handles,
+                      loc=1)  # , bbox_to_anchor=(1.001, 0.99))
+
+plt.savefig('outputs/shvf.pdf', bbox_inches='tight')
+plt.savefig('outputs/shvf.png', bbox_inches='tight')
 
 # %% STUDY THE LIMITS OF THE VMAX IN THE FIT
 
