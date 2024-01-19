@@ -8,6 +8,7 @@ Created on Wed Mar  2 10:29:55 2022
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
 import scipy.special as spice
 import scipy.optimize as opt
@@ -22,12 +23,12 @@ plt.rc('axes', titlesize=18)
 plt.rc('axes', labelsize=18)
 plt.rc('xtick', labelsize=24)
 plt.rc('ytick', labelsize=24)
-plt.rc('legend', fontsize=24)
+plt.rc('legend', fontsize=20)
 plt.rc('figure', titlesize=17)
 plt.rc('xtick', top=True, direction='in')
 plt.rc('ytick', right=True, direction='in')
-plt.rc('xtick.major', size=7, width=1.5, top=True)
-plt.rc('ytick.major', size=7, width=1.5, right=True)
+plt.rc('xtick.major', size=7, width=1.5, top=True, pad=10)
+plt.rc('ytick.major', size=7, width=1.5, right=True, pad=10)
 plt.rc('xtick.minor', size=4, width=1)
 plt.rc('ytick.minor', size=4, width=1)
 #
@@ -284,6 +285,11 @@ def Cm_Mol16(M, x, ci=[19.9, -0.195, 0.089, 0.089, -0.54]):
                    1 + ci[4] * np.log10(x / R200))
 
 
+def Moline21_normalization(V, c0):
+    return (Cv_Mol2021_redshift0(V, c0, c1=-0.90368,
+                                 c2=0.2749, c3=-0.028))
+
+
 # %% CALCULATE THE MEDIAN VALUES OF THE DISTRIBUTION Rmax-Vmax
 
 number_bins_dmo = 25
@@ -304,41 +310,185 @@ vv_medians_dmo, cv_dmo_median, cv_dmo_min, cv_dmo_max, _ = calculate_med(
 vv_medians_hydro, cv_hydro_median, cv_hydro_min, cv_hydro_max, _ = calculate_med(
     Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)
 
-vv_means_dmo, cv_dmo_mean = calculate_mean(
-    Grand_dmo, number_bins_dmo, perc_low=16, perc_high=84)
-vv_means_hydro, cv_hydro_mean = calculate_mean(
-    Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)
+# vv_means_dmo, cv_dmo_mean = calculate_mean(
+#     Grand_dmo, number_bins_dmo, perc_low=16, perc_high=84)
+# vv_means_hydro, cv_hydro_mean = calculate_mean(
+#     Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)
+#
+# vv_gmeans_dmo, cv_dmo_gmean = calculate_gmean(
+#     Grand_dmo, number_bins_dmo)
+# vv_gmeans_hydro, cv_hydro_gmean = calculate_gmean(
+#     Grand_hydro, number_bins_hydro)
 
-vv_gmeans_dmo, cv_dmo_gmean = calculate_gmean(
-    Grand_dmo, number_bins_dmo)
-vv_gmeans_hydro, cv_hydro_gmean = calculate_gmean(
-    Grand_hydro, number_bins_hydro)
+fig, ax = plt.subplots(figsize=(8, 7))
 
-plt.close('all')
+plt.plot(vv_medians_dmo, cv_dmo_median,
+         'k', marker='.', linestyle='', markersize=10, label='Data',
+         zorder=10)
+plt.plot(vv_medians_hydro, cv_hydro_median,
+         'limegreen', marker='.', linestyle='', markersize=10,
+         zorder=10)
 
-plt.figure()
-plt.ylim(1e3, 2e5)
+moline_fit_dmo = curve_fit(
+    Moline21_normalization,
+    xdata=vv_medians_dmo[vv_medians_dmo > dmoLimit],
+    ydata=cv_dmo_median[vv_medians_dmo > dmoLimit],
+    p0=[1.75e5])
 
-plt.scatter(Grand_dmo[:, 1], cv_dmo_cloud, color='k', s=3, label='DMO')
-plt.scatter(Grand_hydro[:, 1], cv_hydro_cloud, color='limegreen',
-            label='Hydro', alpha=0.5, s=3)
+moline_fit_hydro = curve_fit(
+    Moline21_normalization,
+    xdata=vv_medians_hydro[vv_medians_hydro > hydroLimit],
+    ydata=cv_hydro_median[vv_medians_hydro > hydroLimit],
+    p0=[1.75e5])
+print(moline_fit_dmo, np.sqrt(moline_fit_dmo[1][0]))
+print(moline_fit_hydro, np.sqrt(moline_fit_hydro[1][0]))
 
-plt.plot(vv_medians_dmo, cv_dmo_median, '-k')
-plt.plot(vv_medians_hydro, cv_hydro_median, '-g')
+xx_plot = np.logspace(np.log10(vv_medians_dmo[0]), np.log10(60))
 
-plt.plot(vv_medians_dmo, cv_dmo_max, '--k')
-plt.plot(vv_medians_hydro, cv_hydro_max, '--g')
+plt.plot(xx_plot, Cv_Mol2021_redshift0(xx_plot), color='red',
+         label='Moliné+21', alpha=0.5, linewidth=3, linestyle='-.')
 
-plt.plot(vv_medians_dmo, cv_dmo_min, '--k')
-plt.plot(vv_medians_hydro, cv_hydro_min, '--g')
+plt.plot(xx_plot, Cv_Mol2021_redshift0(
+    V=xx_plot, c0=moline_fit_dmo[0][0]),
+         color='k', linewidth=3, label='Fit to Moliné+21')
+
+plt.fill_between(xx_plot,
+                 Cv_Mol2021_redshift0(
+                     V=xx_plot,
+                     c0=(moline_fit_dmo[0][0]-np.sqrt(moline_fit_dmo[1][0]))),
+                 Cv_Mol2021_redshift0(
+                     V=xx_plot,
+                     c0=(moline_fit_dmo[0][0]+np.sqrt(moline_fit_dmo[1][0]))),
+                     color='grey', alpha=0.3, label=r'1 $\sigma$')
+
+plt.plot(xx_plot, Cv_Mol2021_redshift0(
+    V=xx_plot, c0=moline_fit_hydro[0][0]),
+         color='limegreen', linewidth=3)
+
+plt.fill_between(xx_plot,
+                 Cv_Mol2021_redshift0(
+                     V=xx_plot,
+                     c0=(moline_fit_hydro[0][0]-np.sqrt(moline_fit_hydro[1][0]))),
+                 Cv_Mol2021_redshift0(
+                     V=xx_plot,
+                     c0=(moline_fit_hydro[0][0]+np.sqrt(moline_fit_hydro[1][0]))),
+                     color='limegreen', alpha=0.3)
+
+plt.axvline(x=dmoLimit, linestyle='--', alpha=0.5, color='k')
 
 plt.xscale('log')
 plt.yscale('log')
-plt.legend()
 
-plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
+# plt.ylim(1e3, 2e5)
+legend1 = plt.legend(framealpha=1)
+
+legend2 = plt.legend([Line2D([0, 1], [0, 0], marker='o', color='k',
+                             linewidth=2,
+                             markerfacecolor='k', markersize=8),
+                      Line2D([0], [0], marker='o', color='limegreen',
+                             linewidth=2,
+                             markerfacecolor='limegreen', markersize=8)],
+                     ['DMO', 'Hydro'])
+
+ax.add_artist(legend1)
+ax.add_artist(legend2)
+
+plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=26)
 plt.ylabel(r'c$_\mathrm{V}$', size=28)
 
+plt.savefig('outputs/Cv.png', bbox_inches='tight')
+plt.savefig('outputs/Cv.pdf', bbox_inches='tight')
+
+
+plt.figure()
+
+bins = np.geomspace(0.01, 15, num=25)
+n_dmo, bin_mean, _ = plt.hist(cv_dmo_cloud[Grand_dmo_raw[:, 1] > dmoLimit]
+         / Cv_Mol2021_redshift0(
+                     V=Grand_dmo_raw[Grand_dmo_raw[:, 1] > dmoLimit, 1],
+                     c0=moline_fit_dmo[0][0]), log=True, bins=bins,
+         alpha=0.7, color='k', density=True)
+
+
+n_hydro, _, _ = plt.hist(cv_hydro_cloud[Grand_hydro_raw[:, 1] > hydroLimit]
+         / Cv_Mol2021_redshift0(
+                     V=Grand_hydro_raw[Grand_hydro_raw[:, 1] > hydroLimit, 1],
+                     c0=moline_fit_hydro[0][0]), log=True, bins=bins,
+         alpha=0.7, color='limegreen', density=True)
+bin_mean = (bins[:-1]+bins[1:])/2.
+def gaussian (xx, sigma, x0):
+    xx = np.log10(xx)
+    x0 = np.log10(x0)
+    return 1 / (2. * np.pi * sigma) * np.exp(-0.5 * ((xx - x0) / sigma) ** 2.)
+
+gaussian_dmo = curve_fit(gaussian, xdata=bin_mean,
+                         ydata=n_dmo,
+                         p0=[0.5, 0.83])
+print(gaussian_dmo)
+
+xx_array_hist = np.geomspace(0.01, 10)
+plt.plot(xx_array_hist, gaussian(xx=xx_array_hist,
+                                 sigma=gaussian_dmo[0][0],
+                                 x0=gaussian_dmo[0][1]
+                                 ),
+         color='k', zorder=10)
+gaussian_hydro = curve_fit(gaussian, xdata=bin_mean,
+                         ydata=n_hydro,
+                         p0=[0.5, 0.83])
+print(gaussian_hydro)
+
+plt.plot(xx_array_hist, gaussian(xx=xx_array_hist,
+                                 sigma=gaussian_hydro[0][0],
+                                 x0=gaussian_hydro[0][1]
+                                 ),
+         color='limegreen', zorder=10)
+
+plt.xscale('log')
+
+
+
+plt.figure()
+plt.scatter(Grand_dmo_raw[:, 1], cv_dmo_cloud, alpha=0.7, color='k')
+plt.scatter(Grand_hydro_raw[:, 1], cv_hydro_cloud, alpha=0.7,
+            color='limegreen')
+plt.plot(xx_plot, Cv_Mol2021_redshift0(xx_plot), color='red',
+         label='Moliné+21', alpha=0.5, linewidth=3, linestyle='-.')
+
+plt.plot(xx_plot, Cv_Mol2021_redshift0(
+    V=xx_plot, c0=moline_fit_dmo[0][0]),
+         color='k', linewidth=3, label='Fit to Moliné+21')
+
+plt.fill_between(xx_plot,
+                 Cv_Mol2021_redshift0(
+                     V=xx_plot,
+                     c0=(moline_fit_dmo[0][0]-np.sqrt(moline_fit_dmo[1][0]))),
+                 Cv_Mol2021_redshift0(
+                     V=xx_plot,
+                     c0=(moline_fit_dmo[0][0]+np.sqrt(moline_fit_dmo[1][0]))),
+                     color='grey', alpha=0.3, label=r'1 $\sigma$')
+
+plt.plot(xx_plot, Cv_Mol2021_redshift0(
+    V=xx_plot, c0=moline_fit_hydro[0][0]),
+         color='limegreen', linewidth=3)
+
+plt.fill_between(xx_plot,
+                 Cv_Mol2021_redshift0(
+                     V=xx_plot,
+                     c0=(moline_fit_hydro[0][0]-np.sqrt(moline_fit_hydro[1][0]))),
+                 Cv_Mol2021_redshift0(
+                     V=xx_plot,
+                     c0=(moline_fit_hydro[0][0]+np.sqrt(moline_fit_hydro[1][0]))),
+                     color='limegreen', alpha=0.3)
+
+
+plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=26)
+plt.ylabel(r'c$_\mathrm{V}$', size=28)
+
+plt.xscale('log')
+plt.yscale('log')
+
+plt.show()
+# ----------------------------------------------------------------------
 # FIGURE 2
 plt.subplots(12, figsize=(14, 7))
 ax1 = plt.subplot(121)
@@ -457,11 +607,6 @@ def log10MOline21(V, c0, c1, c2, c3):
 def log10MOline21_normalization(V, c0):
     return np.log10(Cv_Mol2021_redshift0(V, c0, c1=-0.90368,
                                          c2=0.2749, c3=-0.028))
-
-
-def MOline21_normalization(V, c0):
-    return (Cv_Mol2021_redshift0(V, c0, c1=-0.90368,
-                                 c2=0.2749, c3=-0.028))
 
 
 def MOline21_normc1(V, c0, c1):
@@ -647,7 +792,7 @@ for i in [1, 2]:
 
     plt.subplot(2, 2, i + 2, sharex=ax1, sharey=ax1)
 
-    if i== 2:
+    if i == 2:
         plt.figure(figsize=(12, 10))
         ax1 = plt.gca()
 
@@ -774,11 +919,10 @@ for i in [1, 2]:
         print(moline_fits[0][0], moline_fits[1][0][0] ** 0.5)
 
         plt.plot(xx_plot, MOline21_normc1(V=xx_plot,
-                                               c0=moline_fits[0][0],
-                                               c1=moline_fits[0][1]),
+                                          c0=moline_fits[0][0],
+                                          c1=moline_fits[0][1]),
                  color='brown', linestyle='dotted',
                  label='Moliné+21 fit', alpha=1, linewidth=4)
-
 
         ##
         moline_fits = curve_fit(MOline21_normc2,
@@ -792,11 +936,10 @@ for i in [1, 2]:
         print(moline_fits[0][0], moline_fits[1][0][0] ** 0.5)
 
         plt.plot(xx_plot, MOline21_normc2(V=xx_plot,
-                                               c0=moline_fits[0][0],
-                                               c2=moline_fits[0][1]),
+                                          c0=moline_fits[0][0],
+                                          c2=moline_fits[0][1]),
                  color='k', linestyle='dotted',
                  label='Moliné+21 fit', alpha=1, linewidth=4)
-
 
         ##
         moline_fits = curve_fit(MOline21_normc3,
@@ -810,13 +953,13 @@ for i in [1, 2]:
         print(moline_fits[0][0], moline_fits[1][0][0] ** 0.5)
 
         plt.plot(xx_plot, MOline21_normc3(V=xx_plot,
-                                               c0=moline_fits[0][0],
-                                               c3=moline_fits[0][1]),
+                                          c0=moline_fits[0][0],
+                                          c3=moline_fits[0][1]),
                  color='orange', linestyle='dotted',
                  label='Moliné+21 fit', alpha=1, linewidth=4)
 
         ##
-        moline_fits = curve_fit(MOline21_normalization,
+        moline_fits = curve_fit(Moline21_normalization,
                                 xdata=xx_dmo[xx_dmo > dmoLimit],
                                 ydata=yy_dmo[xx_dmo > dmoLimit],
                                 p0=[1.75e5],
@@ -826,12 +969,10 @@ for i in [1, 2]:
         print('aaaaaaaaaa')
         print(moline_fits[0][0], moline_fits[1][0][0] ** 0.5)
 
-        plt.plot(xx_plot, MOline21_normalization(V=xx_plot,
-                                               c0=moline_fits[0][0]),
+        plt.plot(xx_plot,
+                 Moline21_normalization(V=xx_plot, c0=moline_fits[0][0]),
                  color='navy', linestyle='dotted',
                  label='Moliné+21 fit', alpha=1, linewidth=4)
-
-
 
         ## HYDRO -------------------------------------------------------
         moline_fits = curve_fit(log10MOline21,
@@ -882,7 +1023,6 @@ for i in [1, 2]:
         #                                        c3=-0.028),
         #          color='g',
         #          alpha=1, linewidth=3)
-
 
         # attemps at 2 free params
         moline_fits = curve_fit(MOline21_normc1,
@@ -936,7 +1076,7 @@ for i in [1, 2]:
                  label='Moliné+21 fit', alpha=1, linewidth=4)
 
         ##
-        moline_fits = curve_fit(MOline21_normalization,
+        moline_fits = curve_fit(Moline21_normalization,
                                 xdata=xx_hydro[xx_hydro > hydroLimit],
                                 ydata=yy_hydro[xx_hydro > hydroLimit],
                                 p0=[1.75e5],
@@ -946,8 +1086,8 @@ for i in [1, 2]:
         print('aaaaaaaaaa')
         print(moline_fits[0][0], moline_fits[1][0][0] ** 0.5)
 
-        plt.plot(xx_plot, MOline21_normalization(V=xx_plot,
-                                                 c0=moline_fits[0][0]),
+        plt.plot(xx_plot,
+                 Moline21_normalization(V=xx_plot, c0=moline_fits[0][0]),
                  color='navy', linestyle='dotted',
                  label='Moliné+21 fit', alpha=1, linewidth=4)
 
@@ -1013,11 +1153,11 @@ colors = ['k', 'navy', 'brown', 'r', 'orange']
 labels = ['All', 'c0', 'c0 and c1', 'c0 and c2', 'c0 and c3']
 linestyles = ['--', 'dotted', 'dotted', 'dotted', 'dotted']
 legend_params = plt.legend([plt.Line2D([], [],
-                                  linestyle=linestyles[i], lw=3,
-                                  color=colors[i])
-                       for i in range(5)],
-                      labels,
-                      loc=4, title='Free params', framealpha=1,
+                                       linestyle=linestyles[i], lw=3,
+                                       color=colors[i])
+                            for i in range(5)],
+                           labels,
+                           loc=4, title='Free params', framealpha=1,
                            fontsize=20, title_fontsize=22)
 colors = ['k', 'g']
 legend33 = plt.legend([plt.Line2D([], [],
