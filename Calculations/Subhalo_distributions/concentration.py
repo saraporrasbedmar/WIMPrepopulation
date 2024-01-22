@@ -246,40 +246,71 @@ print(np.shape(vv_over_dmo))
 
 
 plt.figure()
-number, bins, _ = plt.hist(cc_over_dmo / Moline21_normalization(
-    V=vv_over_dmo, c0=moline_fits_dmo[0][0]),
-                           bins=np.linspace(0, 6), density=True
-                           )
 
-bins = (bins[1:] + bins[:-1]) / 2.
-
-
-def gaussian(xx, sigma, x0=1.):
+def gaussian(xx, sigma, x0):
     return 1 / ((2. * np.pi) ** 0.5 * sigma) * np.exp(
         -0.5 * ((xx - x0) / sigma) ** 2.)
 
 
-gauss_fit_dmo = curve_fit(
-    gaussian,
-    xdata=bins,
-    ydata=number,
-    p0=[0.5],
-    # bounds=([-np.inf],
-    #         [5e5])
-)
 
-print(gauss_fit_dmo)
+num = 25
+
+number, bins = np.histogram(cc_over_dmo / Moline21_normalization(
+        V=vv_over_dmo, c0=moline_fits_dmo[0][0]),
+                               bins=np.linspace(0, 6, num=num), density=True
+                               )
+bins = (bins[1:] + bins[:-1]) / 2.
+
+gauss_fit_dmo = curve_fit(
+        gaussian,
+        xdata=bins,
+        ydata=number,
+        p0=[0.5, 1],
+        # bounds=([-np.inf],
+        #         [5e5])
+    )
+print(gauss_fit_dmo[0])
+
+while abs(gauss_fit_dmo[0][1] - 1) > 0.03:
+
+    number, bins = np.histogram(cc_over_dmo / Moline21_normalization(
+        V=vv_over_dmo, c0=moline_fits_dmo[0][0]) / gauss_fit_dmo[0][1],
+                               bins=np.linspace(0, 6, num=num), density=True
+                               )
+
+    bins = (bins[1:] + bins[:-1]) / 2.
+    gauss_fit_dmo = curve_fit(
+        gaussian,
+        xdata=bins,
+        ydata=number,
+        p0=[0.5, 1],
+        # bounds=([-np.inf],
+        #         [5e5])
+    )
+    print(gauss_fit_dmo[0])
+plt.hist(cc_over_dmo / Moline21_normalization(
+        V=vv_over_dmo, c0=moline_fits_dmo[0][0]) / gauss_fit_dmo[0][1],
+                               bins=np.linspace(0, 6, num=num), density=True,
+                               color='grey', alpha=0.7
+                               )
+
+print('gauss_fit_dmo', gauss_fit_dmo)
 gauss_fit_dmo = gauss_fit_dmo[0]
-gauss_fit_dmo = [gauss_fit_dmo, 1.]
+# gauss_fit_dmo = gauss_fit_dmo[0]
+# gauss_fit_dmo = [gauss_fit_dmo, 1.]
 xx2_plot = np.linspace(0., 6, num=100)
 plt.plot(xx2_plot, gaussian(xx2_plot,
-                            gauss_fit_dmo[0]))#, gauss_fit_dmo[0][1]))
+                            gauss_fit_dmo[0], gauss_fit_dmo[1]))
 
 plt.axvline(gauss_fit_dmo[1] - gauss_fit_dmo[0]/2., color='k', zorder=10)
 plt.axvline(gauss_fit_dmo[1] + gauss_fit_dmo[0]/2., color='k', zorder=10)
 
 print(moline_fits_dmo[0][0])
-print(gauss_fit_dmo[0])
+
+ax.plot(xx2_plot, Moline21_normalization(
+        V=xx2_plot, c0=moline_fits_dmo[0][0]*gauss_fit_dmo[1]),
+         ls='--', color='k')
+
 ax.fill_between(xx_plot,
                 Moline21_normalization(
                     V=xx_plot,
@@ -293,17 +324,63 @@ ax.fill_between(xx_plot,
                 )
 
 
-gauss_fit_hydro = curve_fit(
-    gaussian,
-    xdata=bins,
-    ydata=number,
-    p0=[0.5],
-    # bounds=([-np.inf],
-    #         [5e5])
-)
 
-print(gauss_fit_hydro)
-gauss_fit_hydro = [gauss_fit_hydro[0], 1.]
+vv_over_hydro = Grand_hydro[Grand_hydro[:, 1] > hydroLimit, 1]
+cc_over_hydro = Grand_hydro[Grand_hydro[:, 1] > hydroLimit, 0]
+
+num = 25
+
+number, bins = np.histogram(cc_over_hydro / Moline21_normalization(
+        V=vv_over_hydro, c0=moline_fits_hydro[0][0]),
+                               bins=np.linspace(0, 6, num=num), density=True
+                               )
+bins = (bins[1:] + bins[:-1]) / 2.
+
+gauss_fit_hydro = curve_fit(
+        gaussian,
+        xdata=bins,
+        ydata=number,
+        p0=[0.5, 1],
+        # bounds=([-np.inf],
+        #         [5e5])
+    )
+print(gauss_fit_hydro[0])
+
+while abs(gauss_fit_hydro[0][1] - 1) > 0.03:
+
+    number, bins = np.histogram(cc_over_hydro / Moline21_normalization(
+        V=vv_over_hydro, c0=moline_fits_hydro[0][0]) / gauss_fit_hydro[0][1],
+                               bins=np.linspace(0, 6, num=num), density=True
+                               )
+
+    bins = (bins[1:] + bins[:-1]) / 2.
+    gauss_fit_hydro = curve_fit(
+        gaussian,
+        xdata=bins,
+        ydata=number,
+        p0=[0.5, 1],
+        # bounds=([-np.inf],
+        #         [5e5])
+    )
+    print(gauss_fit_hydro[0])
+plt.hist(cc_over_hydro / Moline21_normalization(
+        V=vv_over_hydro, c0=moline_fits_hydro[0][0]) / gauss_fit_hydro[0][1],
+                               bins=np.linspace(0, 6, num=num), density=True,
+                               color='limegreen', alpha=0.7
+                               )
+print('gauss_fit_hydro', gauss_fit_hydro)
+gauss_fit_hydro = gauss_fit_hydro[0]
+# gauss_fit_hydro = [gauss_fit_hydro[0], 1.]
+plt.plot(xx2_plot, gaussian(xx2_plot,
+                            gauss_fit_hydro[0], gauss_fit_hydro[1]))
+
+plt.axvline(gauss_fit_hydro[1] - gauss_fit_hydro[0]/2., color='g', zorder=10)
+plt.axvline(gauss_fit_hydro[1] + gauss_fit_hydro[0]/2., color='g', zorder=10)
+
+
+ax.plot(xx2_plot, Moline21_normalization(
+        V=xx2_plot, c0=moline_fits_hydro[0][0]*gauss_fit_hydro[1]),
+         ls='--', color='green')
 ax.fill_between(xx_plot,
                 Moline21_normalization(
                     V=xx_plot,
@@ -316,10 +393,6 @@ ax.fill_between(xx_plot,
                 color='limegreen', alpha=0.5, zorder=2
                 )
 
-plt.figure()
-plt.plot(vv_over_dmo,
-         cc_over_dmo / Moline21_normalization(
-             V=vv_over_dmo, c0=moline_fits_dmo[0]))
 
 fig.savefig('outputs/cv_median.pdf', bbox_inches='tight')
 fig.savefig('outputs/cv_median.png', bbox_inches='tight')
