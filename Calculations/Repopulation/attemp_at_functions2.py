@@ -179,13 +179,13 @@ def read_config_file(ConfigFile):
     return parsed_yaml
 
 
-# @njit()
+@njit()
 def ff(c):
     return np.log(1. + c) - c / (1. + c)
 
 
 # SHVF --------------------------------------
-# @njit
+@njit
 def SHVF_Grand2012(V,
                    sim_type, res_string,
                    cosmo_G,
@@ -228,7 +228,7 @@ def SHVF_Grand2012(V,
             * V ** SHVF_mm)
 
 
-# @njit
+@njit
 def SHVF_Grand2012_int(V1, V2,
                        SHVF_bb,
                        SHVF_mm):
@@ -251,7 +251,7 @@ def SHVF_Grand2012_int(V1, V2,
 
 
 # ----------- CONCENTRATIONS ----------------------
-# @njit
+@njit
 def Cv_Grand2012(Vmax, Cv_bb, Cv_mm):
     """
     Calculate the concentration of a subhalo population.
@@ -284,7 +284,7 @@ def Moline21_normalization(V, c0):
                                 c2=0.2749, c3=-0.028)
 
 
-# @njit
+@jit
 def C_Scatt(C, Cv_sigma):
     """
     Create a scatter in the concentration parameter of the
@@ -297,12 +297,12 @@ def C_Scatt(C, Cv_sigma):
     :return: float or array-like
         Subhalos with scattered concentrations.
     """
-    return np.array([np.random.lognormal(np.log(C[i]), Cv_sigma)
-                     for i in range(C.size)])
+    return np.random.lognormal(
+        np.log(C), Cv_sigma, C.size)
 
 
 # ----------- J-FACTORS --------------------------------
-# @njit
+@njit
 def J_abs_vel(V, D_earth, C,
               cosmo_G,
               cosmo_H_0,
@@ -337,7 +337,7 @@ def J_abs_vel(V, D_earth, C,
     return yy
 
 
-# @njit
+@njit
 def Js_vel(V, D_earth, C,
            cosmo_G,
            cosmo_H_0, change_units=True):
@@ -365,7 +365,7 @@ def Js_vel(V, D_earth, C,
                      change_units=change_units) * 7 / 8
 
 
-# @njit
+@njit
 def J03_vel(V, D_earth, C,
             cosmo_G,
             cosmo_H_0, change_units=True):
@@ -397,7 +397,7 @@ def J03_vel(V, D_earth, C,
 
 
 # ----------- REPOPULATION ----------------
-# @njit
+@njit
 def R_max(V, C,
           cosmo_H_0):
     """
@@ -414,7 +414,7 @@ def R_max(V, C,
     return V / cosmo_H_0 * np.sqrt(2. / C) * 1e3
 
 
-# @njit
+@njit
 def R_s(V, C, cosmo_H_0):
     """
     Calculate scale radius (R_s) of a subhalo following the NFW
@@ -431,7 +431,7 @@ def R_s(V, C, cosmo_H_0):
     return R_max(V, C, cosmo_H_0) / 2.163
 
 
-# @jit(forceobj=True)
+@jit(forceobj=True)
 def R_t(V, C, DistGC,
         cosmo_H_0, cosmo_G,
         host_rho_0, host_r_s,
@@ -467,7 +467,7 @@ def R_t(V, C, DistGC,
             * DistGC)
 
 
-# @njit
+@njit
 def Mhost_encapsulated(R, host_rho_0, host_r_s):
     """
     Host mass encapsulated up to a certain radius. We are following
@@ -485,17 +485,17 @@ def Mhost_encapsulated(R, host_rho_0, host_r_s):
                - R / (host_r_s + R)))
 
 
-# @jit()
+@jit()
 def N_subs_resilient(DistGC, args):
     # xx = np.log10(np.array(args[0]))
     # yy = np.log10(np.array(args[1]))
     # spline = UnivariateSpline(xx,
     #                           yy,
     #                           k=1, s=0, ext=0)
-    return DistGC ** args[0] * 10 ** args[1]
+    return args
 
 
-# @njit()
+@njit()
 def N_subs_fragile(DistGC, args):
     # xx = np.array(args[0])
     # yy = np.log10(np.array(args[1]))
@@ -509,15 +509,11 @@ def N_subs_fragile(DistGC, args):
     #                           k=3, s=0, ext=0)
     # return args[1] * np.exp(args[0] / DistGC)
 
-    xx = np.log10(np.array(args[0]))
-    yy = np.log10(np.array(args[1]))
-    spline = UnivariateSpline(xx,
-                              yy,
-                              k=1, s=0, ext=0)
-    return 10 ** spline(np.log10(DistGC))
+
+    return args[1] * np.exp(args[0] / DistGC)
 
 
-# @jit(forceobj=True)
+@jit(forceobj=True)
 def Nr_Ntot_visible(
         DistGC,
         sim_type, res_string,
@@ -550,7 +546,7 @@ def Nr_Ntot_visible(
             * (DistGC >= srd_last_sub))
 
 
-# @njit
+@jit(forceobj=True)
 def Nr_Ntot_repop(
         DistGC,
         sim_type, res_string,
@@ -598,7 +594,7 @@ def Nr_Ntot_repop(
                 * (DistGC >= srd_last_sub))
 
 
-# @njit
+@njit
 def mass_from_Vmax(Vmax, Rmax, c200,
                    cosmo_G):
     """
@@ -618,7 +614,7 @@ def mass_from_Vmax(Vmax, Rmax, c200,
             * ff(c200) / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)))
 
 
-# @njit
+@njit
 def def_Cv(c200, Cv):
     """
     Formula to find c200 knowing Cv to input in the Newton
@@ -637,7 +633,7 @@ def def_Cv(c200, Cv):
             / ff(c200) * (c200 / 2.163) ** 3 - Cv)
 
 
-# @njit
+@njit
 def newton2(fun, x0, args):
     """
     Newton method to find the root of a function.
@@ -659,7 +655,7 @@ def newton2(fun, x0, args):
     return x
 
 
-# @jit()
+@jit()
 def C200_from_Cv_array(Cv):
     """
     Function to find c200 knowing Cv.
@@ -677,7 +673,7 @@ def C200_from_Cv_array(Cv):
     return np.array(C200_med)
 
 
-# @njit()
+@njit()
 def C200_from_Cv_float(Cv):
     """
     Function to find c200 knowing Cv.
@@ -693,7 +689,7 @@ def C200_from_Cv_float(Cv):
     return C200_med
 
 
-# @jit(forceobj=True)
+@jit(forceobj=True)
 def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
                          sim_type, res_string,
                          cosmo_G,
@@ -782,7 +778,7 @@ def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
     return spline(np.random.random(num_subhalos))
 
 
-# @jit(forceobj=True)
+@jit(forceobj=True)
 def calculate_characteristics_subhalo(
         Vmax, Distgc,
         sim_type, res_string,
@@ -827,9 +823,11 @@ def calculate_characteristics_subhalo(
     repop_DistEarth = ((repop_Xs - 8.5) ** 2 + repop_Ys ** 2
                        + repop_Zs ** 2) ** 0.5
 
+
     # repop_C = Cv_Grand2012(Vmax, Cv_bb, Cv_mm)
     repop_C = Moline21_normalization(Vmax, c0=Cv_bb)
     repop_C = C_Scatt(repop_C, Cv_sigma)
+
 
     repop_Js = Js_vel(Vmax, repop_DistEarth, repop_C,
                       cosmo_G=cosmo_G,
@@ -855,18 +853,18 @@ def calculate_characteristics_subhalo(
                             Vmax, repop_Theta, repop_C))
 
 
-# @njit
+@njit
 def xx(mmax, mmin, SHVF_bb, SHVF_mm, root):
     return SHVF_Grand2012_int(mmin, mmax, SHVF_bb, SHVF_mm) - root
 
 
-# @njit
+@njit
 def xxx(mmax, params):
     return (SHVF_Grand2012_int(params[0], mmax,
                                params[1], params[2]) - params[3])
 
 
-# @jit(forceobj=True)
+@jit(forceobj=True)
 def interior_loop_singularbrightest(
         num_subs_max,
         sim_type, res_string,
@@ -1105,7 +1103,7 @@ def interior_loop_singularbrightest(
             brightest_J03[:repop_num_brightest, :])
 
 
-# @jit(forceobj=True)
+@jit(forceobj=True)
 def interior_loop_manybrigthest(
         num_subs_max,
         sim_type, res_string,
@@ -1482,7 +1480,7 @@ def repopulation_bin_by_bin(num_subs_max, sim_type, res_string,
     return
 
 
-def main(inputs):
+def main_repop(inputs):
     sim_type = inputs[0]
     res_string = inputs[1]
     path_input = inputs[2]

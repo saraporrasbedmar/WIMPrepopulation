@@ -43,11 +43,13 @@ except:
     Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
     Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
 
+print(Grand_dmo.shape, Grand_hydro.shape)
 Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > 1e-4, :]
-
+print(Grand_dmo.shape, Grand_hydro.shape)
 Grand_dmo = Grand_dmo[Grand_dmo[:, 0] > 2 * 0.184, :]
 Grand_hydro = Grand_hydro[Grand_hydro[:, 0] > 2 * 0.184, :]
 
+print(Grand_dmo.shape, Grand_hydro.shape)
 Grand_dmo[:, 2] *= 1e3
 Grand_hydro[:, 2] *= 1e3
 
@@ -225,7 +227,6 @@ plt.axvline(dmoLimit, linestyle='-.', color='k', alpha=0.3,
 
 plt.xscale('log')
 plt.yscale('log')
-legend_types = plt.legend(fontsize=18, loc=4, framealpha=1)
 
 handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
            mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)
@@ -234,8 +235,7 @@ handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
 legend11 = plt.legend(handles=handles,
                       loc=1)  # , bbox_to_anchor=(1.001, 0.99))
 
-ax.add_artist(legend11)
-ax.add_artist(legend_types)
+
 
 plt.ylabel(r'c$_\mathrm{V}$', size=28)
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
@@ -255,145 +255,102 @@ def gaussian(xx, sigma, x0):
 
 num = 25
 
-number, bins = np.histogram(cc_over_dmo / Moline21_normalization(
-        V=vv_over_dmo, c0=moline_fits_dmo[0][0]),
-                               bins=np.linspace(0, 6, num=num), density=True
-                               )
-bins = (bins[1:] + bins[:-1]) / 2.
+per50_dmo = np.nanpercentile(cc_over_dmo / Moline21_normalization(
+        V=vv_over_dmo, c0=moline_fits_dmo[0][0]), 50)
 
-gauss_fit_dmo = curve_fit(
-        gaussian,
-        xdata=bins,
-        ydata=number,
-        p0=[0.5, 1],
-        # bounds=([-np.inf],
-        #         [5e5])
-    )
-print(gauss_fit_dmo[0])
+# while abs(per50_dmo - 1.) > 0.01:
+#     per50_dmo = np.nanpercentile(cc_over_dmo / Moline21_normalization(
+#         V=vv_over_dmo, c0=moline_fits_dmo[0][0]) / per50_dmo, 50)
+#     print(per50_dmo)
 
-while abs(gauss_fit_dmo[0][1] - 1) > 0.03:
 
-    number, bins = np.histogram(cc_over_dmo / Moline21_normalization(
-        V=vv_over_dmo, c0=moline_fits_dmo[0][0]) / gauss_fit_dmo[0][1],
-                               bins=np.linspace(0, 6, num=num), density=True
-                               )
-
-    bins = (bins[1:] + bins[:-1]) / 2.
-    gauss_fit_dmo = curve_fit(
-        gaussian,
-        xdata=bins,
-        ydata=number,
-        p0=[0.5, 1],
-        # bounds=([-np.inf],
-        #         [5e5])
-    )
-    print(gauss_fit_dmo[0])
 plt.hist(cc_over_dmo / Moline21_normalization(
-        V=vv_over_dmo, c0=moline_fits_dmo[0][0]) / gauss_fit_dmo[0][1],
+        V=vv_over_dmo, c0=moline_fits_dmo[0][0]) / per50_dmo,
                                bins=np.linspace(0, 6, num=num), density=True,
                                color='grey', alpha=0.7
                                )
 
-print('gauss_fit_dmo', gauss_fit_dmo)
-gauss_fit_dmo = gauss_fit_dmo[0]
-# gauss_fit_dmo = gauss_fit_dmo[0]
-# gauss_fit_dmo = [gauss_fit_dmo, 1.]
+
 xx2_plot = np.linspace(0., 6, num=100)
-plt.plot(xx2_plot, gaussian(xx2_plot,
-                            gauss_fit_dmo[0], gauss_fit_dmo[1]))
 
-plt.axvline(gauss_fit_dmo[1] - gauss_fit_dmo[0]/2., color='k', zorder=10)
-plt.axvline(gauss_fit_dmo[1] + gauss_fit_dmo[0]/2., color='k', zorder=10)
-
-print(moline_fits_dmo[0][0])
-
-ax.plot(xx2_plot, Moline21_normalization(
-        V=xx2_plot, c0=moline_fits_dmo[0][0]*gauss_fit_dmo[1]),
-         ls='--', color='k')
+per16_dmo = np.nanpercentile(cc_over_dmo / Moline21_normalization(
+        V=vv_over_dmo, c0=moline_fits_dmo[0]) / per50_dmo, 16)
+per84_dmo = np.nanpercentile(cc_over_dmo / Moline21_normalization(
+        V=vv_over_dmo, c0=moline_fits_dmo[0]) / per50_dmo, 84)
+plt.axvline(per16_dmo, color='k', ls='--')
+plt.axvline(per50_dmo, color='k', ls='-')
+plt.axvline(per84_dmo, color='k', ls='--')
+print(per16_dmo, np.log10(per16_dmo**-1), np.log10(per50_dmo/per16_dmo))
+print(per50_dmo)
+print(per84_dmo, np.log10(per84_dmo), np.log10(per84_dmo/per50_dmo))
+print()
 
 ax.fill_between(xx_plot,
                 Moline21_normalization(
                     V=xx_plot,
-                    c0=moline_fits_dmo[0][0]
-                       * (gauss_fit_dmo[1] - gauss_fit_dmo[0]/2.)),
+                    c0=moline_fits_dmo[0][0] * per16_dmo),
                 Moline21_normalization(
                     V=xx_plot,
-                    c0=moline_fits_dmo[0][0]
-                       * (gauss_fit_dmo[1] + gauss_fit_dmo[0]/2.)),
-                color='grey', alpha=0.5, zorder=2
+                    c0=moline_fits_dmo[0][0] * per84_dmo),
+                color='grey', alpha=0.5, zorder=3
                 )
 
 
-
+# HYDRO ----------------------------------------------------------------
 vv_over_hydro = Grand_hydro[Grand_hydro[:, 1] > hydroLimit, 1]
 cc_over_hydro = Grand_hydro[Grand_hydro[:, 1] > hydroLimit, 0]
 
 num = 25
 
-number, bins = np.histogram(cc_over_hydro / Moline21_normalization(
-        V=vv_over_hydro, c0=moline_fits_hydro[0][0]),
-                               bins=np.linspace(0, 6, num=num), density=True
-                               )
-bins = (bins[1:] + bins[:-1]) / 2.
+per50_hydro = np.nanpercentile(cc_over_hydro / Moline21_normalization(
+        V=vv_over_hydro, c0=moline_fits_hydro[0]), 50)
+# while abs(per50_hydro - 1.) > 0.1:
+#     per50_dmo = np.nanpercentile(cc_over_hydro / Moline21_normalization(
+#         V=vv_over_hydro, c0=moline_fits_hydro[0][0]) / per50_hydro, 50)
+#     print(per50_hydro)
 
-gauss_fit_hydro = curve_fit(
-        gaussian,
-        xdata=bins,
-        ydata=number,
-        p0=[0.5, 1],
-        # bounds=([-np.inf],
-        #         [5e5])
-    )
-print(gauss_fit_hydro[0])
-
-while abs(gauss_fit_hydro[0][1] - 1) > 0.03:
-
-    number, bins = np.histogram(cc_over_hydro / Moline21_normalization(
-        V=vv_over_hydro, c0=moline_fits_hydro[0][0]) / gauss_fit_hydro[0][1],
-                               bins=np.linspace(0, 6, num=num), density=True
-                               )
-
-    bins = (bins[1:] + bins[:-1]) / 2.
-    gauss_fit_hydro = curve_fit(
-        gaussian,
-        xdata=bins,
-        ydata=number,
-        p0=[0.5, 1],
-        # bounds=([-np.inf],
-        #         [5e5])
-    )
-    print(gauss_fit_hydro[0])
 plt.hist(cc_over_hydro / Moline21_normalization(
-        V=vv_over_hydro, c0=moline_fits_hydro[0][0]) / gauss_fit_hydro[0][1],
+        V=vv_over_hydro, c0=moline_fits_hydro[0][0]) / per50_hydro,
                                bins=np.linspace(0, 6, num=num), density=True,
                                color='limegreen', alpha=0.7
                                )
-print('gauss_fit_hydro', gauss_fit_hydro)
-gauss_fit_hydro = gauss_fit_hydro[0]
-# gauss_fit_hydro = [gauss_fit_hydro[0], 1.]
-plt.plot(xx2_plot, gaussian(xx2_plot,
-                            gauss_fit_hydro[0], gauss_fit_hydro[1]))
 
-plt.axvline(gauss_fit_hydro[1] - gauss_fit_hydro[0]/2., color='g', zorder=10)
-plt.axvline(gauss_fit_hydro[1] + gauss_fit_hydro[0]/2., color='g', zorder=10)
+# per50_hydro = np.nanpercentile(cc_over_hydro / Moline21_normalization(
+#         V=vv_over_hydro, c0=moline_fits_hydro[0]) / per50_hydro, 50)
+per16_hydro = np.nanpercentile(cc_over_hydro / Moline21_normalization(
+        V=vv_over_hydro, c0=moline_fits_hydro[0]), 16)
+per84_hydro = np.nanpercentile(cc_over_hydro / Moline21_normalization(
+        V=vv_over_hydro, c0=moline_fits_hydro[0]), 84)
 
+plt.axvline(per16_hydro, color='darkgreen', ls='--')
+plt.axvline(per50_hydro, color='darkgreen', ls='-')
+plt.axvline(per84_hydro, color='darkgreen', ls='--')
+print(per16_hydro, np.log10(per16_hydro**-1),
+      np.log10(per50_hydro/per16_hydro))
+print(per50_hydro)
+print(per84_hydro,
+      np.log10(per84_hydro), np.log10(per84_hydro/per50_hydro))
 
-ax.plot(xx2_plot, Moline21_normalization(
-        V=xx2_plot, c0=moline_fits_hydro[0][0]*gauss_fit_hydro[1]),
-         ls='--', color='green')
+plt.xlabel(r'$\frac{c_\mathrm{V, data}}{c_\mathrm{V, Moliné21}(V)}$')
+plt.ylabel('Normalized density')
+
 ax.fill_between(xx_plot,
                 Moline21_normalization(
                     V=xx_plot,
-                    c0=moline_fits_hydro[0][0]
-                       * (gauss_fit_hydro[1] - gauss_fit_hydro[0]/2.)),
+                    c0=moline_fits_dmo[0][0] * per16_hydro),
                 Moline21_normalization(
                     V=xx_plot,
-                    c0=moline_fits_hydro[0][0]
-                       * (gauss_fit_hydro[1] + gauss_fit_hydro[0]/2.)),
+                    c0=moline_fits_dmo[0][0] * per84_hydro),
                 color='limegreen', alpha=0.5, zorder=2
                 )
 
+# ax.set_xlim(0.5, 70)
+legend_types = ax.legend(fontsize=18, loc=4, framealpha=1)
+ax.add_artist(legend11)
+ax.add_artist(legend_types)
 
+plt.savefig('outputs/cv_hist.pdf', bbox_inches='tight')
+plt.savefig('outputs/cv_hist.png', bbox_inches='tight')
 fig.savefig('outputs/cv_median.pdf', bbox_inches='tight')
 fig.savefig('outputs/cv_median.png', bbox_inches='tight')
 plt.show()

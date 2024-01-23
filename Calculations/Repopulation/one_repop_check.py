@@ -44,20 +44,19 @@ def read_config_file(ConfigFile):
     return parsed_yaml
 
 
-path_outputs = '/home/porrassa/Desktop/WIMPS_project/' \
-               'Calculations/Repopulation/outputs/' \
+path_outputs = 'outputs/' \
                'test_srds_and_Cv'
+path_outputs = 'outputs/test1repop'
 
-# rerun_sims = True
-rerun_sims = False
+rerun_sims = True
+# rerun_sims = False
 
 if rerun_sims:
 
     if not os.path.exists(path_outputs):
         os.makedirs(path_outputs)
 
-    path_input = '/home/porrassa/Desktop/WIMPS_project/Calculations/' \
-                 'Repopulation/input_files/input_1_repopulation.yml'
+    path_input = 'input_files/input_1_repopulation.yml'
 
     input_data = read_config_file(path_input)
     print('dmo num subs over completion: ',
@@ -85,8 +84,8 @@ if rerun_sims:
     with open(path_input, 'w') as f:
         yaml.dump(input_data, f)
 
-    funct_repop.main(['dmo', 'resilient', path_input, path_outputs])
-    funct_repop.main(['dmo', 'fragile', path_input, path_outputs])
+    funct_repop.main_repop(['dmo', 'resilient', path_input, path_outputs])
+    funct_repop.main_repop(['dmo', 'fragile', path_input, path_outputs])
 
     input_data['repopulations']['num_brightest'] = \
         funct_repop.SHVF_Grand2012_int(
@@ -98,8 +97,8 @@ if rerun_sims:
     with open(path_input, 'w') as f:
         yaml.dump(input_data, f)
 
-    funct_repop.main(['hydro', 'resilient', path_input, path_outputs])
-    funct_repop.main(['hydro', 'fragile', path_input, path_outputs])
+    funct_repop.main_repop(['hydro', 'resilient', path_input, path_outputs])
+    funct_repop.main_repop(['hydro', 'fragile', path_input, path_outputs])
 
 input_data = read_config_file(path_outputs + '/input_data.yml')
 
