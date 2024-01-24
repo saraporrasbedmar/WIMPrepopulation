@@ -52,6 +52,9 @@ Grand_hydro = Grand_hydro[np.argsort(Grand_hydro[:, 1])]
 # Los mayores Dist_Gc son 264 kpc, pero entonces cuál es R200?
 R200 = 263  # kpc
 
+paper2012_dmo = np.loadtxt('dmo_2012.txt')
+paper2012_hydro = np.loadtxt('hydro_2012.txt')
+
 # datos_repop_hydro = np.loadtxt(
 # '/home/saraporras/Desktop/TFM/Repopulation_codes/Hydro_complete.txt')
 # datos_repop_dmo   = np.loadtxt(
@@ -79,17 +82,33 @@ def calcular_dNdV(Vmax):
 
     return Vmax_cumul
 
+def calcular_VdNdV(Vmax):
+    Vmax_cumul = np.zeros(len(x_cumul) - 1)
+
+    for radius in range(len(Vmax_cumul)):
+        aa = Vmax >= x_cumul[radius]
+        bb = Vmax < x_cumul[radius + 1]
+
+        Vmax_cumul[radius] = (sum(aa * bb) / (
+                x_cumul[radius + 1] - x_cumul[radius])
+                              * (x_cumul[radius] + x_cumul[radius+1]) / 2.)
+
+    return Vmax_cumul
+
 
 Vmax_cumul_dmo = calcular_dNdV(Grand_dmo[:, 1])
 Vmax_cumul_hydro = calcular_dNdV(Grand_hydro[:, 1])
 
+Vmax_paper_dmo = calcular_VdNdV(Grand_dmo[:, 1])
+Vmax_paper_hydro = calcular_VdNdV(Grand_hydro[:, 1])
+
+
+x_cumul = (x_cumul[:-1] + x_cumul[1:]) / 2.
 # Vhydro_repop = calcular_dNdV(datos_repop_hydro[:,3])
 # Vdmo_repop   = calcular_dNdV(datos_repop_dmo[:,3])
 
 # vl2_dndv = calcular_dNdV(vl2_data[:,3])
 
-
-x_cumul = (x_cumul[:-1] + x_cumul[1:]) / 2.
 
 
 def find_PowerLaw(xx, yy, lim_inf, lim_sup, plot=True, color='k', label='',
@@ -123,6 +142,38 @@ def find_PowerLaw(xx, yy, lim_inf, lim_sup, plot=True, color='k', label='',
 
     return fits[0], fits[1], perr[0], perr[1]
 
+
+plt.figure()
+plt.plot(paper2012_dmo[:, 0], paper2012_dmo[:, 1], color='k')
+plt.plot(paper2012_hydro[:, 0], paper2012_hydro[:, 1], color='limegreen')
+
+fits_dmo_paper = np.polyfit(x=np.log10(paper2012_dmo[:, 0]),
+                            y=np.log10(paper2012_dmo[:, 1]),
+                            deg=1)
+print(fits_dmo_paper)
+
+fits_hydro_paper = np.polyfit(x=np.log10(paper2012_hydro[:, 0]),
+                            y=np.log10(paper2012_hydro[:, 1]),
+                            deg=1)
+print(fits_hydro_paper)
+
+limit_infG = 8
+limit_supG = 70
+fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(x_cumul, Vmax_paper_dmo / 6.,
+                                           limit_infG, limit_supG,
+                                           label='DMO')
+
+fitsM_Hydro, fitsB_Hydro, _, _ = find_PowerLaw(x_cumul, Vmax_paper_hydro / 6.,
+                                               limit_infG, limit_supG,
+                                               color='limegreen', label='Hyd')
+
+print(fitsM_DMO, fitsB_DMO)
+print(fitsM_Hydro, fitsB_Hydro)
+
+plt.xscale('log')
+plt.yscale('log')
+
+plt.show()
 
 # %%
 # plt.close('all')

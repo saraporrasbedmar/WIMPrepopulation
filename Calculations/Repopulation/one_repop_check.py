@@ -3,6 +3,7 @@ import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from scipy.optimize import curve_fit
 
 import attemp_at_functions2 as funct_repop
 
@@ -34,6 +35,7 @@ except:
     Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
 
 Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > np.min(Grand_dmo[:, 1]), :]
+
 
 def read_config_file(ConfigFile):
     with open(ConfigFile, 'r') as stream:
@@ -128,6 +130,31 @@ def calcular_dNdV(Vmax):
 
     return Vmax_cumul
 
+def find_PowerLaw(xx, yy, lim_inf, lim_sup, plot=True, color='k', label='',
+                  style=''):
+    X1limit = np.where(xx >= lim_inf)[0][0]
+    X2limit = np.where(xx >= lim_sup)[0][0]
+
+    xx_copy = np.log10(xx[X1limit:X2limit])
+    yy_copy = np.log10(yy[X1limit:X2limit])
+
+    xx_copy = xx_copy[np.isfinite(yy_copy)]
+    yy_copy = yy_copy[np.isfinite(yy_copy)]
+
+    fits, cov_matrix = np.polyfit(xx_copy, yy_copy, 1, cov=True, full=False)
+    perr = np.sqrt(np.diag(cov_matrix))
+
+    if plot:
+        plt.plot(xx, yy, label=label, color=color, linestyle=style)
+        plt.plot(xx, yy, '.', color=color, zorder=10)
+
+        xxx = np.logspace(np.log10(2), np.log10(xx[-1]), 100)
+        plt.plot(xxx, 10 ** fits[1] * xxx ** fits[0],
+                 color=color, alpha=0.7,
+                 linestyle='-', lw=2)
+
+    return fits[0], fits[1], perr[0], perr[1]
+
 
 Vmax_cumul_dmo_res = calcular_dNdV(datos_resi_dmo[:, 3])
 Vmax_cumul_dmo_frag = calcular_dNdV(datos_frag_dmo[:, 3])
@@ -143,11 +170,22 @@ plt.plot(x_cumul, Vmax_cumul_dmo_frag, label='DMO frag')
 plt.plot(x_cumul, Vmax_cumul_hydro_res, label='Hydro res')
 plt.plot(x_cumul, Vmax_cumul_hydro_frag, label='Hydro frag')
 
+fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(
+    x_cumul, Vmax_cumul_dmo_res,
+    lim_inf=1.5, lim_sup=5.7, plot=True)
+print(fitsM_DMO, fitsB_DMO)
+
+fitsM_hydro, fitsB_hydro, _, _ = find_PowerLaw(
+    x_cumul, Vmax_cumul_hydro_res, plot=True,
+    lim_inf=1.5, lim_sup=8., color='limegreen', label='Hyd')
+print(fitsM_hydro, fitsB_hydro)
+
 plt.xscale('log')
 plt.yscale('log')
 
 plt.savefig(path_outputs + '/SHVF.png', bbox_inches='tight')
 plt.savefig(path_outputs + '/SHVF.pdf', bbox_inches='tight')
+
 
 # SRD ------------------------------------------------------------------
 
@@ -428,7 +466,9 @@ plt.savefig(path_outputs + '/srd_number.pdf', bbox_inches='tight')
 
 plt.figure(figsize=(12, 10))
 
-def Cv_Mol2021_redshift0(V, c0=1.75e5, c1=-0.90368, c2=0.2749, c3=-0.028):
+
+def Cv_Mol2021_redshift0(V, c0=1.75e5, c1=-0.90368,
+                         c2=0.2749, c3=-0.028):
     # Median subhalo concentration depending on its Vmax and its redshift (here z=0)
     # Moline et al. 2110.02097
     #
@@ -436,6 +476,7 @@ def Cv_Mol2021_redshift0(V, c0=1.75e5, c1=-0.90368, c2=0.2749, c3=-0.028):
     ci = [c0, c1, c2, c3]
     return ci[0] * (1 + (sum([ci[i + 1] * np.log10(V) ** (i + 1)
                               for i in range(3)])))
+
 
 plt.plot(datos_resi_dmo[:, 3], datos_resi_dmo[:, 5], '.', alpha=0.5)
 plt.plot(datos_frag_dmo[:, 3], datos_frag_dmo[:, 5], '.', alpha=0.5)
@@ -478,7 +519,6 @@ plt.plot(
     funct_repop.Moline21_normalization(x_vmax,
                                        c0=input_data['Cv']['hydro']['bb']))
 
-
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
 plt.ylabel(r'c$_\mathrm{V}$', size=28)
 
@@ -487,5 +527,117 @@ plt.yscale('log')
 
 plt.savefig(path_outputs + '/Cv.png', bbox_inches='tight')
 plt.savefig(path_outputs + '/Cv.pdf', bbox_inches='tight')
+
+
+# Cv sigmas  -------------------------------------------------------
+plt.figure(figsize=(12, 10))
+print('\nSigmas of concentrations')
+def gaussian(xx, sigma, x0):
+    return 1 / ((2. * np.pi) ** 0.5 * sigma) * np.exp(
+        -0.5 * ((xx - x0) / sigma) ** 2.)
+
+
+# DMO
+fraction_dmo = (datos_resi_dmo[:, 5]
+                / funct_repop.Moline21_normalization(
+            datos_resi_dmo[:, 3], c0=input_data['Cv']['dmo']['bb']))
+
+per50_dmo = np.nanpercentile(fraction_dmo, 50)
+per16_dmo = np.nanpercentile(fraction_dmo, 16)
+per84_dmo = np.nanpercentile(fraction_dmo, 84)
+print(per16_dmo, per50_dmo, per84_dmo)
+
+
+# Hydro
+fraction_hydro = (datos_resi_hyd[:, 5]
+                / funct_repop.Moline21_normalization(
+            datos_resi_hyd[:, 3], c0=input_data['Cv']['hydro']['bb']))
+
+per50_hydro = np.nanpercentile(fraction_hydro, 50)
+per16_hydro = np.nanpercentile(fraction_hydro, 16)
+per84_hydro = np.nanpercentile(fraction_hydro, 84)
+print(per16_hydro, per50_hydro, per84_hydro)
+
+
+# Histograms
+num = 40
+array_bins = np.geomspace(min(min(fraction_dmo), min(fraction_hydro)),
+                          max(min(fraction_dmo), max(fraction_hydro)),
+                          num=num)
+n_dmo, bins_dmo, _ = plt.hist(fraction_dmo,
+         alpha=0.5, color='k', density=True,
+         bins=array_bins)
+n_hydro, bins_hydro, _  = plt.hist(fraction_hydro,
+         alpha=0.5, color='green', density=True,
+         bins=array_bins)
+
+
+xx3_plot = np.log10(np.geomspace(5e-2, 6))
+def lognormal_fit(xx, mean, sigma):
+    return (1/(sigma * xx * np.sqrt(2.*np.pi))
+              * np.exp(-0.5 * ((np.log(xx) - mean) / sigma)**2.))
+
+fit_lognormal_dmo = curve_fit(
+    lognormal_fit,
+    xdata=(bins_dmo[1:]+bins_dmo[:-1])/2.,
+    ydata=n_dmo)
+print(fit_lognormal_dmo)
+print('Sigma for the lognormal distribution, dmo: ',
+      np.log10(np.exp(fit_lognormal_dmo[0][1])))
+
+plt.plot(xx3_plot,
+         lognormal_fit(xx3_plot, fit_lognormal_dmo[0][0],
+                       fit_lognormal_dmo[0][1]))
+
+fit_lognormal_hydro = curve_fit(
+    lognormal_fit,
+    xdata=(bins_hydro[1:]+bins_hydro[:-1])/2.,
+    ydata=n_hydro)
+print(fit_lognormal_hydro)
+print('Sigma for the lognormal distribution, hydro: ',
+      np.log10(np.exp(fit_lognormal_hydro[0][1])))
+
+plt.plot(xx3_plot,
+         lognormal_fit(xx3_plot, fit_lognormal_hydro[0][0],
+                       fit_lognormal_hydro[0][1]))
+
+def gaussian_not(xx, sigma, x0, aa):
+    return aa / ((2. * np.pi) ** 0.5 * sigma) * np.exp(
+        -0.5 * ((xx - x0) / sigma) ** 2.)
+
+
+
+fit_normal_dmo = curve_fit(
+    gaussian_not,
+    xdata=np.log10((bins_dmo[1:]+bins_dmo[:-1])/2.),
+    ydata=n_dmo)
+print(fit_normal_dmo)
+
+plt.plot(10**xx3_plot,
+         gaussian_not(xx3_plot,
+                      fit_normal_dmo[0][0],
+                      fit_normal_dmo[0][1],
+                      fit_normal_dmo[0][2]))
+
+fit_normal_hydro = curve_fit(
+    gaussian_not,
+    xdata=np.log10((bins_hydro[1:]+bins_hydro[:-1])/2.),
+    ydata=n_hydro)
+print(fit_normal_hydro)
+
+plt.plot(10**xx3_plot,
+         gaussian_not(xx3_plot,
+                      fit_normal_hydro[0][0],
+                      fit_normal_hydro[0][1],
+                      fit_normal_hydro[0][2]))
+
+plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
+plt.ylabel(r'c$_\mathrm{V}$', size=28)
+
+plt.xscale('log')
+plt.yscale('log')
+
+plt.savefig(path_outputs + '/Cv_hist.png', bbox_inches='tight')
+plt.savefig(path_outputs + '/Cv_hist.pdf', bbox_inches='tight')
 
 plt.show()

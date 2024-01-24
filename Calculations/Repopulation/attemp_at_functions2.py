@@ -298,7 +298,7 @@ def C_Scatt(C, Cv_sigma):
         Subhalos with scattered concentrations.
     """
     return np.random.lognormal(
-        np.log(C), Cv_sigma, C.size)
+        np.log(C) + Cv_sigma[0], Cv_sigma[1], C.size)
 
 
 # ----------- J-FACTORS --------------------------------

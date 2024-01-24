@@ -43,13 +43,11 @@ except:
     Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
     Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
 
-print(Grand_dmo.shape, Grand_hydro.shape)
 Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > 1e-4, :]
-print(Grand_dmo.shape, Grand_hydro.shape)
+
 Grand_dmo = Grand_dmo[Grand_dmo[:, 0] > 2 * 0.184, :]
 Grand_hydro = Grand_hydro[Grand_hydro[:, 0] > 2 * 0.184, :]
 
-print(Grand_dmo.shape, Grand_hydro.shape)
 Grand_dmo[:, 2] *= 1e3
 Grand_hydro[:, 2] *= 1e3
 
@@ -165,7 +163,8 @@ vv_medians_dmo, cv_dmo_median, cv_dmo_min, cv_dmo_max, _ = calculate_med(
 vv_medians_hydro, cv_hydro_median, cv_hydro_min, cv_hydro_max, _ = calculate_med(
     Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)
 
-xx_plot = np.logspace(np.log10(vv_medians_dmo[0]), np.log10(60))
+# xx_plot = np.logspace(np.log10(vv_medians_dmo[0]), np.log10(60))
+xx_plot = np.geomspace(1., 60)
 
 # FIGURE start
 fig, ax = plt.subplots(figsize=(8, 8))
@@ -264,22 +263,23 @@ per50_dmo = np.nanpercentile(cc_over_dmo / Moline21_normalization(
 #     print(per50_dmo)
 
 
-plt.hist(cc_over_dmo / Moline21_normalization(
-        V=vv_over_dmo, c0=moline_fits_dmo[0][0]) / per50_dmo,
-                               bins=np.linspace(0, 6, num=num), density=True,
+n_dmo, bins_dmo, _ = plt.hist(cc_over_dmo / Moline21_normalization(
+        V=vv_over_dmo, c0=moline_fits_dmo[0][0]),
+                               bins=np.geomspace(0.05, 6, num=num),
+                              density=True,
                                color='grey', alpha=0.7
                                )
 
 
-xx2_plot = np.linspace(0., 6, num=100)
+xx2_plot = np.geomspace(0.01, 6, num=100)
 
 per16_dmo = np.nanpercentile(cc_over_dmo / Moline21_normalization(
         V=vv_over_dmo, c0=moline_fits_dmo[0]) / per50_dmo, 16)
 per84_dmo = np.nanpercentile(cc_over_dmo / Moline21_normalization(
         V=vv_over_dmo, c0=moline_fits_dmo[0]) / per50_dmo, 84)
-plt.axvline(per16_dmo, color='k', ls='--')
-plt.axvline(per50_dmo, color='k', ls='-')
-plt.axvline(per84_dmo, color='k', ls='--')
+# plt.axvline(per16_dmo, color='k', ls='--')
+# plt.axvline(per50_dmo, color='k', ls='-')
+# plt.axvline(per84_dmo, color='k', ls='--')
 print(per16_dmo, np.log10(per16_dmo**-1), np.log10(per50_dmo/per16_dmo))
 print(per50_dmo)
 print(per84_dmo, np.log10(per84_dmo), np.log10(per84_dmo/per50_dmo))
@@ -309,9 +309,10 @@ per50_hydro = np.nanpercentile(cc_over_hydro / Moline21_normalization(
 #         V=vv_over_hydro, c0=moline_fits_hydro[0][0]) / per50_hydro, 50)
 #     print(per50_hydro)
 
-plt.hist(cc_over_hydro / Moline21_normalization(
-        V=vv_over_hydro, c0=moline_fits_hydro[0][0]) / per50_hydro,
-                               bins=np.linspace(0, 6, num=num), density=True,
+n_hydro, bins_hydro, _ = plt.hist(cc_over_hydro / Moline21_normalization(
+        V=vv_over_hydro, c0=moline_fits_hydro[0][0]),
+                               bins=np.geomspace(0.05, 6, num=num),
+                                  density=True,
                                color='limegreen', alpha=0.7
                                )
 
@@ -322,9 +323,9 @@ per16_hydro = np.nanpercentile(cc_over_hydro / Moline21_normalization(
 per84_hydro = np.nanpercentile(cc_over_hydro / Moline21_normalization(
         V=vv_over_hydro, c0=moline_fits_hydro[0]), 84)
 
-plt.axvline(per16_hydro, color='darkgreen', ls='--')
-plt.axvline(per50_hydro, color='darkgreen', ls='-')
-plt.axvline(per84_hydro, color='darkgreen', ls='--')
+# plt.axvline(per16_hydro, color='darkgreen', ls='--')
+# plt.axvline(per50_hydro, color='darkgreen', ls='-')
+# plt.axvline(per84_hydro, color='darkgreen', ls='--')
 print(per16_hydro, np.log10(per16_hydro**-1),
       np.log10(per50_hydro/per16_hydro))
 print(per50_hydro)
@@ -337,20 +338,92 @@ plt.ylabel('Normalized density')
 ax.fill_between(xx_plot,
                 Moline21_normalization(
                     V=xx_plot,
-                    c0=moline_fits_dmo[0][0] * per16_hydro),
+                    c0=moline_fits_hydro[0][0] * per16_hydro),
                 Moline21_normalization(
                     V=xx_plot,
-                    c0=moline_fits_dmo[0][0] * per84_hydro),
+                    c0=moline_fits_hydro[0][0] * per84_hydro),
                 color='limegreen', alpha=0.5, zorder=2
                 )
+
+def lognormal_fit(xx, mean, sigma):
+    return (1/(sigma * xx * np.sqrt(2.*np.pi))
+              * np.exp(-0.5 * ((np.log(xx) - mean) / sigma)**2.))
+
+fit_lognormal_dmo = curve_fit(
+    lognormal_fit,
+    xdata=(bins_dmo[1:]+bins_dmo[:-1])/2.,
+    ydata=n_dmo)
+print(fit_lognormal_dmo)
+print('Sigma for the lognormal distribution, dmo: ',
+      np.log10(np.exp(fit_lognormal_dmo[0][1])))
+
+plt.plot(xx2_plot,
+         lognormal_fit(xx2_plot, fit_lognormal_dmo[0][0],
+                       fit_lognormal_dmo[0][1]),
+         color='k')
+
+fit_lognormal_hydro = curve_fit(
+    lognormal_fit,
+    xdata=(bins_hydro[1:]+bins_hydro[:-1])/2.,
+    ydata=n_hydro)
+print(fit_lognormal_hydro)
+print('Sigma for the lognormal distribution, hydro: ',
+      np.log10(np.exp(fit_lognormal_hydro[0][1])))
+
+plt.plot(xx2_plot,
+         lognormal_fit(xx2_plot, fit_lognormal_hydro[0][0],
+                       fit_lognormal_hydro[0][1]),
+         color='green')
+
+plt.xscale('log')
+
+plt.savefig('outputs/cv_hist.pdf', bbox_inches='tight')
+plt.savefig('outputs/cv_hist.png', bbox_inches='tight')
+# ----------------------------------------------------
+def gaussian_not(xx, sigma, x0, aa):
+    return aa / ((2. * np.pi) ** 0.5 * sigma) * np.exp(
+        -0.5 * ((xx - x0) / sigma) ** 2.)
+
+
+plt.figure()
+xx3_plot = np.log10(np.geomspace(5e-2, 6))
+plt.scatter(np.log10((bins_dmo[1:]+bins_dmo[:-1])/2.),
+            n_dmo, color='k')
+plt.scatter(np.log10((bins_hydro[1:]+bins_hydro[:-1])/2.),
+            n_hydro, color='g')
+
+fit_normal_dmo = curve_fit(
+    gaussian_not,
+    xdata=np.log10((bins_dmo[1:]+bins_dmo[:-1])/2.),
+    ydata=n_dmo)
+print(fit_normal_dmo)
+
+plt.plot(xx3_plot,
+         gaussian_not(xx3_plot,
+                      fit_normal_dmo[0][0],
+                      fit_normal_dmo[0][1],
+                      fit_normal_dmo[0][2]))
+
+fit_normal_hydro = curve_fit(
+    gaussian_not,
+    xdata=np.log10((bins_hydro[1:]+bins_hydro[:-1])/2.),
+    ydata=n_hydro)
+print(fit_normal_hydro)
+
+plt.plot(xx3_plot,
+         gaussian_not(xx3_plot,
+                      fit_normal_hydro[0][0],
+                      fit_normal_hydro[0][1],
+                      fit_normal_hydro[0][2]))
 
 # ax.set_xlim(0.5, 70)
 legend_types = ax.legend(fontsize=18, loc=4, framealpha=1)
 ax.add_artist(legend11)
 ax.add_artist(legend_types)
+ax.set_xlim(0.9, 70.)
 
-plt.savefig('outputs/cv_hist.pdf', bbox_inches='tight')
-plt.savefig('outputs/cv_hist.png', bbox_inches='tight')
+# plt.xscale('log')
+
 fig.savefig('outputs/cv_median.pdf', bbox_inches='tight')
 fig.savefig('outputs/cv_median.png', bbox_inches='tight')
 plt.show()
