@@ -9,30 +9,38 @@ Created on Thu Mar  3 20:34:39 2022
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colorbar as colorbarr
+import matplotlib.patches as mpatches
 
+
+all_size = 24
 plt.rcParams['mathtext.fontset'] = 'stix'
 plt.rcParams['font.family'] = 'STIXGeneral'
-plt.rc('font', size=20)
-plt.rc('axes', titlesize=16)
-plt.rc('axes', labelsize=16)
-plt.rc('xtick', labelsize=21)
-plt.rc('ytick', labelsize=20)
-plt.rc('legend', fontsize=20)
-plt.rc('figure', titlesize=17)
+plt.rcParams['axes.labelsize'] = all_size
+plt.rcParams['lines.markersize'] = 10
+plt.rc('font', size=all_size)
+plt.rc('axes', titlesize=all_size)
+plt.rc('axes', labelsize=all_size)
+plt.rc('xtick', labelsize=all_size)
+plt.rc('ytick', labelsize=all_size)
+plt.rc('legend', fontsize=16)
+plt.rc('figure', titlesize=all_size)
 plt.rc('xtick', top=True, direction='in')
 plt.rc('ytick', right=True, direction='in')
-plt.rc('xtick.major', size=7, width=1.5, top=True)
-plt.rc('ytick.major', size=7, width=1.5, right=True)
-plt.rc('xtick.minor', size=4, width=1)
-plt.rc('ytick.minor', size=4, width=1)
+plt.rc('xtick.major', size=10, width=2, top=False, pad=10)
+plt.rc('ytick.major', size=10, width=2, right=True, pad=10)
+plt.rc('xtick.minor', size=7, width=1.5, top=False)
+plt.rc('ytick.minor', size=7, width=1.5)
 
 #        Rmax[kpc]        Vmax[km/s]      Radius[Mpc]
-Grand_dmo = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
-Grand_hydro = np.loadtxt('../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
+try:
+    Grand_dmo = np.loadtxt(
+        '../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
+    Grand_hydro = np.loadtxt(
+        '../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
 
-# #        Rmax        Vmax      Radius
-# Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
-# Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
+except:
+    Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
+    Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
 
 Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > 1e-4, :]
 Grand_dmo[:, 2] *= 1e3
@@ -43,6 +51,9 @@ Grand_hydro = Grand_hydro[np.argsort(Grand_hydro[:, 1])]
 
 # Los mayores Dist_Gc son 264 kpc, pero entonces cuál es R200?
 R200 = 263  # kpc
+
+paper2012_dmo = np.loadtxt('dmo_2012.txt')
+paper2012_hydro = np.loadtxt('hydro_2012.txt')
 
 # datos_repop_hydro = np.loadtxt(
 # '/home/saraporras/Desktop/TFM/Repopulation_codes/Hydro_complete.txt')
@@ -56,7 +67,7 @@ plt.close('all')
 # %%
 
 x_cumul = np.logspace(np.log10(Grand_hydro[0, 1]),
-                      np.log10(Grand_hydro[-1, 1]), num=25)
+                      np.log10(Grand_hydro[-1, 1]), num=26)
 
 
 def calcular_dNdV(Vmax):
@@ -71,21 +82,37 @@ def calcular_dNdV(Vmax):
 
     return Vmax_cumul
 
+def calcular_VdNdV(Vmax):
+    Vmax_cumul = np.zeros(len(x_cumul) - 1)
+
+    for radius in range(len(Vmax_cumul)):
+        aa = Vmax >= x_cumul[radius]
+        bb = Vmax < x_cumul[radius + 1]
+
+        Vmax_cumul[radius] = (sum(aa * bb) / (
+                x_cumul[radius + 1] - x_cumul[radius])
+                              * (x_cumul[radius] + x_cumul[radius+1]) / 2.)
+
+    return Vmax_cumul
+
 
 Vmax_cumul_dmo = calcular_dNdV(Grand_dmo[:, 1])
 Vmax_cumul_hydro = calcular_dNdV(Grand_hydro[:, 1])
 
+Vmax_paper_dmo = calcular_VdNdV(Grand_dmo[:, 1])
+Vmax_paper_hydro = calcular_VdNdV(Grand_hydro[:, 1])
+
+
+x_cumul = (x_cumul[:-1] + x_cumul[1:]) / 2.
 # Vhydro_repop = calcular_dNdV(datos_repop_hydro[:,3])
 # Vdmo_repop   = calcular_dNdV(datos_repop_dmo[:,3])
 
 # vl2_dndv = calcular_dNdV(vl2_data[:,3])
 
 
-x_cumul = (x_cumul[:-1] + x_cumul[1:]) / 2.
-
 
 def find_PowerLaw(xx, yy, lim_inf, lim_sup, plot=True, color='k', label='',
-                  style='-'):
+                  style=''):
     X1limit = np.where(xx >= lim_inf)[0][0]
     X2limit = np.where(xx >= lim_sup)[0][0]
 
@@ -106,14 +133,47 @@ def find_PowerLaw(xx, yy, lim_inf, lim_sup, plot=True, color='k', label='',
 
     if plot:
         plt.plot(xx, yy, label=label, color=color, linestyle=style)
-        plt.plot(xx, yy, '.', color=color)
+        plt.plot(xx, yy, '.', color=color, zorder=10)
 
         xxx = np.logspace(np.log10(2), np.log10(xx[-1]), 100)
-        plt.plot(xxx, 10 ** fits[1] * xxx ** fits[0], color=color, alpha=0.5,
-                 linestyle='--')
+        plt.plot(xxx, 10 ** fits[1] * xxx ** fits[0],
+                 color=color, alpha=0.7,
+                 linestyle='-', lw=2)
 
     return fits[0], fits[1], perr[0], perr[1]
 
+
+plt.figure()
+plt.plot(paper2012_dmo[:, 0], paper2012_dmo[:, 1], color='k')
+plt.plot(paper2012_hydro[:, 0], paper2012_hydro[:, 1], color='limegreen')
+
+fits_dmo_paper = np.polyfit(x=np.log10(paper2012_dmo[:, 0]),
+                            y=np.log10(paper2012_dmo[:, 1]),
+                            deg=1)
+print(fits_dmo_paper)
+
+fits_hydro_paper = np.polyfit(x=np.log10(paper2012_hydro[:, 0]),
+                            y=np.log10(paper2012_hydro[:, 1]),
+                            deg=1)
+print(fits_hydro_paper)
+
+limit_infG = 8
+limit_supG = 70
+fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(x_cumul, Vmax_paper_dmo / 6.,
+                                           limit_infG, limit_supG,
+                                           label='DMO')
+
+fitsM_Hydro, fitsB_Hydro, _, _ = find_PowerLaw(x_cumul, Vmax_paper_hydro / 6.,
+                                               limit_infG, limit_supG,
+                                               color='limegreen', label='Hyd')
+
+print(fitsM_DMO, fitsB_DMO)
+print(fitsM_Hydro, fitsB_Hydro)
+
+plt.xscale('log')
+plt.yscale('log')
+
+plt.show()
 
 # %%
 # plt.close('all')
@@ -165,8 +225,6 @@ Vmax = 201.033  # from VLII website
 plt.xscale('log')
 plt.yscale('log')
 
-plt.axvline(limit_infG, color='grey', alpha=0.3)
-plt.axvline(limit_supG, color='grey', alpha=0.3)
 
 plt.xlabel(r'$V_{\mathrm{max}}$ [km s$^{-1}$]', size=24)
 plt.ylabel(r'$\frac{dN(V_{\mathrm{max}})}{dV_{\mathrm{max}}}$', size=27)
@@ -174,6 +232,20 @@ plt.ylabel(r'$\frac{dN(V_{\mathrm{max}})}{dV_{\mathrm{max}}}$', size=27)
 # fig.set_xticklabels( )
 
 plt.legend()
+plt.axvline(limit_infG, linestyle='-.', color='k', alpha=0.3,
+            linewidth=2, label='Fit limits')
+plt.axvline(limit_supG, linestyle='-.', color='k', alpha=0.3,
+            linewidth=2)
+
+handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
+           mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)
+           )
+
+legend11 = plt.legend(handles=handles,
+                      loc=1)  # , bbox_to_anchor=(1.001, 0.99))
+
+plt.savefig('outputs/shvf.pdf', bbox_inches='tight')
+plt.savefig('outputs/shvf.png', bbox_inches='tight')
 
 # %% STUDY THE LIMITS OF THE VMAX IN THE FIT
 
@@ -379,7 +451,7 @@ fig.text(0.06, 0.5, 'Limite superior', ha='center', va='center',
 
 number_bins = np.arange(15, 35)
 
-numbers = 7
+numbers = 3
 limit_infG = np.linspace(6, 10, num=numbers)
 limit_supG = np.linspace(30, 70, num=numbers)
 
@@ -429,13 +501,13 @@ for nbin, bin_i in enumerate(number_bins):
             ax3.errorbar(x=bin_i + 0.45 * np.random.random(1)
                            * (-1) ** (np.random.random() < 0.5),
                          y=-fitsM_Hydro,
-                         yerr=fitsM_Hydro_std,
+                         # yerr=fitsM_Hydro_std,
                          color=(red_array[ninf], 0, blue_array[nsup]),
                          linestyle='', marker='x', capsize=6, markersize=6)
             ax2.errorbar(x=bin_i + 0.45 * np.random.random(1)
                            * (-1) ** (np.random.random() < 0.5),
                          y=-fitsM_DMO,
-                         yerr=fitsM_DMO_std,
+                         # yerr=fitsM_DMO_std,
                          color=(red_array[ninf], 0, blue_array[nsup]),
                          linestyle='', marker='x',
                          capsize=6, markersize=6)
@@ -443,13 +515,13 @@ for nbin, bin_i in enumerate(number_bins):
             ax3.errorbar(x=bin_i + 0.45 * np.random.random(1)
                            * (-1) ** (np.random.random() < 0.5),
                          y=fitsB_Hydro,
-                         yerr=fitsB_Hydro_std,
+                         # yerr=fitsB_Hydro_std,
                          color=(0, red_array[ninf], blue_array[nsup]),
                          linestyle='', marker='o', capsize=6, markersize=3)
             ax2.errorbar(x=bin_i + 0.45 * np.random.random(1)
                            * (-1) ** (np.random.random() < 0.5),
                          y=fitsB_DMO,
-                         yerr=fitsB_DMO_std,
+                         # yerr=fitsB_DMO_std,
                          color=(0, red_array[ninf], blue_array[nsup]),
                          linestyle='', marker='o', capsize=6, markersize=3)
 

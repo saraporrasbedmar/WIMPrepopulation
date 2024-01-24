@@ -22,15 +22,19 @@ SHVF:
         bb: 5.0796
     
     # Min and max velocities to repopulate [km/s]
-    RangeMin: 0.1
-    RangeMax: 7.
+    RangeMin: 0.8
+    RangeMax: 60.
+
+    # Vmax at which the simulation is complete
+    Vmax_completion: 8.
     
     
 
 SRD:
-    formula:
-        resilient: 'DistGC**args[0] * 10**args[1]'
-        fragile: '10 ** ((DistGC / args[0]) ** args[1] * np.exp(-args[2] * (DistGC - args[0]) / args[0]))'
+    formula: # This is for the outputs, numba does not allow eval :)))
+             # Lines ~470-490 to define these functions.
+        resilient: ''
+        fragile: ''
     dmo:
         resilient:
             args: [ 0.54343928, -2.17672138]  #[ 0.54343928, -2.17672138]
@@ -63,15 +67,9 @@ Cv:
 
 # REPOPULATION
 repopulations:
-    its: 500
-    id: 'Test_functions'
+    print_freq: 1
+    its: 1
     num_subs_max: 5e5
-    print_freq: 10
-    num_brightest: 1
+    num_brightest: 20
     inc_factor: 1.5
-    
-    type:
-        2: ['dmo', False]
-        4: ['hydro', False]
-        1: ['dmo', True]
-        3: ['hydro', True]
+

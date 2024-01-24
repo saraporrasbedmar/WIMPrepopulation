@@ -3,25 +3,20 @@ import sys
 import math
 import yaml
 import psutil
+import inspect
 import numpy as np
-import random as rdm
 import time
 
 from scipy.optimize import newton
-# from scipy.integrate import simpson
 from scipy.interpolate import UnivariateSpline
 
 from numba import njit, jit
-from numba.typed import List
 from numba.core.errors import NumbaDeprecationWarning, \
     NumbaPendingDeprecationWarning
 import warnings
 
-
 warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
 warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
-
-from multiprocessing import Pool
 
 
 def tupleset(t, i, value):
@@ -184,71 +179,6 @@ def read_config_file(ConfigFile):
     return parsed_yaml
 
 
-def repopulation(num_subs_max, sim_type, res_string,
-                 cosmo_G,
-                 cosmo_H_0,
-                 cosmo_rho_crit,
-
-                 host_R_vir,
-                 host_rho_0,
-                 host_r_s,
-
-                 pathname,
-                 repop_its,
-                 repop_print_freq,
-                 repop_inc_factor,
-
-                 SHVF_cts_RangeMin,
-                 SHVF_cts_RangeMax,
-                 SHVF_bb,
-                 SHVF_mm,
-
-                 Cv_bb,
-                 Cv_mm,
-                 Cv_sigma,
-
-                 srd_args,
-                 srd_last_sub):
-    print(SHVF_cts_RangeMin,
-          SHVF_cts_RangeMax)
-    print('    Max. number of repop subhalos: %i' %
-          SHVF_Grand2012_int(
-              SHVF_cts_RangeMin,
-              SHVF_cts_RangeMax,
-              SHVF_bb,
-              SHVF_mm)
-          )
-
-    computing_bin_by_bin(num_subs_max, sim_type, res_string,
-                         cosmo_G,
-                         cosmo_H_0,
-                         cosmo_rho_crit,
-
-                         host_R_vir,
-                         host_rho_0,
-                         host_r_s,
-
-                         pathname,
-                         repop_its,
-                         repop_print_freq,
-                         repop_inc_factor,
-
-                         SHVF_cts_RangeMin,
-                         SHVF_cts_RangeMax,
-                         SHVF_bb,
-                         SHVF_mm,
-
-                         Cv_bb,
-                         Cv_mm,
-                         Cv_sigma,
-
-                         srd_args,
-                         srd_last_sub)
-
-    print(pathname)
-    return
-
-
 @njit()
 def ff(c):
     return np.log(1. + c) - c / (1. + c)
@@ -280,7 +210,8 @@ def SHVF_Grand2012(V,
                    Cv_mm,
                    Cv_sigma,
 
-                   srd_args,
+                   srd_args_repop,
+                   srd_args_visible,
                    srd_last_sub):
     """
     SubHalo Velocity Function (SHVF) - number of subhalos as a
@@ -313,17 +244,17 @@ def SHVF_Grand2012_int(V1, V2,
     :return: float or array-like
         Integrated SHVF.
     """
-    return int(np.round(10 ** SHVF_bb
-                        / (SHVF_mm + 1) *
-                        (V2 ** (SHVF_mm + 1)
-                         - V1 ** (SHVF_mm + 1))))
+    return int(np.ceil(10 ** SHVF_bb
+                       / (SHVF_mm + 1) *
+                       (V2 ** (SHVF_mm + 1)
+                        - V1 ** (SHVF_mm + 1))))
 
 
 # ----------- CONCENTRATIONS ----------------------
 @njit
 def Cv_Grand2012(Vmax, Cv_bb, Cv_mm):
     """
-    Calculate the scatter of a subhalo population.
+    Calculate the concentration of a subhalo population.
     Based on Grand 2012.07846.
 
     :param Vmax: float or array-like [km/s]
@@ -335,6 +266,22 @@ def Cv_Grand2012(Vmax, Cv_bb, Cv_mm):
     # Concentration based on Grand 2012.07846.
     return (10 ** Cv_bb
             * Vmax ** Cv_mm)
+
+
+def Cv_Mol2021_redshift0(V, c0=1.75e5, c1=-0.90368, c2=0.2749, c3=-0.028):
+    # Median subhalo concentration depending on its Vmax and
+    # its redshift (here z=0).
+    # Moline et al. 2110.02097
+    #
+    # V - max radial velocity of a bound particle in the subhalo [km/s]
+    ci = [c0, c1, c2, c3]
+    return ci[0] * (1 + (sum([ci[i + 1] * np.log10(V) ** (i + 1)
+                              for i in range(3)])))
+
+
+def Moline21_normalization(V, c0):
+    return Cv_Mol2021_redshift0(V, c0, c1=-0.90368,
+                                c2=0.2749, c3=-0.028)
 
 
 @jit
@@ -350,8 +297,8 @@ def C_Scatt(C, Cv_sigma):
     :return: float or array-like
         Subhalos with scattered concentrations.
     """
-    return np.array([np.random.lognormal(np.log(C[i]), Cv_sigma)
-                     for i in range(C.size)])
+    return np.random.lognormal(
+        np.log(C) + Cv_sigma[0], Cv_sigma[1], C.size)
 
 
 # ----------- J-FACTORS --------------------------------
@@ -379,7 +326,8 @@ def J_abs_vel(V, D_earth, C,
         -> [Msun**2 / kpc**5] with change_units=False
         -> [GeV**2 / cm**5] with change_units=True
     """
-    yy = (2.163 ** 3. / D_earth ** 2. / ff(2.163) ** 2
+    yy = (2.163 ** 3. / D_earth ** 2.
+          / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)) ** 2
           * cosmo_H_0 / 12 / np.pi / float(cosmo_G) ** 2
           * np.sqrt(C / 2) * V ** 3
           * 1e-3)
@@ -483,14 +431,15 @@ def R_s(V, C, cosmo_H_0):
     return R_max(V, C, cosmo_H_0) / 2.163
 
 
-@njit
+@jit(forceobj=True)
 def R_t(V, C, DistGC,
         cosmo_H_0, cosmo_G,
-        host_rho_0, host_r_s):
+        host_rho_0, host_r_s,
+        singular_case=True):
     """
     Calculation of tidal radius (R_t) of a subhalo, following the
     NFW analytical expression for a subhalo density profile.
-    
+
     Definition of R_t: 1603.04057 King radius pg 14
 
     :param V: float or array-like [km/s]
@@ -505,7 +454,12 @@ def R_t(V, C, DistGC,
         Tidal radius of the subhalo given by the inputs.
     """
     Rmax = R_max(V, C, cosmo_H_0)
-    c200 = C200_from_Cv(C)
+
+    if singular_case:
+        c200 = C200_from_Cv_float(C)
+    else:
+        c200 = C200_from_Cv_array(C)
+
     M = mass_from_Vmax(V, Rmax, c200, cosmo_G)
 
     return (((M / (3 * Mhost_encapsulated(
@@ -514,16 +468,14 @@ def R_t(V, C, DistGC,
 
 
 @njit
-def Mhost_encapsulated(R,
-                       host_rho_0,
-                       host_r_s):
+def Mhost_encapsulated(R, host_rho_0, host_r_s):
     """
     Host mass encapsulated up to a certain radius. We are following
     a NFW density profile for the host.
-    
+
     :param R: float or array-like [kpc]
         Radius up to which we integrate the density profile.
-        
+
     :return: float or array-like [Msun]
         Host mass encapsulated up to R.
     """
@@ -533,44 +485,96 @@ def Mhost_encapsulated(R,
                - R / (host_r_s + R)))
 
 
-@njit()
+@jit()
 def N_subs_resilient(DistGC, args):
-    return DistGC ** args[0] * 10 ** args[1]
+    # xx = np.log10(np.array(args[0]))
+    # yy = np.log10(np.array(args[1]))
+    # spline = UnivariateSpline(xx,
+    #                           yy,
+    #                           k=1, s=0, ext=0)
+    return args
 
 
 @njit()
 def N_subs_fragile(DistGC, args):
-    return ((DistGC / args[0]) ** args[1]
-            * np.exp(-args[2] * (DistGC - args[0]) / args[0]))
+    # xx = np.array(args[0])
+    # yy = np.log10(np.array(args[1]))
+    # spline = UnivariateSpline(xx,
+    #                           yy,
+    #                           k=3, s=0, ext=0)
+    # return 10 ** spline(DistGC)
+
+    # xxx = np.linspace(1e-3, 220., 1000)
+    # spline = UnivariateSpline(xxx, args[1] * np.exp(args[0] / xxx),
+    #                           k=3, s=0, ext=0)
+    # return args[1] * np.exp(args[0] / DistGC)
 
 
-@njit
-def Nr_Ntot(DistGC,
-            sim_type, res_string,
-            cosmo_G,
-            cosmo_H_0,
-            cosmo_rho_crit,
+    return args[1] * np.exp(args[0] / DistGC)
 
-            host_R_vir,
-            host_rho_0,
-            host_r_s,
 
-            pathname,
-            repop_its,
-            repop_print_freq,
-            repop_inc_factor,
+@jit(forceobj=True)
+def Nr_Ntot_visible(
+        DistGC,
+        sim_type, res_string,
+        cosmo_G,
+        cosmo_H_0,
+        cosmo_rho_crit,
 
-            SHVF_cts_RangeMin,
-            SHVF_cts_RangeMax,
-            SHVF_bb,
-            SHVF_mm,
+        host_R_vir,
+        host_rho_0,
+        host_r_s,
 
-            Cv_bb,
-            Cv_mm,
-            Cv_sigma,
+        pathname,
+        repop_its,
+        repop_print_freq,
+        repop_inc_factor,
 
-            srd_args,
-            srd_last_sub):
+        SHVF_cts_RangeMin,
+        SHVF_cts_RangeMax,
+        SHVF_bb,
+        SHVF_mm,
+
+        Cv_bb,
+        Cv_mm,
+        Cv_sigma,
+
+        srd_args_repop,
+        srd_args_visible,
+        srd_last_sub):
+    return (N_subs_fragile(DistGC, srd_args_visible)
+            * (DistGC >= srd_last_sub))
+
+
+@jit(forceobj=True)
+def Nr_Ntot_repop(
+        DistGC,
+        sim_type, res_string,
+        cosmo_G,
+        cosmo_H_0,
+        cosmo_rho_crit,
+
+        host_R_vir,
+        host_rho_0,
+        host_r_s,
+
+        pathname,
+        repop_its,
+        repop_print_freq,
+        repop_inc_factor,
+
+        SHVF_cts_RangeMin,
+        SHVF_cts_RangeMax,
+        SHVF_bb,
+        SHVF_mm,
+
+        Cv_bb,
+        Cv_mm,
+        Cv_sigma,
+
+        srd_args_repop,
+        srd_args_visible,
+        srd_last_sub):
     """
     Proportion of subhalo numbers at a certain distance of the GC.
 
@@ -582,22 +586,12 @@ def Nr_Ntot(DistGC,
         Number of subhalos at a certain distance of the GC.
     """
     if res_string == 'resilient':
-        if sim_type == 'dmo':
-            return N_subs_resilient(DistGC,
-                                    [0.54343928, -2.17672138])
-        if sim_type == 'hydro':
-            return N_subs_resilient(DistGC,
-                                    [0.97254648, -3.08584275])
+        return (N_subs_resilient(DistGC, srd_args_repop)
+                * (DistGC >= srd_last_sub))
 
     else:
-        if sim_type == 'dmo':
-            return (10 ** N_subs_fragile(DistGC,
-                                         [1011.38716, 0.4037927, 2.35522213])
-                    * (DistGC >= srd_last_sub))
-        if sim_type == 'hydro':
-            return (10 ** N_subs_fragile(DistGC,
-                                         [666.49179, 0.75291017, 2.90546523])
-                    * (DistGC >= srd_last_sub))
+        return (N_subs_fragile(DistGC, srd_args_repop)
+                * (DistGC >= srd_last_sub))
 
 
 @njit
@@ -617,7 +611,7 @@ def mass_from_Vmax(Vmax, Rmax, c200,
         Mass from the subhalo assuming a NFW profile.
     """
     return (Vmax ** 2 * Rmax / float(cosmo_G)
-            * ff(c200) / ff(2.163))
+            * ff(c200) / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)))
 
 
 @njit
@@ -635,7 +629,8 @@ def def_Cv(c200, Cv):
         The output will be 0 when you find the c200 for a
         specific Cv.
     """
-    return 200 * ff(2.163) / ff(c200) * (c200 / 2.163) ** 3 - Cv
+    return (200 * (np.log(1. + 2.163) - 2.163 / (1. + 2.163))
+            / ff(c200) * (c200 / 2.163) ** 3 - Cv)
 
 
 @njit
@@ -660,8 +655,26 @@ def newton2(fun, x0, args):
     return x
 
 
-@njit
-def C200_from_Cv(Cv):
+@jit()
+def C200_from_Cv_array(Cv):
+    """
+    Function to find c200 knowing Cv.
+
+    :param Cv: float or array-like
+        Cv of subhalo (concentration definition)
+
+    :return: float or array-like
+        c200 of subhalo (concentration definition)
+    """
+    C200_med = []
+    for i in Cv:
+        C200_med.append(newton2(def_Cv, 40.0, i))
+
+    return np.array(C200_med)
+
+
+@njit()
+def C200_from_Cv_float(Cv):
     """
     Function to find c200 knowing Cv.
 
@@ -672,130 +685,8 @@ def C200_from_Cv(Cv):
         c200 of subhalo (concentration definition)
     """
     C200_med = newton2(def_Cv, 40.0, Cv)
-    C200_med = np.array([C200_med])
-    # if np.shape(Cv) == ():
-    #     C200_med = newton2(def_Cv, 40.0, Cv)
-    #     C200_med = np.array([C200_med])
-    # else:
-    #     num = np.shape(Cv)[0]
-    #     C200_med = np.zeros(num)
-    #
-    #     for i in range(num):
-    #         # opt.root(def_Cv, 40, args=Cv[i])['x'][0]
-    #         C200_med[i] = newton2(def_Cv, 40.0, Cv[i])
 
     return C200_med
-
-
-@njit()
-def rej_samp(x_min, x_max, pdf, num_subhalos,
-             sim_type, res_string,
-             cosmo_G,
-             cosmo_H_0,
-             cosmo_rho_crit,
-
-             host_R_vir,
-             host_rho_0,
-             host_r_s,
-
-             pathname,
-             repop_its,
-             repop_print_freq,
-             repop_inc_factor,
-
-             SHVF_cts_RangeMin,
-             SHVF_cts_RangeMax,
-             SHVF_bb,
-             SHVF_mm,
-
-             Cv_bb,
-             Cv_mm,
-             Cv_sigma,
-
-             srd_args,
-             srd_last_sub):
-    """
-    Rejection sample algorithm. It populates a number of objects
-    with a probability distribution defined by the pdf function.
-
-    :param x_min: float
-        Minimum value the function can intake.
-    :param x_max: float
-        Maximum value the function can intake.
-    :param pdf: function
-        Function that we use a probability distribution.
-    :param num_subhalos: int
-        Number of objects we want.
-
-    :return: float or array-like
-        Population following the probability distribution.
-    """
-    results = np.zeros(num_subhalos)
-    i = 0
-
-    # Compute the maximum of the function
-    fn_max = np.max(np.array([pdf(i,
-                                  sim_type, res_string,
-                                  cosmo_G,
-                                  cosmo_H_0,
-                                  cosmo_rho_crit,
-
-                                  host_R_vir,
-                                  host_rho_0,
-                                  host_r_s,
-
-                                  pathname,
-                                  repop_its,
-                                  repop_print_freq,
-                                  repop_inc_factor,
-
-                                  SHVF_cts_RangeMin,
-                                  SHVF_cts_RangeMax,
-                                  SHVF_bb,
-                                  SHVF_mm,
-
-                                  Cv_bb,
-                                  Cv_mm,
-                                  Cv_sigma,
-
-                                  srd_args,
-                                  srd_last_sub)
-                              for i in np.linspace(x_min, x_max, 1000)]))
-
-    while i < num_subhalos:
-        x = rdm.uniform(x_min, x_max)
-        h = rdm.uniform(0, fn_max)
-
-        if h < pdf(x,
-                   sim_type, res_string,
-                   cosmo_G,
-                   cosmo_H_0,
-                   cosmo_rho_crit,
-
-                   host_R_vir,
-                   host_rho_0,
-                   host_r_s,
-
-                   pathname,
-                   repop_its,
-                   repop_print_freq,
-                   repop_inc_factor,
-
-                   SHVF_cts_RangeMin,
-                   SHVF_cts_RangeMax,
-                   SHVF_bb,
-                   SHVF_mm,
-
-                   Cv_bb,
-                   Cv_mm,
-                   Cv_sigma,
-
-                   srd_args,
-                   srd_last_sub):
-            results[i] = x
-            i += 1
-
-    return results
 
 
 @jit(forceobj=True)
@@ -823,7 +714,8 @@ def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
                          Cv_mm,
                          Cv_sigma,
 
-                         srd_args,
+                         srd_args_repop,
+                         srd_args_visible,
                          srd_last_sub):
     """
     Montecarlo sample algorithm. It populates a number of objects
@@ -869,7 +761,8 @@ def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
             Cv_mm,
             Cv_sigma,
 
-            srd_args,
+            srd_args_repop,
+            srd_args_visible,
             srd_last_sub)
 
     cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
@@ -886,39 +779,41 @@ def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
 
 
 @jit(forceobj=True)
-def calculate_characteristics_subhalo(Vmax, Distgc,
-                                      sim_type, res_string,
-                                      cosmo_G,
-                                      cosmo_H_0,
-                                      cosmo_rho_crit,
+def calculate_characteristics_subhalo(
+        Vmax, Distgc,
+        sim_type, res_string,
+        cosmo_G,
+        cosmo_H_0,
+        cosmo_rho_crit,
 
-                                      host_R_vir,
-                                      host_rho_0,
-                                      host_r_s,
+        host_R_vir,
+        host_rho_0,
+        host_r_s,
 
-                                      pathname,
-                                      repop_its,
-                                      repop_print_freq,
-                                      repop_inc_factor,
+        pathname,
+        repop_its,
+        repop_print_freq,
+        repop_inc_factor,
+        repop_num_brightest,
 
-                                      SHVF_cts_RangeMin,
-                                      SHVF_cts_RangeMax,
-                                      SHVF_bb,
-                                      SHVF_mm,
+        SHVF_cts_RangeMin,
+        SHVF_cts_RangeMax,
+        SHVF_bb,
+        SHVF_mm,
 
-                                      Cv_bb,
-                                      Cv_mm,
-                                      Cv_sigma,
+        Cv_bb,
+        Cv_mm,
+        Cv_sigma,
 
-                                      srd_args,
-                                      srd_last_sub
-                                      ):
+        srd_args_repop,
+        srd_args_visible,
+        srd_last_sub):
     # Random distribution of subhalos around the celestial sphere
     num_subs = len(Vmax)
     repop_theta = 2 * math.pi * np.random.random(num_subs)
     repop_phi = math.pi * np.random.random(num_subs)
 
-    # Positions of th subhalos
+    # Positions of the subhalos
     repop_Xs = (Distgc * np.cos(repop_theta)
                 * np.sin(repop_phi))
     repop_Ys = (Distgc * np.sin(repop_theta)
@@ -928,8 +823,11 @@ def calculate_characteristics_subhalo(Vmax, Distgc,
     repop_DistEarth = ((repop_Xs - 8.5) ** 2 + repop_Ys ** 2
                        + repop_Zs ** 2) ** 0.5
 
-    repop_C = Cv_Grand2012(Vmax, Cv_bb, Cv_mm)
+
+    # repop_C = Cv_Grand2012(Vmax, Cv_bb, Cv_mm)
+    repop_C = Moline21_normalization(Vmax, c0=Cv_bb)
     repop_C = C_Scatt(repop_C, Cv_sigma)
+
 
     repop_Js = Js_vel(Vmax, repop_DistEarth, repop_C,
                       cosmo_G=cosmo_G,
@@ -937,6 +835,15 @@ def calculate_characteristics_subhalo(Vmax, Distgc,
     repop_J03 = J03_vel(Vmax, repop_DistEarth, repop_C,
                         cosmo_G=cosmo_G,
                         cosmo_H_0=cosmo_H_0)
+
+    if res_string == 'fragile' and (repop_num_brightest > 100):
+        roche = (R_t(Vmax, repop_C, Distgc,
+                     cosmo_H_0, cosmo_G, host_rho_0, host_r_s,
+                     singular_case=False)
+                 < R_s(Vmax, repop_C, cosmo_H_0))[0]
+
+        repop_Js[roche] = 0.
+        repop_J03[roche] = 0.
 
     # Angular size of subhalos (up to R_s)
     repop_Theta = 180 / np.pi * np.arctan(
@@ -946,117 +853,75 @@ def calculate_characteristics_subhalo(Vmax, Distgc,
                             Vmax, repop_Theta, repop_C))
 
 
-@jit
+@njit
 def xx(mmax, mmin, SHVF_bb, SHVF_mm, root):
     return SHVF_Grand2012_int(mmin, mmax, SHVF_bb, SHVF_mm) - root
 
 
+@njit
+def xxx(mmax, params):
+    return (SHVF_Grand2012_int(params[0], mmax,
+                               params[1], params[2]) - params[3])
+
+
 @jit(forceobj=True)
-def interior_loop(num_subs_max, sim_type, res_string,
-                  cosmo_G,
-                  cosmo_H_0,
-                  cosmo_rho_crit,
+def interior_loop_singularbrightest(
+        num_subs_max,
+        sim_type, res_string,
+        cosmo_G,
+        cosmo_H_0,
+        cosmo_rho_crit,
 
-                  host_R_vir,
-                  host_rho_0,
-                  host_r_s,
+        host_R_vir,
+        host_rho_0,
+        host_r_s,
 
-                  pathname,
-                  repop_its,
-                  repop_print_freq,
-                  repop_inc_factor,
+        pathname,
+        repop_its,
+        repop_print_freq,
+        repop_inc_factor,
+        repop_num_brightest,
 
-                  SHVF_cts_RangeMin,
-                  SHVF_cts_RangeMax,
-                  SHVF_bb,
-                  SHVF_mm,
+        SHVF_cts_RangeMin,
+        SHVF_cts_RangeMax,
+        SHVF_bb,
+        SHVF_mm,
 
-                  Cv_bb,
-                  Cv_mm,
-                  Cv_sigma,
+        Cv_bb,
+        Cv_mm,
+        Cv_sigma,
 
-                  srd_args,
-                  srd_last_sub):
+        srd_args_repop,
+        srd_args_visible,
+        srd_last_sub,
+        Vmax_completion):
     # We have 6 variables we want to save in our files,
     # change this number if necessary
-    brightest_Js = np.zeros((6, 1))
-    brightest_J03 = np.zeros((6, 1))
+    # (output from 'calculate_characteristics_subhalo()')
+    brightest_Js = np.zeros((2 * repop_num_brightest, 6))
+    brightest_J03 = np.zeros((2 * repop_num_brightest, 6))
 
-    # We calculate our subhalo population one by one in order to
-    # save memory
+    # We calculate our subhalo population in bins to save memory
     m_min = SHVF_cts_RangeMin
 
-    aaa = 200
+    while m_min < SHVF_cts_RangeMax:
 
-    while SHVF_Grand2012_int(m_min, SHVF_cts_RangeMax,
-                             SHVF_bb, SHVF_mm) > num_subs_max:
+        if SHVF_Grand2012_int(m_min, SHVF_cts_RangeMax,
+                              SHVF_bb, SHVF_mm) > num_subs_max:
 
-        m_max = newton(xx, m_min,
-                       args=[m_min, SHVF_bb, SHVF_mm, num_subs_max])
+            m_max = newton(xx, m_min,
+                           args=[m_min, SHVF_bb, SHVF_mm, num_subs_max])
+            new_mmin = m_max
 
-        repop_Vmax = montecarlo_algorithm(m_min, m_max,
-                                          SHVF_Grand2012,
-                                          num_subhalos=num_subs_max,
-                                          sim_type=sim_type,
-                                          res_string=res_string,
+        else:
+            m_max = np.minimum(m_min * repop_inc_factor,
+                               SHVF_cts_RangeMax)
+            new_mmin = m_min * repop_inc_factor
 
-                                          cosmo_G=cosmo_G,
-                                          cosmo_H_0=cosmo_H_0,
-                                          cosmo_rho_crit=cosmo_rho_crit,
-
-                                          host_R_vir=host_R_vir,
-                                          host_rho_0=host_rho_0,
-                                          host_r_s=host_r_s,
-
-                                          pathname=pathname,
-                                          repop_its=repop_its,
-                                          repop_print_freq=repop_print_freq,
-                                          repop_inc_factor=repop_inc_factor,
-
-                                          SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-                                          SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-                                          SHVF_bb=SHVF_bb,
-                                          SHVF_mm=SHVF_mm,
-
-                                          Cv_bb=Cv_bb,
-                                          Cv_mm=Cv_mm,
-                                          Cv_sigma=Cv_sigma,
-
-                                          srd_args=srd_args,
-                                          srd_last_sub=srd_last_sub)
-        repop_DistGC = montecarlo_algorithm(1e-3, host_R_vir,
-                                            Nr_Ntot,
-                                            num_subhalos=num_subs_max,
-                                            sim_type=sim_type,
-                                            res_string=res_string,
-
-                                            cosmo_G=cosmo_G,
-                                            cosmo_H_0=cosmo_H_0,
-                                            cosmo_rho_crit=cosmo_rho_crit,
-
-                                            host_R_vir=host_R_vir,
-                                            host_rho_0=host_rho_0,
-                                            host_r_s=host_r_s,
-
-                                            pathname=pathname,
-                                            repop_its=repop_its,
-                                            repop_print_freq=repop_print_freq,
-                                            repop_inc_factor=repop_inc_factor,
-
-                                            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-                                            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-                                            SHVF_bb=SHVF_bb,
-                                            SHVF_mm=SHVF_mm,
-
-                                            Cv_bb=Cv_bb,
-                                            Cv_mm=Cv_mm,
-                                            Cv_sigma=Cv_sigma,
-
-                                            srd_args=srd_args,
-                                            srd_last_sub=srd_last_sub)
-
-        new_data = calculate_characteristics_subhalo(
-            repop_Vmax, repop_DistGC,
+        repop_Vmax = montecarlo_algorithm(
+            m_min, m_max,
+            SHVF_Grand2012,
+            num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
             sim_type=sim_type,
             res_string=res_string,
 
@@ -1082,123 +947,220 @@ def interior_loop(num_subs_max, sim_type, res_string,
             Cv_mm=Cv_mm,
             Cv_sigma=Cv_sigma,
 
-            srd_args=srd_args,
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
 
-        bright_Js = np.where(
-            np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
+        repop_DistGC_lower = montecarlo_algorithm(
+            1e-3, host_R_vir,
+            Nr_Ntot_repop,
+            num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
+            sim_type=sim_type,
+            res_string=res_string,
 
-        aaa = np.min(((np.min(new_data[:, 2])), aaa))
-        if res_string == 'fragile':
-            while (R_t(new_data[bright_Js, 4],
-                       new_data[bright_Js, 6],
-                       new_data[bright_Js, 2],
-                       cosmo_H_0, cosmo_G,
-                       host_rho_0, host_r_s)
-                   < R_s(new_data[bright_Js, 4],
-                         new_data[bright_Js, 6],
-                         cosmo_H_0)):
-                new_data[bright_Js, 0] = 0.
-                bright_Js = np.where(
-                    np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
-                print('Roche')
+            cosmo_G=cosmo_G,
+            cosmo_H_0=cosmo_H_0,
+            cosmo_rho_crit=cosmo_rho_crit,
 
-        if new_data[bright_Js, 0] > brightest_Js[0, 0]:
-            brightest_Js[0, 0] = new_data[bright_Js, 0]
-            brightest_Js[1:, 0] = new_data[bright_Js, 2:]
+            host_R_vir=host_R_vir,
+            host_rho_0=host_rho_0,
+            host_r_s=host_r_s,
 
-        bright_J03 = np.where(
-            np.max(new_data[:, 1]) == new_data[:, 1])[0][0]
-        if res_string == 'fragile':
-            while (R_t(new_data[bright_J03, 4],
-                       new_data[bright_J03, 6],
-                       new_data[bright_J03, 2],
-                       cosmo_H_0, cosmo_G,
-                       host_rho_0, host_r_s)
-                   < R_s(new_data[bright_J03, 4],
-                         new_data[bright_J03, 6],
-                         cosmo_H_0)):
-                new_data[bright_J03, 0] = 0.
-                bright_J03 = np.where(
-                    np.max(new_data[:, 1]) == new_data[:, 1])[0][0]
-        if new_data[bright_J03, 1] > brightest_J03[0, 0]:
-            brightest_J03[0, 0] = new_data[bright_J03, 1]
-            brightest_J03[1:, 0] = new_data[bright_J03, 2:]
+            pathname=pathname,
+            repop_its=repop_its,
+            repop_print_freq=repop_print_freq,
+            repop_inc_factor=repop_inc_factor,
 
-        m_min = m_max
+            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+            SHVF_bb=SHVF_bb,
+            SHVF_mm=SHVF_mm,
+
+            Cv_bb=Cv_bb,
+            Cv_mm=Cv_mm,
+            Cv_sigma=Cv_sigma,
+
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
+            srd_last_sub=srd_last_sub)
+
+        repop_DistGC_upper = montecarlo_algorithm(
+            1e-3, host_R_vir,
+            Nr_Ntot_visible,
+            num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
+            sim_type=sim_type,
+            res_string=res_string,
+
+            cosmo_G=cosmo_G,
+            cosmo_H_0=cosmo_H_0,
+            cosmo_rho_crit=cosmo_rho_crit,
+
+            host_R_vir=host_R_vir,
+            host_rho_0=host_rho_0,
+            host_r_s=host_r_s,
+
+            pathname=pathname,
+            repop_its=repop_its,
+            repop_print_freq=repop_print_freq,
+            repop_inc_factor=repop_inc_factor,
+
+            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+            SHVF_bb=SHVF_bb,
+            SHVF_mm=SHVF_mm,
+
+            Cv_bb=Cv_bb,
+            Cv_mm=Cv_mm,
+            Cv_sigma=Cv_sigma,
+
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
+            srd_last_sub=srd_last_sub)
+
+        repop_DistGC = (repop_DistGC_lower * (repop_Vmax <= Vmax_completion)
+                        + repop_DistGC_upper * (repop_Vmax > Vmax_completion))
+
+        new_data = calculate_characteristics_subhalo(
+            repop_Vmax, repop_DistGC,
+            sim_type=sim_type,
+            res_string=res_string,
+
+            cosmo_G=cosmo_G,
+            cosmo_H_0=cosmo_H_0,
+            cosmo_rho_crit=cosmo_rho_crit,
+
+            host_R_vir=host_R_vir,
+            host_rho_0=host_rho_0,
+            host_r_s=host_r_s,
+
+            pathname=pathname,
+            repop_its=repop_its,
+            repop_print_freq=repop_print_freq,
+            repop_inc_factor=repop_inc_factor,
+            repop_num_brightest=repop_num_brightest,
+
+            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+            SHVF_bb=SHVF_bb,
+            SHVF_mm=SHVF_mm,
+
+            Cv_bb=Cv_bb,
+            Cv_mm=Cv_mm,
+            Cv_sigma=Cv_sigma,
+
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
+            srd_last_sub=srd_last_sub)
+
+        for new_sub in range(repop_num_brightest):
+
+            bright_Js = np.argmax(new_data[:, 0])
+            bright_J03 = np.argmax(new_data[:, 1])
+
+            if res_string == 'fragile':
+                while (R_t(new_data[bright_Js, 4],
+                           new_data[bright_Js, 6],
+                           new_data[bright_Js, 2],
+                           cosmo_H_0, cosmo_G,
+                           host_rho_0, host_r_s,
+                           singular_case=True)
+                       < R_s(new_data[bright_Js, 4],
+                             new_data[bright_Js, 6],
+                             cosmo_H_0)):
+                    print('subhalo broken (Js)')
+                    new_data[bright_Js, 0] = 0.
+                    bright_Js = np.argmax(new_data[:, 0])
+
+                while (R_t(new_data[bright_J03, 4],
+                           new_data[bright_J03, 6],
+                           new_data[bright_J03, 2],
+                           cosmo_H_0, cosmo_G,
+                           host_rho_0, host_r_s,
+                           singular_case=True)
+                       < R_s(new_data[bright_J03, 4],
+                             new_data[bright_J03, 6],
+                             cosmo_H_0)):
+                    print('subhalo broken (J03)')
+                    new_data[bright_J03, 1] = 0.
+                    bright_J03 = np.argmax(new_data[:, 1])
+
+            brightest_Js[
+            repop_num_brightest + new_sub, :] = new_data[
+                bright_Js, [0, 2, 3, 4, 5, 6]]
+            new_data[bright_Js, 0] = 0.
+
+            brightest_J03[
+            repop_num_brightest + new_sub, :] = new_data[bright_J03, 1:]
+            new_data[bright_J03, 1] = 0.
+
+        # We take the brightest subhalos only
+        brightest_Js = brightest_Js[np.argsort(brightest_Js[:, 0])[::-1], :]
+        brightest_J03 = brightest_J03[np.argsort(brightest_J03[:, 0])[::-1], :]
+
+        m_min = new_mmin
+
+    return (brightest_Js[:repop_num_brightest, :],
+            brightest_J03[:repop_num_brightest, :])
+
+
+@jit(forceobj=True)
+def interior_loop_manybrigthest(
+        num_subs_max,
+        sim_type, res_string,
+        cosmo_G,
+        cosmo_H_0,
+        cosmo_rho_crit,
+
+        host_R_vir,
+        host_rho_0,
+        host_r_s,
+
+        pathname,
+        repop_its,
+        repop_print_freq,
+        repop_inc_factor,
+        repop_num_brightest,
+
+        SHVF_cts_RangeMin,
+        SHVF_cts_RangeMax,
+        SHVF_bb,
+        SHVF_mm,
+
+        Cv_bb,
+        Cv_mm,
+        Cv_sigma,
+
+        srd_args_repop,
+        srd_args_visible,
+        srd_last_sub,
+        Vmax_completion):
+    # We have 6 variables we want to save in our files,
+    # change this number if necessary
+    # (output from 'calculate_characteristics_subhalo()')
+    brightest_Js = np.zeros((repop_num_brightest, 6))
+    brightest_J03 = np.zeros((repop_num_brightest, 6))
+
+    # We calculate our subhalo population in bins to save memory
+    m_min = SHVF_cts_RangeMin
 
     while m_min < SHVF_cts_RangeMax:
-        m_max = np.minimum(m_min * repop_inc_factor,
-                           SHVF_cts_RangeMax)
 
-        num_subhalos = SHVF_Grand2012_int(m_min, m_max,
-                                          SHVF_bb, SHVF_mm)
-        # print('   %.6f - %.6f %d'
-        #       % (m_min, m_max, num_subhalos))
+        if SHVF_Grand2012_int(m_min, m_min * repop_inc_factor,
+                              SHVF_bb, SHVF_mm) > num_subs_max:
 
-        repop_Vmax = montecarlo_algorithm(m_min, m_max,
-                                          SHVF_Grand2012,
-                                          num_subhalos=num_subhalos,
-                                          sim_type=sim_type,
-                                          res_string=res_string,
+            m_max = newton(xx, m_min,
+                           args=[m_min, SHVF_bb, SHVF_mm, num_subs_max])
+            new_mmin = m_max
 
-                                          cosmo_G=cosmo_G,
-                                          cosmo_H_0=cosmo_H_0,
-                                          cosmo_rho_crit=cosmo_rho_crit,
+        else:
+            m_max = np.minimum(m_min * repop_inc_factor,
+                               SHVF_cts_RangeMax)
+            new_mmin = m_min * repop_inc_factor
 
-                                          host_R_vir=host_R_vir,
-                                          host_rho_0=host_rho_0,
-                                          host_r_s=host_r_s,
-
-                                          pathname=pathname,
-                                          repop_its=repop_its,
-                                          repop_print_freq=repop_print_freq,
-                                          repop_inc_factor=repop_inc_factor,
-
-                                          SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-                                          SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-                                          SHVF_bb=SHVF_bb,
-                                          SHVF_mm=SHVF_mm,
-
-                                          Cv_bb=Cv_bb,
-                                          Cv_mm=Cv_mm,
-                                          Cv_sigma=Cv_sigma,
-
-                                          srd_args=srd_args,
-                                          srd_last_sub=srd_last_sub)
-        repop_DistGC = montecarlo_algorithm(1e-3, host_R_vir,
-                                            Nr_Ntot,
-                                            num_subhalos=num_subhalos,
-                                            sim_type=sim_type,
-                                            res_string=res_string,
-
-                                            cosmo_G=cosmo_G,
-                                            cosmo_H_0=cosmo_H_0,
-                                            cosmo_rho_crit=cosmo_rho_crit,
-
-                                            host_R_vir=host_R_vir,
-                                            host_rho_0=host_rho_0,
-                                            host_r_s=host_r_s,
-
-                                            pathname=pathname,
-                                            repop_its=repop_its,
-                                            repop_print_freq=repop_print_freq,
-                                            repop_inc_factor=repop_inc_factor,
-
-                                            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-                                            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-                                            SHVF_bb=SHVF_bb,
-                                            SHVF_mm=SHVF_mm,
-
-                                            Cv_bb=Cv_bb,
-                                            Cv_mm=Cv_mm,
-                                            Cv_sigma=Cv_sigma,
-
-                                            srd_args=srd_args,
-                                            srd_last_sub=srd_last_sub)
-
-        new_data = calculate_characteristics_subhalo(
-            repop_Vmax, repop_DistGC,
+        repop_Vmax = montecarlo_algorithm(
+            m_min, m_max,
+            SHVF_Grand2012,
+            num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
             sim_type=sim_type,
             res_string=res_string,
 
@@ -1224,105 +1186,192 @@ def interior_loop(num_subs_max, sim_type, res_string,
             Cv_mm=Cv_mm,
             Cv_sigma=Cv_sigma,
 
-            srd_args=srd_args,
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
 
-        bright_Js = np.where(
-            np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
+        repop_DistGC_lower = montecarlo_algorithm(
+            1e-3, host_R_vir,
+            Nr_Ntot_repop,
+            num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
+            sim_type=sim_type,
+            res_string=res_string,
 
-        aaa = np.min(((np.min(new_data[:, 2])), aaa))
-        if res_string == 'fragile':
-            while (R_t(new_data[bright_Js, 4],
-                       new_data[bright_Js, 6],
-                       new_data[bright_Js, 2],
-                       cosmo_H_0, cosmo_G,
-                       host_rho_0, host_r_s)
-                   < R_s(new_data[bright_Js, 4],
-                         new_data[bright_Js, 6],
-                         cosmo_H_0)):
-                new_data[bright_Js, 0] = 0.
-                bright_Js = np.where(
-                    np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
-                print('Roche')
+            cosmo_G=cosmo_G,
+            cosmo_H_0=cosmo_H_0,
+            cosmo_rho_crit=cosmo_rho_crit,
 
-        if new_data[bright_Js, 0] > brightest_Js[0, 0]:
-            brightest_Js[0, 0] = new_data[bright_Js, 0]
-            brightest_Js[1:, 0] = new_data[bright_Js, 2:]
+            host_R_vir=host_R_vir,
+            host_rho_0=host_rho_0,
+            host_r_s=host_r_s,
 
-        bright_J03 = np.where(
-            np.max(new_data[:, 0]) == new_data[:, 0])[0][0]
-        if res_string == 'fragile':
-            while (R_t(new_data[bright_J03, 4],
-                       new_data[bright_J03, 6],
-                       new_data[bright_J03, 2],
-                       cosmo_H_0, cosmo_G,
-                       host_rho_0, host_r_s)
-                   < R_s(new_data[bright_J03, 4],
-                         new_data[bright_J03, 6],
-                         cosmo_H_0)):
-                new_data[bright_J03, 0] = 0.
-                bright_J03 = np.where(
-                    np.max(new_data[:, 1]) == new_data[:, 1])[0][0]
-        if new_data[bright_J03, 1] > brightest_J03[0, 0]:
-            brightest_J03[0, 0] = new_data[bright_J03, 1]
-            brightest_J03[1:, 0] = new_data[bright_J03, 2:]
+            pathname=pathname,
+            repop_its=repop_its,
+            repop_print_freq=repop_print_freq,
+            repop_inc_factor=repop_inc_factor,
 
-        m_min *= repop_inc_factor
+            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+            SHVF_bb=SHVF_bb,
+            SHVF_mm=SHVF_mm,
 
-        # print('        %.3f  %s\n' %
-        #       (memory_usage_psutil(),
-        #        time.strftime(" %Y-%m-%d %H:%M:%S",
-        #                      time.gmtime())))
-    #print(aaa)
+            Cv_bb=Cv_bb,
+            Cv_mm=Cv_mm,
+            Cv_sigma=Cv_sigma,
+
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
+            srd_last_sub=srd_last_sub)
+
+        repop_DistGC_upper = montecarlo_algorithm(
+            1e-3, host_R_vir,
+            Nr_Ntot_visible,
+            num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
+            sim_type=sim_type,
+            res_string=res_string,
+
+            cosmo_G=cosmo_G,
+            cosmo_H_0=cosmo_H_0,
+            cosmo_rho_crit=cosmo_rho_crit,
+
+            host_R_vir=host_R_vir,
+            host_rho_0=host_rho_0,
+            host_r_s=host_r_s,
+
+            pathname=pathname,
+            repop_its=repop_its,
+            repop_print_freq=repop_print_freq,
+            repop_inc_factor=repop_inc_factor,
+
+            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+            SHVF_bb=SHVF_bb,
+            SHVF_mm=SHVF_mm,
+
+            Cv_bb=Cv_bb,
+            Cv_mm=Cv_mm,
+            Cv_sigma=Cv_sigma,
+
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
+            srd_last_sub=srd_last_sub)
+
+        repop_DistGC = (repop_DistGC_lower * (repop_Vmax <= Vmax_completion)
+                        + repop_DistGC_upper * (repop_Vmax > Vmax_completion))
+
+        new_data = calculate_characteristics_subhalo(
+            repop_Vmax, repop_DistGC,
+            sim_type=sim_type,
+            res_string=res_string,
+
+            cosmo_G=cosmo_G,
+            cosmo_H_0=cosmo_H_0,
+            cosmo_rho_crit=cosmo_rho_crit,
+
+            host_R_vir=host_R_vir,
+            host_rho_0=host_rho_0,
+            host_r_s=host_r_s,
+
+            pathname=pathname,
+            repop_its=repop_its,
+            repop_print_freq=repop_print_freq,
+            repop_inc_factor=repop_inc_factor,
+            repop_num_brightest=repop_num_brightest,
+
+            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+            SHVF_bb=SHVF_bb,
+            SHVF_mm=SHVF_mm,
+
+            Cv_bb=Cv_bb,
+            Cv_mm=Cv_mm,
+            Cv_sigma=Cv_sigma,
+
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
+            srd_last_sub=srd_last_sub)
+
+        # We take the brightest subhalos only
+        brightest_Js = np.append(brightest_Js,
+                                 new_data[:, [0, 2, 3, 4, 5, 6]],
+                                 axis=0)
+
+        brightest_Js = brightest_Js[np.argsort(brightest_Js[:, 0])[::-1], :]
+        brightest_Js = brightest_Js[:repop_num_brightest, :]
+
+        # Same for J03
+        brightest_J03 = np.append(brightest_J03, new_data[:, 1:], axis=0)
+
+        brightest_J03 = brightest_J03[np.argsort(
+            brightest_J03[:, 0])[::-1], :]
+        brightest_J03 = brightest_J03[:repop_num_brightest, :]
+
+        m_min = new_mmin
+
     return brightest_Js, brightest_J03
 
 
-def computing_bin_by_bin(num_subs_max, sim_type, res_string,
-                         cosmo_G,
-                         cosmo_H_0,
-                         cosmo_rho_crit,
+def repopulation_bin_by_bin(num_subs_max, sim_type, res_string,
+                            cosmo_G,
+                            cosmo_H_0,
+                            cosmo_rho_crit,
 
-                         host_R_vir,
-                         host_rho_0,
-                         host_r_s,
+                            host_R_vir,
+                            host_rho_0,
+                            host_r_s,
 
-                         pathname,
-                         repop_its,
-                         repop_print_freq,
-                         repop_inc_factor,
+                            pathname,
+                            repop_its,
+                            repop_print_freq,
+                            repop_inc_factor,
+                            repop_num_brightest,
 
-                         SHVF_cts_RangeMin,
-                         SHVF_cts_RangeMax,
-                         SHVF_bb,
-                         SHVF_mm,
+                            SHVF_cts_RangeMin,
+                            SHVF_cts_RangeMax,
+                            SHVF_bb,
+                            SHVF_mm,
 
-                         Cv_bb,
-                         Cv_mm,
-                         Cv_sigma,
+                            Cv_bb,
+                            Cv_mm,
+                            Cv_sigma,
 
-                         srd_args,
-                         srd_last_sub):
+                            srd_args_repop,
+                            srd_args_visible,
+                            srd_last_sub,
+                            Vmax_completion):
     headerS = (('#\n# Vmin: [' + str(SHVF_cts_RangeMin) + ', '
-                + str(SHVF_cts_RangeMax) + '], resilient: '
+                + str(SHVF_cts_RangeMax) + '], '
                 + str(res_string) + '; '
-                + str(repop_its) +
-                (' iterations \n# Js (<r_s) (GeV^2 cm^-5)'
-                 '       Dgc (kpc)'
-                 '           D_Earth (kpc)'
-                 '               Vmax (km/s)'
-                 '                ang size (deg)'
-                 '               Cv \n#\n')))
+                + str(repop_its)
+                + ' iterations, ' + str(repop_num_brightest)
+                + ' brightest\n# Read the individual iterations with: '
+                  'np.loadtxt().reshape('
+                + str(repop_its) + ', '
+                + str(repop_num_brightest) + ', '
+                + str(6) + ')\n'
+                           '# Js (<r_s) (GeV^2 cm^-5)'
+                           '       Dgc (kpc)'
+                           '           D_Earth (kpc)'
+                           '               Vmax (km/s)'
+                           '                ang size (deg)'
+                           '               Cv \n#\n'))
 
     header03 = (('#\n# Vmin: [' + str(SHVF_cts_RangeMin) + ', '
                  + str(SHVF_cts_RangeMax) + '], resilient: '
                  + str(res_string) + '; '
                  + str(repop_its) +
-                 (' iterations \n# J03 (<0.3deg) (GeV^2 cm^-5)'
-                  '       Dgc (kpc)'
-                  '           D_Earth (kpc)'
-                  '               Vmax (km/s)'
-                  '               ang size (deg)'
-                  '               Cv \n#\n')))
+                 ' iterations, ' + str(repop_num_brightest)
+                 + ' brightest\n# Read the individual iterations with: '
+                   'np.loadtxt().reshape('
+                 + str(repop_its) + ', '
+                 + str(repop_num_brightest) + ', '
+                 + str(6) + ')\n'
+                            '# J03 (<0.3deg) (GeV^2 cm^-5)'
+                            '       Dgc (kpc)'
+                            '           D_Earth (kpc)'
+                            '               Vmax (km/s)'
+                            '               ang size (deg)'
+                            '               Cv \n#\n'))
 
     file_Js = open(pathname + '/Js_' + sim_type + '_'
                    + str(res_string) + '_results.txt', 'w')
@@ -1351,38 +1400,75 @@ def computing_bin_by_bin(num_subs_max, sim_type, res_string,
                                           time.gmtime())))
             progress.close()
 
-        brightest_Js, brightest_J03 = interior_loop(
-            num_subs_max=num_subs_max,
-            sim_type=sim_type,
-            res_string=res_string,
+        if repop_num_brightest < 100:
+            brightest_Js, brightest_J03 = interior_loop_singularbrightest(
+                num_subs_max=num_subs_max,
+                sim_type=sim_type,
+                res_string=res_string,
 
-            cosmo_G=cosmo_G,
-            cosmo_H_0=cosmo_H_0,
-            cosmo_rho_crit=cosmo_rho_crit,
+                cosmo_G=cosmo_G,
+                cosmo_H_0=cosmo_H_0,
+                cosmo_rho_crit=cosmo_rho_crit,
 
-            host_R_vir=host_R_vir,
-            host_rho_0=host_rho_0,
-            host_r_s=host_r_s,
+                host_R_vir=host_R_vir,
+                host_rho_0=host_rho_0,
+                host_r_s=host_r_s,
 
-            pathname=pathname,
-            repop_its=repop_its,
-            repop_print_freq=repop_print_freq,
-            repop_inc_factor=repop_inc_factor,
+                pathname=pathname,
+                repop_its=repop_its,
+                repop_print_freq=repop_print_freq,
+                repop_inc_factor=repop_inc_factor,
+                repop_num_brightest=repop_num_brightest,
 
-            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-            SHVF_bb=SHVF_bb,
-            SHVF_mm=SHVF_mm,
+                SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+                SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+                SHVF_bb=SHVF_bb,
+                SHVF_mm=SHVF_mm,
 
-            Cv_bb=Cv_bb,
-            Cv_mm=Cv_mm,
-            Cv_sigma=Cv_sigma,
+                Cv_bb=Cv_bb,
+                Cv_mm=Cv_mm,
+                Cv_sigma=Cv_sigma,
 
-            srd_args=srd_args,
-            srd_last_sub=srd_last_sub)
+                srd_args_repop=srd_args_repop,
+                srd_args_visible=srd_args_visible,
+                srd_last_sub=srd_last_sub,
+                Vmax_completion=Vmax_completion)
+        else:
+            brightest_Js, brightest_J03 = interior_loop_manybrigthest(
+                num_subs_max=num_subs_max,
+                sim_type=sim_type,
+                res_string=res_string,
 
-        np.savetxt(file_Js, brightest_Js.T)
-        np.savetxt(file_J03, brightest_J03.T)
+                cosmo_G=cosmo_G,
+                cosmo_H_0=cosmo_H_0,
+                cosmo_rho_crit=cosmo_rho_crit,
+
+                host_R_vir=host_R_vir,
+                host_rho_0=host_rho_0,
+                host_r_s=host_r_s,
+
+                pathname=pathname,
+                repop_its=repop_its,
+                repop_print_freq=repop_print_freq,
+                repop_inc_factor=repop_inc_factor,
+                repop_num_brightest=repop_num_brightest,
+
+                SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+                SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+                SHVF_bb=SHVF_bb,
+                SHVF_mm=SHVF_mm,
+
+                Cv_bb=Cv_bb,
+                Cv_mm=Cv_mm,
+                Cv_sigma=Cv_sigma,
+
+                srd_args_repop=srd_args_repop,
+                srd_args_visible=srd_args_visible,
+                srd_last_sub=srd_last_sub,
+                Vmax_completion=Vmax_completion)
+
+        np.savetxt(file_Js, brightest_Js)
+        np.savetxt(file_J03, brightest_J03)
 
     print('End of repop loop: %.3f  %s\n' %
           (memory_usage_psutil(),
@@ -1396,13 +1482,15 @@ def computing_bin_by_bin(num_subs_max, sim_type, res_string,
 
 def main(inputs):
     sim_type = inputs[0]
-    resilient = inputs[1]
-    path_name = inputs[2]
-    print(sim_type, resilient, type(resilient))
+    res_string = inputs[1]
+    path_input = inputs[2]
+    path_output = inputs[3]
+    print(sim_type, res_string)
+    print(path_output)
 
     # Calculations ----------------#
 
-    data_dict = read_config_file('input_files/data_newResSRD.yml')
+    data_dict = read_config_file(path_input)
 
     cosmo_G = data_dict['cosmo_constants']['G']
     cosmo_H_0 = data_dict['cosmo_constants']['H_0']
@@ -1419,25 +1507,25 @@ def main(inputs):
     repopulations = data_dict['repopulations']
 
     # Save input data in a file in the outputs directory
-    file_inputs = open(path_name + '/input_data.yml', 'w')
+    file_inputs = open(path_output + '/input_data.yml', 'w')
+    data_dict['SRD']['formula']['resilient'] = inspect.getsource(
+        N_subs_resilient)
+    data_dict['SRD']['formula']['fragile'] = inspect.getsource(
+        N_subs_fragile)
     yaml.dump(data_dict, file_inputs,
               default_flow_style=False, allow_unicode=True)
     file_inputs.close()
 
     repop_its = repopulations['its']
-    repop_id = repopulations['id']
     num_subs_max = int(float(repopulations['num_subs_max']))
     repop_print_freq = repopulations['print_freq']
-    repop_num_brightest = repopulations['num_brightest']
+    repop_num_brightest = int(repopulations['num_brightest'])
     repop_inc_factor = repopulations['inc_factor']
 
     SHVF_cts_RangeMin = SHVF_cts['RangeMin']
     SHVF_cts_RangeMax = SHVF_cts['RangeMax']
 
-    if resilient is True:
-        res_string = 'resilient'
-    else:
-        res_string = 'fragile'
+    Vmax_completion = SHVF_cts['Vmax_completion']
 
     if sim_type == 'dmo':
         SHVF_bb = SHVF_cts['dmo']['bb']
@@ -1447,8 +1535,8 @@ def main(inputs):
         Cv_mm = cv_cts['dmo']['mm']
         Cv_sigma = cv_cts['dmo']['sigma']
 
-        srd_args = srd_cts['dmo'][res_string]['args']
-        srd_args = List(srd_args)
+        srd_args_repop = srd_cts['dmo'][res_string]['args']
+        srd_args_visible = srd_cts['dmo']['fragile']['args']
         srd_last_sub = srd_cts['dmo'][res_string]['last_subhalo']
 
     if sim_type == 'hydro':
@@ -1459,69 +1547,54 @@ def main(inputs):
         Cv_mm = cv_cts['hydro']['mm']
         Cv_sigma = cv_cts['hydro']['sigma']
 
-        srd_args = srd_cts['hydro'][res_string]['args']
+        srd_args_repop = srd_cts['hydro'][res_string]['args']
+        srd_args_visible = srd_cts['hydro']['fragile']['args']
         srd_last_sub = srd_cts['hydro'][res_string]['last_subhalo']
 
-    # for i in [5e6, 1e6, 5e5, 1e5, 1e4]:
-    #     num_subs_max = int(i)
-    repopulation(num_subs_max=num_subs_max,
-                 sim_type=sim_type,
-                 res_string=res_string,
+    print(SHVF_cts_RangeMin,
+          SHVF_cts_RangeMax)
+    print('    Max. number of repop subhalos: %i' %
+          SHVF_Grand2012_int(
+              SHVF_cts_RangeMin,
+              SHVF_cts_RangeMax,
+              SHVF_bb,
+              SHVF_mm)
+          )
+    repopulation_bin_by_bin(
+        num_subs_max=num_subs_max,
+        sim_type=sim_type,
+        res_string=res_string,
 
-                 cosmo_G=cosmo_G,
-                 cosmo_H_0=cosmo_H_0,
-                 cosmo_rho_crit=cosmo_rho_crit,
+        cosmo_G=cosmo_G,
+        cosmo_H_0=cosmo_H_0,
+        cosmo_rho_crit=cosmo_rho_crit,
 
-                 host_R_vir=host_R_vir,
-                 host_rho_0=host_rho_0,
-                 host_r_s=host_r_s,
+        host_R_vir=host_R_vir,
+        host_rho_0=host_rho_0,
+        host_r_s=host_r_s,
 
-                 pathname=path_name,
-                 repop_its=repop_its,
-                 repop_print_freq=repop_print_freq,
-                 repop_inc_factor=repop_inc_factor,
+        pathname=path_output,
+        repop_its=repop_its,
+        repop_print_freq=repop_print_freq,
+        repop_inc_factor=repop_inc_factor,
+        repop_num_brightest=repop_num_brightest,
 
-                 SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-                 SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-                 SHVF_bb=SHVF_bb,
-                 SHVF_mm=SHVF_mm,
+        SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+        SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+        SHVF_bb=SHVF_bb,
+        SHVF_mm=SHVF_mm,
 
-                 Cv_bb=Cv_bb,
-                 Cv_mm=Cv_mm,
-                 Cv_sigma=Cv_sigma,
+        Cv_bb=Cv_bb,
+        Cv_mm=Cv_mm,
+        Cv_sigma=Cv_sigma,
 
-                 srd_args=srd_args,
-                 srd_last_sub=srd_last_sub
-                 )
+        srd_args_repop=srd_args_repop,
+        srd_args_visible=srd_args_visible,
+        srd_last_sub=srd_last_sub,
+        Vmax_completion=Vmax_completion
+    )
 
-
-print(time.strftime(" %d-%m-%Y %H:%M:%S", time.gmtime()))
 
 if __name__ == "__main__":
-    path_name = str('outputs/'
-                    + 'test'  #sys.argv[3]
-                    #+ time.strftime(" %Y-%m-%d %H:%M:%S",
-                    #                time.gmtime())
-                    )
-    #if not os.path.exists(path_name):
-    #    os.makedirs(path_name)
-    print(path_name)
-    print(sys.argv)
-    if sys.argv[2] == 'True':
-        main([sys.argv[1], True, path_name])
-    if sys.argv[2] == 'False':
-        main([sys.argv[1], False, path_name])
-    #main(['hydro', False, path_name])
-    #main(['hydro', True, path_name])
-    #main(['dmo', False, path_name])
-    #main(['dmo', True, path_name])
-
-    #p = Pool(4, None)
-    #p.map(main, [
-    #    ['hydro', True, path_name],
-    #    ['dmo', False, path_name],
-    #    ['dmo', True, path_name],
-    #    ['hydro', False, path_name]
-    #])
-    #p.close()
-    #p.join()
+    print(time.strftime("%d-%m-%Y %H:%M:%S", time.gmtime()))
+    main([sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]])
