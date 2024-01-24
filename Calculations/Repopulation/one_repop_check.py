@@ -86,8 +86,8 @@ if rerun_sims:
     with open(path_input, 'w') as f:
         yaml.dump(input_data, f)
 
-    funct_repop.main_repop(['dmo', 'resilient', path_input, path_outputs])
-    funct_repop.main_repop(['dmo', 'fragile', path_input, path_outputs])
+    funct_repop.main(['dmo', 'resilient', path_input, path_outputs])
+    funct_repop.main(['dmo', 'fragile', path_input, path_outputs])
 
     input_data['repopulations']['num_brightest'] = \
         funct_repop.SHVF_Grand2012_int(
@@ -99,8 +99,8 @@ if rerun_sims:
     with open(path_input, 'w') as f:
         yaml.dump(input_data, f)
 
-    funct_repop.main_repop(['hydro', 'resilient', path_input, path_outputs])
-    funct_repop.main_repop(['hydro', 'fragile', path_input, path_outputs])
+    funct_repop.main(['hydro', 'resilient', path_input, path_outputs])
+    funct_repop.main(['hydro', 'fragile', path_input, path_outputs])
 
 input_data = read_config_file(path_outputs + '/input_data.yml')
 

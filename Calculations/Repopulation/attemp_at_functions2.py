@@ -1480,7 +1480,7 @@ def repopulation_bin_by_bin(num_subs_max, sim_type, res_string,
     return
 
 
-def main_repop(inputs):
+def main(inputs):
     sim_type = inputs[0]
     res_string = inputs[1]
     path_input = inputs[2]
