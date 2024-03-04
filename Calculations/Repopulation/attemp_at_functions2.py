@@ -833,14 +833,14 @@ def calculate_characteristics_subhalo(
                         cosmo_G=cosmo_G,
                         cosmo_H_0=cosmo_H_0)
 
-    if res_string == 'fragile' and (repop_num_brightest > 100):
-        roche = (R_t(Vmax, repop_C, Distgc,
-                     cosmo_H_0, cosmo_G, host_rho_0, host_r_s,
-                     singular_case=False)
-                 < R_s(Vmax, repop_C, cosmo_H_0))[0]
-
-        repop_Js[roche] = 0.
-        repop_J03[roche] = 0.
+    # if res_string == 'fragile' and (repop_num_brightest > 100):
+    #     roche = (R_t(Vmax, repop_C, Distgc,
+    #                  cosmo_H_0, cosmo_G, host_rho_0, host_r_s,
+    #                  singular_case=False)
+    #              < R_s(Vmax, repop_C, cosmo_H_0))[0]
+    #
+    #     repop_Js[roche] = 0.
+    #     repop_J03[roche] = 0.
 
     # Angular size of subhalos (up to R_s)
     repop_Theta = 180 / np.pi * np.arctan(
@@ -1134,212 +1134,212 @@ def interior_loop_singularbrightest(
             brightest_J03[:repop_num_brightest, :])
 
 
-@jit(forceobj=True)
-def interior_loop_manybrigthest(
-        num_subs_max,
-        sim_type, res_string,
-        cosmo_G,
-        cosmo_H_0,
-        cosmo_rho_crit,
-
-        host_R_vir,
-        host_rho_0,
-        host_r_s,
-
-        pathname,
-        repop_its,
-        repop_print_freq,
-        repop_inc_factor,
-        repop_num_brightest,
-
-        SHVF_cts_RangeMin,
-        SHVF_cts_RangeMax,
-        SHVF_bb,
-        SHVF_mm,
-
-        Cv_bb,
-        Cv_mm,
-        Cv_sigma,
-
-        srd_args_repop,
-        srd_args_visible,
-        srd_last_sub,
-        Vmax_completion):
-    # We have 6 variables we want to save in our files,
-    # change this number if necessary
-    # (output from 'calculate_characteristics_subhalo()')
-    brightest_Js = np.zeros((repop_num_brightest, 6))
-    brightest_J03 = np.zeros((repop_num_brightest, 6))
-
-    # We calculate our subhalo population in bins to save memory
-    m_min = SHVF_cts_RangeMin
-
-    while m_min < SHVF_cts_RangeMax:
-
-        if SHVF_Grand2012_int(m_min, m_min * repop_inc_factor,
-                              SHVF_bb, SHVF_mm) > num_subs_max:
-
-            m_max = newton(xx, m_min,
-                           args=[m_min, SHVF_bb, SHVF_mm, num_subs_max])
-            new_mmin = m_max
-
-        else:
-            m_max = np.minimum(m_min * repop_inc_factor,
-                               SHVF_cts_RangeMax)
-            new_mmin = m_min * repop_inc_factor
-
-        repop_Vmax = montecarlo_algorithm(
-            m_min, m_max,
-            SHVF_Grand2012,
-            num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
-            sim_type=sim_type,
-            res_string=res_string,
-
-            cosmo_G=cosmo_G,
-            cosmo_H_0=cosmo_H_0,
-            cosmo_rho_crit=cosmo_rho_crit,
-
-            host_R_vir=host_R_vir,
-            host_rho_0=host_rho_0,
-            host_r_s=host_r_s,
-
-            pathname=pathname,
-            repop_its=repop_its,
-            repop_print_freq=repop_print_freq,
-            repop_inc_factor=repop_inc_factor,
-
-            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-            SHVF_bb=SHVF_bb,
-            SHVF_mm=SHVF_mm,
-
-            Cv_bb=Cv_bb,
-            Cv_mm=Cv_mm,
-            Cv_sigma=Cv_sigma,
-
-            srd_args_repop=srd_args_repop,
-            srd_args_visible=srd_args_visible,
-            srd_last_sub=srd_last_sub)
-
-        repop_DistGC_lower = montecarlo_algorithm(
-            1e-3, host_R_vir,
-            Nr_Ntot_repop,
-            num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
-            sim_type=sim_type,
-            res_string=res_string,
-
-            cosmo_G=cosmo_G,
-            cosmo_H_0=cosmo_H_0,
-            cosmo_rho_crit=cosmo_rho_crit,
-
-            host_R_vir=host_R_vir,
-            host_rho_0=host_rho_0,
-            host_r_s=host_r_s,
-
-            pathname=pathname,
-            repop_its=repop_its,
-            repop_print_freq=repop_print_freq,
-            repop_inc_factor=repop_inc_factor,
-
-            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-            SHVF_bb=SHVF_bb,
-            SHVF_mm=SHVF_mm,
-
-            Cv_bb=Cv_bb,
-            Cv_mm=Cv_mm,
-            Cv_sigma=Cv_sigma,
-
-            srd_args_repop=srd_args_repop,
-            srd_args_visible=srd_args_visible,
-            srd_last_sub=srd_last_sub)
-
-        repop_DistGC_upper = montecarlo_algorithm(
-            1e-3, host_R_vir,
-            Nr_Ntot_visible,
-            num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
-            sim_type=sim_type,
-            res_string=res_string,
-
-            cosmo_G=cosmo_G,
-            cosmo_H_0=cosmo_H_0,
-            cosmo_rho_crit=cosmo_rho_crit,
-
-            host_R_vir=host_R_vir,
-            host_rho_0=host_rho_0,
-            host_r_s=host_r_s,
-
-            pathname=pathname,
-            repop_its=repop_its,
-            repop_print_freq=repop_print_freq,
-            repop_inc_factor=repop_inc_factor,
-
-            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-            SHVF_bb=SHVF_bb,
-            SHVF_mm=SHVF_mm,
-
-            Cv_bb=Cv_bb,
-            Cv_mm=Cv_mm,
-            Cv_sigma=Cv_sigma,
-
-            srd_args_repop=srd_args_repop,
-            srd_args_visible=srd_args_visible,
-            srd_last_sub=srd_last_sub)
-
-        repop_DistGC = (repop_DistGC_lower * (repop_Vmax <= Vmax_completion)
-                        + repop_DistGC_upper * (repop_Vmax > Vmax_completion))
-
-        new_data = calculate_characteristics_subhalo(
-            repop_Vmax, repop_DistGC,
-            sim_type=sim_type,
-            res_string=res_string,
-
-            cosmo_G=cosmo_G,
-            cosmo_H_0=cosmo_H_0,
-            cosmo_rho_crit=cosmo_rho_crit,
-
-            host_R_vir=host_R_vir,
-            host_rho_0=host_rho_0,
-            host_r_s=host_r_s,
-
-            pathname=pathname,
-            repop_its=repop_its,
-            repop_print_freq=repop_print_freq,
-            repop_inc_factor=repop_inc_factor,
-            repop_num_brightest=repop_num_brightest,
-
-            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-            SHVF_bb=SHVF_bb,
-            SHVF_mm=SHVF_mm,
-
-            Cv_bb=Cv_bb,
-            Cv_mm=Cv_mm,
-            Cv_sigma=Cv_sigma,
-
-            srd_args_repop=srd_args_repop,
-            srd_args_visible=srd_args_visible,
-            srd_last_sub=srd_last_sub)
-
-        # We take the brightest subhalos only
-        brightest_Js = np.append(brightest_Js,
-                                 new_data[:, [0, 2, 3, 4, 5, 6]],
-                                 axis=0)
-
-        brightest_Js = brightest_Js[np.argsort(brightest_Js[:, 0])[::-1], :]
-        brightest_Js = brightest_Js[:repop_num_brightest, :]
-
-        # Same for J03
-        brightest_J03 = np.append(brightest_J03, new_data[:, 1:], axis=0)
-
-        brightest_J03 = brightest_J03[np.argsort(
-            brightest_J03[:, 0])[::-1], :]
-        brightest_J03 = brightest_J03[:repop_num_brightest, :]
-
-        m_min = new_mmin
-
-    return brightest_Js, brightest_J03
+# @jit(forceobj=True)
+# def interior_loop_manybrigthest(
+#         num_subs_max,
+#         sim_type, res_string,
+#         cosmo_G,
+#         cosmo_H_0,
+#         cosmo_rho_crit,
+#
+#         host_R_vir,
+#         host_rho_0,
+#         host_r_s,
+#
+#         pathname,
+#         repop_its,
+#         repop_print_freq,
+#         repop_inc_factor,
+#         repop_num_brightest,
+#
+#         SHVF_cts_RangeMin,
+#         SHVF_cts_RangeMax,
+#         SHVF_bb,
+#         SHVF_mm,
+#
+#         Cv_bb,
+#         Cv_mm,
+#         Cv_sigma,
+#
+#         srd_args_repop,
+#         srd_args_visible,
+#         srd_last_sub,
+#         Vmax_completion):
+#     # We have 6 variables we want to save in our files,
+#     # change this number if necessary
+#     # (output from 'calculate_characteristics_subhalo()')
+#     brightest_Js = np.zeros((repop_num_brightest, 6))
+#     brightest_J03 = np.zeros((repop_num_brightest, 6))
+#
+#     # We calculate our subhalo population in bins to save memory
+#     m_min = SHVF_cts_RangeMin
+#
+#     while m_min < SHVF_cts_RangeMax:
+#
+#         if SHVF_Grand2012_int(m_min, m_min * repop_inc_factor,
+#                               SHVF_bb, SHVF_mm) > num_subs_max:
+#
+#             m_max = newton(xx, m_min,
+#                            args=[m_min, SHVF_bb, SHVF_mm, num_subs_max])
+#             new_mmin = m_max
+#
+#         else:
+#             m_max = np.minimum(m_min * repop_inc_factor,
+#                                SHVF_cts_RangeMax)
+#             new_mmin = m_min * repop_inc_factor
+#
+#         repop_Vmax = montecarlo_algorithm(
+#             m_min, m_max,
+#             SHVF_Grand2012,
+#             num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
+#             sim_type=sim_type,
+#             res_string=res_string,
+#
+#             cosmo_G=cosmo_G,
+#             cosmo_H_0=cosmo_H_0,
+#             cosmo_rho_crit=cosmo_rho_crit,
+#
+#             host_R_vir=host_R_vir,
+#             host_rho_0=host_rho_0,
+#             host_r_s=host_r_s,
+#
+#             pathname=pathname,
+#             repop_its=repop_its,
+#             repop_print_freq=repop_print_freq,
+#             repop_inc_factor=repop_inc_factor,
+#
+#             SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+#             SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+#             SHVF_bb=SHVF_bb,
+#             SHVF_mm=SHVF_mm,
+#
+#             Cv_bb=Cv_bb,
+#             Cv_mm=Cv_mm,
+#             Cv_sigma=Cv_sigma,
+#
+#             srd_args_repop=srd_args_repop,
+#             srd_args_visible=srd_args_visible,
+#             srd_last_sub=srd_last_sub)
+#
+#         repop_DistGC_lower = montecarlo_algorithm(
+#             1e-3, host_R_vir,
+#             Nr_Ntot_repop,
+#             num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
+#             sim_type=sim_type,
+#             res_string=res_string,
+#
+#             cosmo_G=cosmo_G,
+#             cosmo_H_0=cosmo_H_0,
+#             cosmo_rho_crit=cosmo_rho_crit,
+#
+#             host_R_vir=host_R_vir,
+#             host_rho_0=host_rho_0,
+#             host_r_s=host_r_s,
+#
+#             pathname=pathname,
+#             repop_its=repop_its,
+#             repop_print_freq=repop_print_freq,
+#             repop_inc_factor=repop_inc_factor,
+#
+#             SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+#             SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+#             SHVF_bb=SHVF_bb,
+#             SHVF_mm=SHVF_mm,
+#
+#             Cv_bb=Cv_bb,
+#             Cv_mm=Cv_mm,
+#             Cv_sigma=Cv_sigma,
+#
+#             srd_args_repop=srd_args_repop,
+#             srd_args_visible=srd_args_visible,
+#             srd_last_sub=srd_last_sub)
+#
+#         repop_DistGC_upper = montecarlo_algorithm(
+#             1e-3, host_R_vir,
+#             Nr_Ntot_visible,
+#             num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
+#             sim_type=sim_type,
+#             res_string=res_string,
+#
+#             cosmo_G=cosmo_G,
+#             cosmo_H_0=cosmo_H_0,
+#             cosmo_rho_crit=cosmo_rho_crit,
+#
+#             host_R_vir=host_R_vir,
+#             host_rho_0=host_rho_0,
+#             host_r_s=host_r_s,
+#
+#             pathname=pathname,
+#             repop_its=repop_its,
+#             repop_print_freq=repop_print_freq,
+#             repop_inc_factor=repop_inc_factor,
+#
+#             SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+#             SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+#             SHVF_bb=SHVF_bb,
+#             SHVF_mm=SHVF_mm,
+#
+#             Cv_bb=Cv_bb,
+#             Cv_mm=Cv_mm,
+#             Cv_sigma=Cv_sigma,
+#
+#             srd_args_repop=srd_args_repop,
+#             srd_args_visible=srd_args_visible,
+#             srd_last_sub=srd_last_sub)
+#
+#         repop_DistGC = (repop_DistGC_lower * (repop_Vmax <= Vmax_completion)
+#                         + repop_DistGC_upper * (repop_Vmax > Vmax_completion))
+#
+#         new_data = calculate_characteristics_subhalo(
+#             repop_Vmax, repop_DistGC,
+#             sim_type=sim_type,
+#             res_string=res_string,
+#
+#             cosmo_G=cosmo_G,
+#             cosmo_H_0=cosmo_H_0,
+#             cosmo_rho_crit=cosmo_rho_crit,
+#
+#             host_R_vir=host_R_vir,
+#             host_rho_0=host_rho_0,
+#             host_r_s=host_r_s,
+#
+#             pathname=pathname,
+#             repop_its=repop_its,
+#             repop_print_freq=repop_print_freq,
+#             repop_inc_factor=repop_inc_factor,
+#             repop_num_brightest=repop_num_brightest,
+#
+#             SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+#             SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+#             SHVF_bb=SHVF_bb,
+#             SHVF_mm=SHVF_mm,
+#
+#             Cv_bb=Cv_bb,
+#             Cv_mm=Cv_mm,
+#             Cv_sigma=Cv_sigma,
+#
+#             srd_args_repop=srd_args_repop,
+#             srd_args_visible=srd_args_visible,
+#             srd_last_sub=srd_last_sub)
+#
+#         # We take the brightest subhalos only
+#         brightest_Js = np.append(brightest_Js,
+#                                  new_data[:, [0, 2, 3, 4, 5, 6]],
+#                                  axis=0)
+#
+#         brightest_Js = brightest_Js[np.argsort(brightest_Js[:, 0])[::-1], :]
+#         brightest_Js = brightest_Js[:repop_num_brightest, :]
+#
+#         # Same for J03
+#         brightest_J03 = np.append(brightest_J03, new_data[:, 1:], axis=0)
+#
+#         brightest_J03 = brightest_J03[np.argsort(
+#             brightest_J03[:, 0])[::-1], :]
+#         brightest_J03 = brightest_J03[:repop_num_brightest, :]
+#
+#         m_min = new_mmin
+#
+#     return brightest_Js, brightest_J03
 
 
 def repopulation_bin_by_bin(num_subs_max, sim_type, res_string,
@@ -1431,8 +1431,8 @@ def repopulation_bin_by_bin(num_subs_max, sim_type, res_string,
                                           time.gmtime())))
             progress.close()
 
-        if repop_num_brightest < 100:
-            brightest_Js, brightest_J03 = interior_loop_singularbrightest(
+        # if repop_num_brightest < 100:
+        brightest_Js, brightest_J03 = interior_loop_singularbrightest(
                 num_subs_max=num_subs_max,
                 sim_type=sim_type,
                 res_string=res_string,
@@ -1464,39 +1464,39 @@ def repopulation_bin_by_bin(num_subs_max, sim_type, res_string,
                 srd_args_visible=srd_args_visible,
                 srd_last_sub=srd_last_sub,
                 Vmax_completion=Vmax_completion)
-        else:
-            brightest_Js, brightest_J03 = interior_loop_manybrigthest(
-                num_subs_max=num_subs_max,
-                sim_type=sim_type,
-                res_string=res_string,
-
-                cosmo_G=cosmo_G,
-                cosmo_H_0=cosmo_H_0,
-                cosmo_rho_crit=cosmo_rho_crit,
-
-                host_R_vir=host_R_vir,
-                host_rho_0=host_rho_0,
-                host_r_s=host_r_s,
-
-                pathname=pathname,
-                repop_its=repop_its,
-                repop_print_freq=repop_print_freq,
-                repop_inc_factor=repop_inc_factor,
-                repop_num_brightest=repop_num_brightest,
-
-                SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-                SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-                SHVF_bb=SHVF_bb,
-                SHVF_mm=SHVF_mm,
-
-                Cv_bb=Cv_bb,
-                Cv_mm=Cv_mm,
-                Cv_sigma=Cv_sigma,
-
-                srd_args_repop=srd_args_repop,
-                srd_args_visible=srd_args_visible,
-                srd_last_sub=srd_last_sub,
-                Vmax_completion=Vmax_completion)
+        # else:
+        #     brightest_Js, brightest_J03 = interior_loop_manybrigthest(
+        #         num_subs_max=num_subs_max,
+        #         sim_type=sim_type,
+        #         res_string=res_string,
+        #
+        #         cosmo_G=cosmo_G,
+        #         cosmo_H_0=cosmo_H_0,
+        #         cosmo_rho_crit=cosmo_rho_crit,
+        #
+        #         host_R_vir=host_R_vir,
+        #         host_rho_0=host_rho_0,
+        #         host_r_s=host_r_s,
+        #
+        #         pathname=pathname,
+        #         repop_its=repop_its,
+        #         repop_print_freq=repop_print_freq,
+        #         repop_inc_factor=repop_inc_factor,
+        #         repop_num_brightest=repop_num_brightest,
+        #
+        #         SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+        #         SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+        #         SHVF_bb=SHVF_bb,
+        #         SHVF_mm=SHVF_mm,
+        #
+        #         Cv_bb=Cv_bb,
+        #         Cv_mm=Cv_mm,
+        #         Cv_sigma=Cv_sigma,
+        #
+        #         srd_args_repop=srd_args_repop,
+        #         srd_args_visible=srd_args_visible,
+        #         srd_last_sub=srd_last_sub,
+        #         Vmax_completion=Vmax_completion)
 
         np.savetxt(file_Js, brightest_Js)
         np.savetxt(file_J03, brightest_J03)
