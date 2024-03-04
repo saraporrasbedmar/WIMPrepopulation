@@ -509,7 +509,6 @@ def N_subs_fragile(DistGC, args):
     #                           k=3, s=0, ext=0)
     # return args[1] * np.exp(args[0] / DistGC)
 
-
     return args[1] * np.exp(args[0] / DistGC)
 
 
@@ -823,11 +822,9 @@ def calculate_characteristics_subhalo(
     repop_DistEarth = ((repop_Xs - 8.5) ** 2 + repop_Ys ** 2
                        + repop_Zs ** 2) ** 0.5
 
-
     # repop_C = Cv_Grand2012(Vmax, Cv_bb, Cv_mm)
     repop_C = Moline21_normalization(Vmax, c0=Cv_bb)
     repop_C = C_Scatt(repop_C, Cv_sigma)
-
 
     repop_Js = Js_vel(Vmax, repop_DistEarth, repop_C,
                       cosmo_G=cosmo_G,
@@ -864,7 +861,7 @@ def xxx(mmax, params):
                                params[1], params[2]) - params[3])
 
 
-@jit(forceobj=True)
+# @jit(forceobj=True)
 def interior_loop_singularbrightest(
         num_subs_max,
         sim_type, res_string,
@@ -1067,7 +1064,24 @@ def interior_loop_singularbrightest(
                        < R_s(new_data[bright_Js, 4],
                              new_data[bright_Js, 6],
                              cosmo_H_0)):
-                    print('subhalo broken (Js)')
+                    # print('subhalo broken (Js)')
+                    progress = open(pathname + '/progress_' +
+                                    sim_type + '_'
+                                    + str(res_string)
+                                    + '_results.txt', 'a')
+                    progress.write('subhalo broken (Js)'
+                                   + str(new_data[bright_Js, :])
+                                   + str(R_t(new_data[bright_Js, 4],
+                                             new_data[bright_Js, 6],
+                                             new_data[bright_Js, 2],
+                                             cosmo_H_0, cosmo_G,
+                                             host_rho_0, host_r_s,
+                                             singular_case=True))
+                                   + str(R_s(new_data[bright_Js, 4],
+                                             new_data[bright_Js, 6],
+                                             cosmo_H_0))
+                                   + '\n')
+                    progress.close()
                     new_data[bright_Js, 0] = 0.
                     bright_Js = np.argmax(new_data[:, 0])
 
@@ -1080,7 +1094,24 @@ def interior_loop_singularbrightest(
                        < R_s(new_data[bright_J03, 4],
                              new_data[bright_J03, 6],
                              cosmo_H_0)):
-                    print('subhalo broken (J03)')
+                    # print('subhalo broken (J03)')
+                    progress = open(pathname + '/progress_' +
+                                    sim_type + '_'
+                                    + str(res_string)
+                                    + '_results.txt', 'a')
+                    progress.write('subhalo broken (J03)'
+                                   + str(new_data[bright_J03, :])
+                                   + str(R_t(new_data[bright_J03, 4],
+                                             new_data[bright_J03, 6],
+                                             new_data[bright_J03, 2],
+                                             cosmo_H_0, cosmo_G,
+                                             host_rho_0, host_r_s,
+                                             singular_case=True))
+                                   + str(R_s(new_data[bright_J03, 4],
+                                             new_data[bright_J03, 6],
+                                             cosmo_H_0))
+                                   + '\n')
+                    progress.close()
                     new_data[bright_J03, 1] = 0.
                     bright_J03 = np.argmax(new_data[:, 1])
 
