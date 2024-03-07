@@ -1080,7 +1080,7 @@ def interior_loop_singularbrightest(
                                    + str(R_s(new_data[bright_Js, 4],
                                              new_data[bright_Js, 6],
                                              cosmo_H_0))
-                                   )
+                                   + '\n')
                     progress.write(bright_Js + '\n')
                     new_data[bright_Js, 0] = 0.
                     bright_Js = np.argmax(new_data[:, 0])
@@ -1113,9 +1113,11 @@ def interior_loop_singularbrightest(
                                              new_data[bright_J03, 6],
                                              cosmo_H_0))
                                    + '\n')
-                    progress.close()
+                    progress.write(bright_J03 + '\n')
                     new_data[bright_J03, 1] = 0.
                     bright_J03 = np.argmax(new_data[:, 1])
+                    progress.write(bright_J03 + '\n')
+                    progress.close()
 
             brightest_Js[
             repop_num_brightest + new_sub, :] = new_data[
