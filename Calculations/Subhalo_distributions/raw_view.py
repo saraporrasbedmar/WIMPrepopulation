@@ -30,6 +30,11 @@ try:
     Grand_hydro = np.loadtxt(
         '../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
 
+    data_release_dmo = np.loadtxt(
+        '../Data_subhalos_simulations/dmo_table.txt')
+    data_release_hydro = np.loadtxt(
+        '../Data_subhalos_simulations/hydro_table.txt')
+
 except:
     Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
     Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
@@ -45,9 +50,17 @@ Grand_hydro = Grand_hydro[np.argsort(Grand_hydro[:, 1])]
 fig, ax = plt.subplots(figsize=(10, 8))
 
 plt.scatter(Grand_dmo[:, 1], Grand_dmo[:, 0],
-            color='k', s=10, zorder=10)
+            color='k', s=10, zorder=10, alpha=0.5,
+            label='2 years old data')
 plt.scatter(Grand_hydro[:, 1], Grand_hydro[:, 0],
-            color='limegreen', s=10, zorder=10)
+            color='green', s=10, zorder=10, alpha=0.5)
+
+
+plt.scatter(data_release_dmo[:, 1], data_release_dmo[:, 0],
+            color='grey', s=20, zorder=10, marker='x', alpha=0.6,
+            label='New release data')
+plt.scatter(data_release_hydro[:, 1], data_release_hydro[:, 0],
+            color='limegreen', s=20, zorder=10, marker='x', alpha=0.6)
 
 
 plt.axhline(0.184, linestyle='-.', color='k', alpha=0.6,
@@ -79,6 +92,7 @@ handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
            )
 
 legend11 = plt.legend(handles=handles, loc=2)
+legend22 = plt.legend(loc=4, title='Shapes')
 
 ax.add_artist(legend11)
 
@@ -87,4 +101,4 @@ plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]')
 
 fig.savefig('outputs/raw.pdf', bbox_inches='tight')
 fig.savefig('outputs/raw.png', bbox_inches='tight')
-# plt.show()
+plt.show()

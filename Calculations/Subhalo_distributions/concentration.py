@@ -39,6 +39,11 @@ try:
     Grand_hydro = np.loadtxt(
         '../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
 
+    data_release_dmo = np.loadtxt(
+        '../Data_subhalos_simulations/dmo_table.txt')
+    data_release_hydro = np.loadtxt(
+        '../Data_subhalos_simulations/hydro_table.txt')
+
 except:
     Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
     Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
@@ -54,13 +59,11 @@ Grand_hydro[:, 2] *= 1e3
 Grand_dmo = Grand_dmo[np.argsort(Grand_dmo[:, 1])]
 Grand_hydro = Grand_hydro[np.argsort(Grand_hydro[:, 1])]
 
+data_release_dmo = data_release_dmo[np.argsort(data_release_dmo[:, 1])]
+data_release_hydro = data_release_hydro[np.argsort(data_release_hydro[:, 1])]
+
 Grand_dmo_raw = Grand_dmo.copy()
 Grand_hydro_raw = Grand_hydro.copy()
-
-# Los mayores Dist_Gc son 264 kpc, pero entonces cuál es R200?
-R200 = 263  # kpc
-
-plt.close('all')
 
 
 # %%  CALCULATE THE RMAX-VMAX RELATION
@@ -90,6 +93,10 @@ def Moline21_normalization(V, c0):
     return (Cv_Mol2021_redshift0(V, c0, c1=-0.90368,
                                  c2=0.2749, c3=-0.028))
 
+def Moline21_normalization2(V, c0, c1):
+    return (Cv_Mol2021_redshift0(V, c0, c1,
+                                 c2=0., c3=0.0))
+
 
 def Cv_Grand(Vmax, mm, bb):
     return 2. * (10 ** (-bb) * Vmax ** (1. - mm) / H0) ** 2
@@ -104,7 +111,6 @@ H0 = 70. / 1e3
 
 def calculate_med(dataset, num_interv, perc_low=20, perc_high=80, nmax=60):
     x_approx = np.geomspace(dataset[0, 1], nmax, num=num_interv)
-    # print(x_approx)
 
     ymed = []
     yp20 = []
@@ -113,15 +119,7 @@ def calculate_med(dataset, num_interv, perc_low=20, perc_high=80, nmax=60):
     # print(dataset[:, 1])
 
     for i in range(num_interv - 1):
-        if len(np.where(dataset[:, 1] > x_approx[i + 1])[0]) == 0 \
-                or len(np.where(dataset[:, 1] > x_approx[i])[0]) == 0 \
-                or (len(np.where(dataset[:, 1] > x_approx[i])[0])
-                    == len(np.where(dataset[:, 1] > x_approx[i + 1])[0])):
-            ymed.append(0)
-            yp20.append(0)
-            yp80.append(0)
-            std.append(0)
-        else:
+        try:
             xmin = np.where(dataset[:, 1] > x_approx[i])[0][0]
             xmax = np.where(dataset[:, 1] > x_approx[i + 1])[0][0]
 
@@ -131,6 +129,12 @@ def calculate_med(dataset, num_interv, perc_low=20, perc_high=80, nmax=60):
             std.append(aaa)
             yp20.append(np.nanpercentile(dataset[:, 0][xmin:xmax], perc_low))
             yp80.append(np.nanpercentile(dataset[:, 0][xmin:xmax], perc_high))
+
+        except:
+            ymed.append(0)
+            yp20.append(0)
+            yp80.append(0)
+            std.append(0)
 
     x_approx = (x_approx[:-1] + x_approx[1:]) / 2.
     y_ceros = np.array(ymed) > 0.
@@ -155,6 +159,14 @@ dmoLimit = 11
 cv_dmo_cloud = Cv_Grand_points(Grand_dmo_raw[:, 1], Grand_dmo_raw[:, 0])
 cv_hydro_cloud = Cv_Grand_points(Grand_hydro_raw[:, 1], Grand_hydro_raw[:, 0])
 
+cv_dmo_cloud_release = Cv_Grand_points(data_release_dmo[:, 1],
+                                       data_release_dmo[:, 0])
+cv_hydro_cloud_release = Cv_Grand_points(data_release_hydro[:, 1],
+                                         data_release_hydro[:, 0])
+
+data_release_dmo[:, 0] = cv_dmo_cloud_release
+data_release_hydro[:, 0] = cv_hydro_cloud_release
+
 Grand_dmo[:, 0] = cv_dmo_cloud
 Grand_hydro[:, 0] = cv_hydro_cloud
 
@@ -163,19 +175,29 @@ vv_medians_dmo, cv_dmo_median, cv_dmo_min, cv_dmo_max, _ = calculate_med(
 vv_medians_hydro, cv_hydro_median, cv_hydro_min, cv_hydro_max, _ = calculate_med(
     Grand_hydro, number_bins_hydro, perc_low=16, perc_high=84)
 
+vv_medians_dmo_release, cv_dmo_median_release, _, _, _ = calculate_med(
+    data_release_dmo, number_bins_dmo, perc_low=16, perc_high=84, nmax=150)
+vv_medians_hydro_release, cv_hydro_median_release, _, _, _ = calculate_med(
+    data_release_hydro, number_bins_hydro, perc_low=16, perc_high=84, nmax=150)
+
 # xx_plot = np.logspace(np.log10(vv_medians_dmo[0]), np.log10(60))
-xx_plot = np.geomspace(1., 60)
+xx_plot = np.geomspace(1., 100)
 
 # FIGURE start
-fig, ax = plt.subplots(figsize=(8, 8))
-
+fig, (ax, ax2) = plt.subplots(1, 2, figsize=(20, 8))
+plt.subplot(121)
+plt.plot(vv_medians_dmo_release, cv_dmo_median_release,
+         '+', alpha=1, color='k', zorder=15, label='Release data')
+plt.plot(vv_medians_hydro_release, cv_hydro_median_release,
+         '+', alpha=1, color='green', zorder=15)
 plt.plot(vv_medians_dmo, cv_dmo_median, '.k', ms=13, zorder=10,
-         label='Data')
+         label='2 years old')
 plt.plot(vv_medians_hydro, cv_hydro_median, '.',
          color='green', ms=13, zorder=10)
 
 plt.plot(xx_plot, Cv_Mol2021_redshift0(xx_plot), color='red',
          label='Moliné+21', alpha=0.6, linewidth=3, zorder=9)
+
 
 # DMO fit
 moline_fits_dmo = curve_fit(
@@ -194,11 +216,38 @@ plt.plot(xx_plot,
          color='k',
          alpha=1,
          linewidth=3,
-         zorder=5, label='Fit to Moline+21')
+         zorder=5, label='Fit to 2 year')
 print(moline_fits_dmo[0][0] + moline_fits_dmo[1][0] ** 0.5,
       moline_fits_dmo[0][0]
       - moline_fits_dmo[1][0] ** 0.5
       )
+
+moline_fits_dmo_release = curve_fit(
+    Moline21_normalization2,
+    xdata=vv_medians_dmo_release[vv_medians_dmo_release > dmoLimit],
+    ydata=cv_dmo_median_release[vv_medians_dmo_release > dmoLimit],
+    p0=[1.e4, -0.5],
+    # bounds=([-np.inf],
+    #         [5e5])
+)
+
+print(moline_fits_dmo_release)
+
+plt.plot(xx_plot,
+         Cv_Mol2021_redshift0(V=xx_plot, c0=moline_fits_dmo_release[0][0],
+                              c1=moline_fits_dmo_release[0][1],
+                              c2=0.,
+                              c3=0.),
+         color='k',
+         alpha=1,
+         linewidth=3, ls='--',
+         zorder=5, label='Fit to release')
+print(moline_fits_dmo_release[0][0] + moline_fits_dmo_release[1][0] ** 0.5,
+      moline_fits_dmo_release[0][0]
+      - moline_fits_dmo_release[1][0] ** 0.5
+      )
+
+
 # Hydro fit
 moline_fits_hydro = curve_fit(
     Moline21_normalization,
@@ -221,6 +270,30 @@ plt.plot(xx_plot,
          linewidth=3,
          zorder=5)
 
+moline_fits_hydro_release = curve_fit(
+    Moline21_normalization2,
+    xdata=vv_medians_hydro_release[vv_medians_hydro_release > hydroLimit],
+    ydata=cv_hydro_median_release[vv_medians_hydro_release > hydroLimit],
+    p0=[1.e4, -0.5],
+    # bounds=([-np.inf],
+    #         [5e5])
+)
+print(moline_fits_hydro_release[0][0] + moline_fits_hydro_release[1][0] ** 0.5,
+      moline_fits_hydro_release[0][0]
+      - moline_fits_hydro_release[1][0] ** 0.5
+      )
+print(moline_fits_hydro_release)
+
+plt.plot(xx_plot,
+         Cv_Mol2021_redshift0(V=xx_plot, c0=moline_fits_hydro_release[0][0],
+                              c1=moline_fits_hydro_release[0][1],
+                              c2=0.,
+                              c3=0.),
+         color='green',
+         alpha=1,
+         linewidth=3, ls='--',
+         zorder=5)
+
 plt.axvline(dmoLimit, linestyle='-.', color='k', alpha=0.3,
             linewidth=2, label='Fit limit')
 
@@ -234,8 +307,6 @@ handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
 legend11 = plt.legend(handles=handles,
                       loc=1)  # , bbox_to_anchor=(1.001, 0.99))
 
-
-
 plt.ylabel(r'c$_\mathrm{V}$', size=28)
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
 
@@ -243,19 +314,18 @@ vv_over_dmo = Grand_dmo[Grand_dmo[:, 1] > dmoLimit, 1]
 cc_over_dmo = Grand_dmo[Grand_dmo[:, 1] > dmoLimit, 0]
 print(np.shape(vv_over_dmo))
 
+plt.subplot(122)
 
-plt.figure()
 
 def gaussian(xx, sigma, x0):
     return 1 / ((2. * np.pi) ** 0.5 * sigma) * np.exp(
         -0.5 * ((xx - x0) / sigma) ** 2.)
 
 
-
 num = 25
 
 per50_dmo = np.nanpercentile(cc_over_dmo / Moline21_normalization(
-        V=vv_over_dmo, c0=moline_fits_dmo[0][0]), 50)
+    V=vv_over_dmo, c0=moline_fits_dmo[0][0]), 50)
 
 # while abs(per50_dmo - 1.) > 0.01:
 #     per50_dmo = np.nanpercentile(cc_over_dmo / Moline21_normalization(
@@ -264,37 +334,25 @@ per50_dmo = np.nanpercentile(cc_over_dmo / Moline21_normalization(
 
 
 n_dmo, bins_dmo, _ = plt.hist(cc_over_dmo / Moline21_normalization(
-        V=vv_over_dmo, c0=moline_fits_dmo[0][0]),
-                               bins=np.geomspace(0.05, 6, num=num),
+    V=vv_over_dmo, c0=moline_fits_dmo[0][0]),
+                              bins=np.geomspace(0.05, 6, num=num),
                               density=True,
-                               color='grey', alpha=0.7
-                               )
-
+                              color='grey', alpha=0.7
+                              )
 
 xx2_plot = np.geomspace(0.01, 6, num=100)
 
 per16_dmo = np.nanpercentile(cc_over_dmo / Moline21_normalization(
-        V=vv_over_dmo, c0=moline_fits_dmo[0]) / per50_dmo, 16)
+    V=vv_over_dmo, c0=moline_fits_dmo[0]) / per50_dmo, 16)
 per84_dmo = np.nanpercentile(cc_over_dmo / Moline21_normalization(
-        V=vv_over_dmo, c0=moline_fits_dmo[0]) / per50_dmo, 84)
+    V=vv_over_dmo, c0=moline_fits_dmo[0]) / per50_dmo, 84)
 # plt.axvline(per16_dmo, color='k', ls='--')
 # plt.axvline(per50_dmo, color='k', ls='-')
 # plt.axvline(per84_dmo, color='k', ls='--')
-print(per16_dmo, np.log10(per16_dmo**-1), np.log10(per50_dmo/per16_dmo))
+print(per16_dmo, np.log10(per16_dmo ** -1), np.log10(per50_dmo / per16_dmo))
 print(per50_dmo)
-print(per84_dmo, np.log10(per84_dmo), np.log10(per84_dmo/per50_dmo))
+print(per84_dmo, np.log10(per84_dmo), np.log10(per84_dmo / per50_dmo))
 print()
-
-ax.fill_between(xx_plot,
-                Moline21_normalization(
-                    V=xx_plot,
-                    c0=moline_fits_dmo[0][0] * per16_dmo),
-                Moline21_normalization(
-                    V=xx_plot,
-                    c0=moline_fits_dmo[0][0] * per84_dmo),
-                color='grey', alpha=0.5, zorder=3
-                )
-
 
 # HYDRO ----------------------------------------------------------------
 vv_over_hydro = Grand_hydro[Grand_hydro[:, 1] > hydroLimit, 1]
@@ -303,55 +361,48 @@ cc_over_hydro = Grand_hydro[Grand_hydro[:, 1] > hydroLimit, 0]
 num = 25
 
 per50_hydro = np.nanpercentile(cc_over_hydro / Moline21_normalization(
-        V=vv_over_hydro, c0=moline_fits_hydro[0]), 50)
+    V=vv_over_hydro, c0=moline_fits_hydro[0]), 50)
 # while abs(per50_hydro - 1.) > 0.1:
 #     per50_dmo = np.nanpercentile(cc_over_hydro / Moline21_normalization(
 #         V=vv_over_hydro, c0=moline_fits_hydro[0][0]) / per50_hydro, 50)
 #     print(per50_hydro)
 
 n_hydro, bins_hydro, _ = plt.hist(cc_over_hydro / Moline21_normalization(
-        V=vv_over_hydro, c0=moline_fits_hydro[0][0]),
-                               bins=np.geomspace(0.05, 6, num=num),
+    V=vv_over_hydro, c0=moline_fits_hydro[0][0]),
+                                  bins=np.geomspace(0.05, 6, num=num),
                                   density=True,
-                               color='limegreen', alpha=0.7
-                               )
+                                  color='limegreen', alpha=0.7
+                                  )
 
 # per50_hydro = np.nanpercentile(cc_over_hydro / Moline21_normalization(
 #         V=vv_over_hydro, c0=moline_fits_hydro[0]) / per50_hydro, 50)
 per16_hydro = np.nanpercentile(cc_over_hydro / Moline21_normalization(
-        V=vv_over_hydro, c0=moline_fits_hydro[0]), 16)
+    V=vv_over_hydro, c0=moline_fits_hydro[0]), 16)
 per84_hydro = np.nanpercentile(cc_over_hydro / Moline21_normalization(
-        V=vv_over_hydro, c0=moline_fits_hydro[0]), 84)
+    V=vv_over_hydro, c0=moline_fits_hydro[0]), 84)
 
 # plt.axvline(per16_hydro, color='darkgreen', ls='--')
 # plt.axvline(per50_hydro, color='darkgreen', ls='-')
 # plt.axvline(per84_hydro, color='darkgreen', ls='--')
-print(per16_hydro, np.log10(per16_hydro**-1),
-      np.log10(per50_hydro/per16_hydro))
+print(per16_hydro, np.log10(per16_hydro ** -1),
+      np.log10(per50_hydro / per16_hydro))
 print(per50_hydro)
 print(per84_hydro,
-      np.log10(per84_hydro), np.log10(per84_hydro/per50_hydro))
+      np.log10(per84_hydro), np.log10(per84_hydro / per50_hydro))
 
-plt.xlabel(r'$\frac{c_\mathrm{V, data}}{c_\mathrm{V, Moliné21}(V)}$')
+plt.xlabel(r'$\frac{c_\mathrm{V, data}}{c_\mathrm{V, Moliné21}(V)}$',
+           fontsize=34)
 plt.ylabel('Normalized density')
 
-ax.fill_between(xx_plot,
-                Moline21_normalization(
-                    V=xx_plot,
-                    c0=moline_fits_hydro[0][0] * per16_hydro),
-                Moline21_normalization(
-                    V=xx_plot,
-                    c0=moline_fits_hydro[0][0] * per84_hydro),
-                color='limegreen', alpha=0.5, zorder=2
-                )
 
 def lognormal_fit(xx, mean, sigma):
-    return (1/(sigma * xx * np.sqrt(2.*np.pi))
-              * np.exp(-0.5 * ((np.log(xx) - mean) / sigma)**2.))
+    return (1 / (sigma * xx * np.sqrt(2. * np.pi))
+            * np.exp(-0.5 * ((np.log(xx) - mean) / sigma) ** 2.))
+
 
 fit_lognormal_dmo = curve_fit(
     lognormal_fit,
-    xdata=(bins_dmo[1:]+bins_dmo[:-1])/2.,
+    xdata=(bins_dmo[1:] + bins_dmo[:-1]) / 2.,
     ydata=n_dmo)
 print(fit_lognormal_dmo)
 print('Sigma for the lognormal distribution, dmo: ',
@@ -360,11 +411,11 @@ print('Sigma for the lognormal distribution, dmo: ',
 plt.plot(xx2_plot,
          lognormal_fit(xx2_plot, fit_lognormal_dmo[0][0],
                        fit_lognormal_dmo[0][1]),
-         color='k')
+         color='k', lw=2)
 
 fit_lognormal_hydro = curve_fit(
     lognormal_fit,
-    xdata=(bins_hydro[1:]+bins_hydro[:-1])/2.,
+    xdata=(bins_hydro[1:] + bins_hydro[:-1]) / 2.,
     ydata=n_hydro)
 print(fit_lognormal_hydro)
 print('Sigma for the lognormal distribution, hydro: ',
@@ -373,12 +424,22 @@ print('Sigma for the lognormal distribution, hydro: ',
 plt.plot(xx2_plot,
          lognormal_fit(xx2_plot, fit_lognormal_hydro[0][0],
                        fit_lognormal_hydro[0][1]),
-         color='green')
+         color='green', lw=2)
 
 plt.xscale('log')
+lg1 = plt.legend(handles=handles, loc=1)
+lg2 = plt.legend([plt.Line2D([], [],
+                             linestyle='-', lw=2,
+                             color='k')],
+                 ['Lognormal fit'],
+                 loc=2, framealpha=1)
+ax2.add_artist(lg1)
+ax2.add_artist(lg2)
 
 plt.savefig('outputs/cv_hist.pdf', bbox_inches='tight')
 plt.savefig('outputs/cv_hist.png', bbox_inches='tight')
+
+
 # ----------------------------------------------------
 def gaussian_not(xx, sigma, x0, aa):
     return aa / ((2. * np.pi) ** 0.5 * sigma) * np.exp(
@@ -387,14 +448,14 @@ def gaussian_not(xx, sigma, x0, aa):
 
 plt.figure()
 xx3_plot = np.log10(np.geomspace(5e-2, 6))
-plt.scatter(np.log10((bins_dmo[1:]+bins_dmo[:-1])/2.),
+plt.scatter(np.log10((bins_dmo[1:] + bins_dmo[:-1]) / 2.),
             n_dmo, color='k')
-plt.scatter(np.log10((bins_hydro[1:]+bins_hydro[:-1])/2.),
+plt.scatter(np.log10((bins_hydro[1:] + bins_hydro[:-1]) / 2.),
             n_hydro, color='g')
 
 fit_normal_dmo = curve_fit(
     gaussian_not,
-    xdata=np.log10((bins_dmo[1:]+bins_dmo[:-1])/2.),
+    xdata=np.log10((bins_dmo[1:] + bins_dmo[:-1]) / 2.),
     ydata=n_dmo)
 print(fit_normal_dmo)
 
@@ -406,7 +467,7 @@ plt.plot(xx3_plot,
 
 fit_normal_hydro = curve_fit(
     gaussian_not,
-    xdata=np.log10((bins_hydro[1:]+bins_hydro[:-1])/2.),
+    xdata=np.log10((bins_hydro[1:] + bins_hydro[:-1]) / 2.),
     ydata=n_hydro)
 print(fit_normal_hydro)
 
@@ -416,11 +477,31 @@ plt.plot(xx3_plot,
                       fit_normal_hydro[0][1],
                       fit_normal_hydro[0][2]))
 
+ax.fill_between(xx_plot,
+                Moline21_normalization(
+                    V=xx_plot,
+                    c0=moline_fits_dmo[0][0]) * 10 ** -fit_normal_dmo[0][0],
+                Moline21_normalization(
+                    V=xx_plot,
+                    c0=moline_fits_dmo[0][0] * 10 ** fit_normal_dmo[0][0]),
+                color='grey', alpha=0.5, zorder=3
+                )
+ax.fill_between(xx_plot,
+                Moline21_normalization(
+                    V=xx_plot,
+                    c0=moline_fits_hydro[0][0]) * 10 ** -fit_normal_hydro[0][
+                    0],
+                Moline21_normalization(
+                    V=xx_plot,
+                    c0=moline_fits_hydro[0][0]) * 10 ** fit_normal_hydro[0][0],
+                color='limegreen', alpha=0.5, zorder=2
+                )
+
 # ax.set_xlim(0.5, 70)
 legend_types = ax.legend(fontsize=18, loc=4, framealpha=1)
 ax.add_artist(legend11)
 ax.add_artist(legend_types)
-ax.set_xlim(0.9, 70.)
+# ax.set_xlim(0.9, 70.)
 
 # plt.xscale('log')
 

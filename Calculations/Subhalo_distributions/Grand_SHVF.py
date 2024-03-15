@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import matplotlib.colorbar as colorbarr
 import matplotlib.patches as mpatches
 
-
 all_size = 24
 plt.rcParams['mathtext.fontset'] = 'stix'
 plt.rcParams['font.family'] = 'STIXGeneral'
@@ -38,6 +37,11 @@ try:
     Grand_hydro = np.loadtxt(
         '../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
 
+    data_release_dmo = np.loadtxt(
+        '../Data_subhalos_simulations/dmo_table.txt')
+    data_release_hydro = np.loadtxt(
+        '../Data_subhalos_simulations/hydro_table.txt')
+
 except:
     Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
     Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
@@ -45,12 +49,14 @@ except:
 Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > 1e-4, :]
 Grand_dmo[:, 2] *= 1e3
 Grand_hydro[:, 2] *= 1e3
+Grand_dmo = Grand_dmo[Grand_dmo[:, 2] < 220., :]
+Grand_hydro = Grand_hydro[Grand_hydro[:, 1] < 220., :]
 
 Grand_dmo = Grand_dmo[np.argsort(Grand_dmo[:, 1])]
 Grand_hydro = Grand_hydro[np.argsort(Grand_hydro[:, 1])]
 
-# Los mayores Dist_Gc son 264 kpc, pero entonces cuál es R200?
-R200 = 263  # kpc
+data_release_dmo = data_release_dmo[np.argsort(data_release_dmo[:, 1])]
+data_release_hydro = data_release_hydro[np.argsort(data_release_hydro[:, 1])]
 
 paper2012_dmo = np.loadtxt('dmo_2012.txt')
 paper2012_hydro = np.loadtxt('hydro_2012.txt')
@@ -66,8 +72,11 @@ plt.close('all')
 
 # %%
 
-x_cumul = np.logspace(np.log10(Grand_hydro[0, 1]),
-                      np.log10(Grand_hydro[-1, 1]), num=26)
+# x_cumul = np.geomspace(Grand_hydro[0, 1],
+#                       Grand_hydro[-1, 1], num=26)
+
+x_cumul = np.geomspace(1.,
+                       100., num=26)
 
 
 def calcular_dNdV(Vmax):
@@ -82,6 +91,7 @@ def calcular_dNdV(Vmax):
 
     return Vmax_cumul
 
+
 def calcular_VdNdV(Vmax):
     Vmax_cumul = np.zeros(len(x_cumul) - 1)
 
@@ -91,7 +101,7 @@ def calcular_VdNdV(Vmax):
 
         Vmax_cumul[radius] = (sum(aa * bb) / (
                 x_cumul[radius + 1] - x_cumul[radius])
-                              * (x_cumul[radius] + x_cumul[radius+1]) / 2.)
+                              * (x_cumul[radius] + x_cumul[radius + 1]) / 2.)
 
     return Vmax_cumul
 
@@ -99,23 +109,28 @@ def calcular_VdNdV(Vmax):
 Vmax_cumul_dmo = calcular_dNdV(Grand_dmo[:, 1])
 Vmax_cumul_hydro = calcular_dNdV(Grand_hydro[:, 1])
 
+Vmax_cumul_dmo_release = calcular_dNdV(data_release_dmo[:, 1])
+Vmax_cumul_hydro_release = calcular_dNdV(data_release_hydro[:, 1])
+
 Vmax_paper_dmo = calcular_VdNdV(Grand_dmo[:, 1])
 Vmax_paper_hydro = calcular_VdNdV(Grand_hydro[:, 1])
 
-
 x_cumul = (x_cumul[:-1] + x_cumul[1:]) / 2.
+
+
 # Vhydro_repop = calcular_dNdV(datos_repop_hydro[:,3])
 # Vdmo_repop   = calcular_dNdV(datos_repop_dmo[:,3])
 
 # vl2_dndv = calcular_dNdV(vl2_data[:,3])
 
 
-
 def find_PowerLaw(xx, yy, lim_inf, lim_sup, plot=True, color='k', label='',
                   style=''):
     X1limit = np.where(xx >= lim_inf)[0][0]
-    X2limit = np.where(xx >= lim_sup)[0][0]
-
+    try:
+        X2limit = np.where(xx >= lim_sup)[0][0]
+    except:
+        X2limit = len(xx)
     xx_copy = np.log10(xx[X1limit:X2limit])
     yy_copy = np.log10(yy[X1limit:X2limit])
 
@@ -144,8 +159,8 @@ def find_PowerLaw(xx, yy, lim_inf, lim_sup, plot=True, color='k', label='',
 
 
 plt.figure()
-plt.plot(paper2012_dmo[:, 0], paper2012_dmo[:, 1], color='k')
-plt.plot(paper2012_hydro[:, 0], paper2012_hydro[:, 1], color='limegreen')
+# plt.plot(paper2012_dmo[:, 0], paper2012_dmo[:, 1], color='blue')
+# plt.plot(paper2012_hydro[:, 0], paper2012_hydro[:, 1], color='red')
 
 fits_dmo_paper = np.polyfit(x=np.log10(paper2012_dmo[:, 0]),
                             y=np.log10(paper2012_dmo[:, 1]),
@@ -153,38 +168,12 @@ fits_dmo_paper = np.polyfit(x=np.log10(paper2012_dmo[:, 0]),
 print(fits_dmo_paper)
 
 fits_hydro_paper = np.polyfit(x=np.log10(paper2012_hydro[:, 0]),
-                            y=np.log10(paper2012_hydro[:, 1]),
-                            deg=1)
+                              y=np.log10(paper2012_hydro[:, 1]),
+                              deg=1)
 print(fits_hydro_paper)
 
 limit_infG = 8
 limit_supG = 70
-fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(x_cumul, Vmax_paper_dmo / 6.,
-                                           limit_infG, limit_supG,
-                                           label='DMO')
-
-fitsM_Hydro, fitsB_Hydro, _, _ = find_PowerLaw(x_cumul, Vmax_paper_hydro / 6.,
-                                               limit_infG, limit_supG,
-                                               color='limegreen', label='Hyd')
-
-print(fitsM_DMO, fitsB_DMO)
-print(fitsM_Hydro, fitsB_Hydro)
-
-plt.xscale('log')
-plt.yscale('log')
-
-plt.show()
-
-# %%
-# plt.close('all')
-fig = plt.figure(5)
-print('Fig 5')
-
-limit_infG = 8
-limit_supG = 70
-
-# NEW DATA CALCULUS dV/dN (dividing by 6) ----------------------
-
 fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(x_cumul, Vmax_cumul_dmo / 6.,
                                            limit_infG, limit_supG,
                                            label='DMO')
@@ -192,6 +181,56 @@ fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(x_cumul, Vmax_cumul_dmo / 6.,
 fitsM_Hydro, fitsB_Hydro, _, _ = find_PowerLaw(x_cumul, Vmax_cumul_hydro / 6.,
                                                limit_infG, limit_supG,
                                                color='limegreen', label='Hyd')
+
+print('Old')
+print(fitsM_DMO, fitsB_DMO)
+print(fitsM_Hydro, fitsB_Hydro)
+
+limit_infG = 8
+limit_supG = 100
+fitsM_DMO_release, fitsB_DMO_release, _, _ = find_PowerLaw(
+    x_cumul, Vmax_cumul_dmo_release / 6.,
+    limit_infG, limit_supG, color='purple',
+    label='DMO')
+
+fitsM_Hydro_release, fitsB_Hydro_release, _, _ = find_PowerLaw(
+    x_cumul, Vmax_cumul_hydro_release / 6.,
+    limit_infG, 25,
+    color='orange', label='Hyd')
+
+print('Release')
+print(fitsM_DMO_release, fitsB_DMO_release)
+print(fitsM_Hydro_release, fitsB_Hydro_release)
+
+plt.xscale('log')
+plt.yscale('log')
+
+# plt.show()
+
+# %%
+# plt.close('all')
+# fig = plt.figure(5)
+# print('Fig 5')
+
+limit_infG = 7
+limit_supG = 35
+
+# NEW DATA CALCULUS dV/dN (dividing by 6) ----------------------
+
+# fitsM_DMO, fitsB_DMO, fitsM_DMOerr, fitsB_DMOerr = find_PowerLaw(x_cumul,
+#                                                                  Vmax_cumul_dmo / 6.,
+#                                                                  limit_infG,
+#                                                                  limit_supG,
+#                                                                  label='DMO')
+#
+# fitsM_Hydro, fitsB_Hydro, fitsM_Hydroerr, fitsB_Hydroerr = find_PowerLaw(
+#     x_cumul, Vmax_cumul_hydro / 6.,
+#     limit_infG, limit_supG,
+#     color='limegreen', label='Hyd')
+#
+# print('fits')
+# print(fitsM_DMO, fitsB_DMO, fitsM_DMOerr, fitsB_DMOerr)
+# print(fitsM_Hydro, fitsB_Hydro, fitsM_Hydroerr, fitsB_Hydroerr)
 
 
 # COMPARISON MOLINE21 --------------------------------------------
@@ -224,7 +263,6 @@ Vmax = 201.033  # from VLII website
 
 plt.xscale('log')
 plt.yscale('log')
-
 
 plt.xlabel(r'$V_{\mathrm{max}}$ [km s$^{-1}$]', size=24)
 plt.ylabel(r'$\frac{dN(V_{\mathrm{max}})}{dV_{\mathrm{max}}}$', size=27)

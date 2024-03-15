@@ -41,6 +41,11 @@ try:
     Grand_hydro = np.loadtxt(
         '../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
 
+    data_release_dmo = np.loadtxt(
+        '../Data_subhalos_simulations/dmo_table.txt')
+    data_release_hydro = np.loadtxt(
+        '../Data_subhalos_simulations/hydro_table.txt')
+
 except:
     Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
     Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
@@ -53,6 +58,13 @@ Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > np.min(Grand_dmo[:, 1]), :]
 
 Grand_dmo = Grand_dmo[np.argsort(Grand_dmo[:, 2])]
 Grand_hydro = Grand_hydro[np.argsort(Grand_hydro[:, 2])]
+
+data_release_dmo = data_release_dmo[np.argsort(data_release_dmo[:, 2])]
+data_release_hydro = data_release_hydro[np.argsort(data_release_hydro[:, 2])]
+
+
+data_release_dmo[:, 2] = data_release_dmo[:, 2]*1e-3
+data_release_hydro[:, 2] = data_release_hydro[:, 2]*1e-3
 
 # Los mayores Dist_Gc son 264 kpc, pero entonces cuál es R200?
 R200 = 0.265  # kpc
@@ -727,18 +739,36 @@ for ni, ii in enumerate(v_cut):
     print('v_cut: ', ii, ni)
     Grand_dmo_over = Grand_dmo[Grand_dmo[:, 1] >= ii, :]
     Grand_hydro_over = Grand_hydro[Grand_hydro[:, 1] >= ii, :]
+    release_dmo_over = data_release_dmo[data_release_dmo[:, 1] >= ii, :]
+    release_hydro_over = data_release_hydro[data_release_hydro[:, 1] >= ii, :]
 
     srd_dmo_over = (np.array(encontrar_SRD_sinVol(Grand_dmo_over))
                     / len(Grand_dmo_over))
     srd_hydro_over = (np.array(encontrar_SRD_sinVol(Grand_hydro_over))
                       / len(Grand_hydro_over))
 
+    srd_dmo_over_release = (np.array(encontrar_SRD_sinVol(release_dmo_over))
+                    / len(release_dmo_over))
+    srd_hydro_over_release = (np.array(encontrar_SRD_sinVol(release_hydro_over))
+                      / len(release_hydro_over))
+    print(release_dmo_over)
+    print(srd_dmo_over_release)
+
     plt.plot(bins_mean, srd_dmo_over, ls='', color='k',
              ms=15, marker='.',
-             alpha=1, zorder=15, label='Data')
+             alpha=1, zorder=15, label='2 years old data')
 
     plt.plot(bins_mean, srd_hydro_over, ls='', color='forestgreen',
              ms=15, marker='.',
+             alpha=1, zorder=15)
+
+
+    plt.plot(bins_mean, srd_dmo_over_release, ls='', color='k',
+             ms=15, marker='+', markeredgewidth=3,
+             alpha=1, zorder=15, label='Release data')
+
+    plt.plot(bins_mean, srd_hydro_over_release, ls='', color='forestgreen',
+             ms=15, marker='+', markeredgewidth=3,
              alpha=1, zorder=15)
 
 
@@ -776,12 +806,15 @@ plt.annotate(r'R$_\mathrm{vir}$', (190, 2e-2), color='b', rotation=45,
              alpha=0.7, zorder=0)
 
 plt.axvline(8.5, linestyle='-.', alpha=1, color='Sandybrown')
-plt.annotate('Earth', (8, 0.055), color='Saddlebrown', rotation=45,
-             fontsize=18, zorder=0)
+plt.annotate('Earth', (10, 0.15), color='Saddlebrown', rotation=0.,
+             fontsize=18, zorder=10)
 
+plt.axvline(6.61, alpha=0.5, color='k', linestyle='-',
+            label='Last subhalo', lw=2)
+plt.axvline(13.6, alpha=0.5, color='limegreen', linestyle='-', lw=2)
 
-plt.ylabel(r'n(r) = $\frac{N(r)}{N_{Tot}}$')
-plt.xlabel('r [kpc]', size=24)
+plt.ylabel(r'$N(D_\mathrm{GC}) \, / \, N_{Total}$')
+plt.xlabel(r'D$_\mathrm{GC}$ [kpc]', size=24)
 
 plt.xscale('linear')
 plt.yscale('log')
@@ -811,9 +844,9 @@ legend11 = plt.legend(loc=4, framealpha=1)
 
 ax1.add_artist(legend11)
 ax1.add_artist(legend_colors)
-plt.savefig('outputs/srd_compar_log.png', bbox_inches='tight')
-plt.savefig('outputs/srd_compar_log.pdf', bbox_inches='tight')
-
+plt.savefig('outputs/srd_compar_lin.png', bbox_inches='tight')
+plt.savefig('outputs/srd_compar_lin.pdf', bbox_inches='tight')
+plt.show()
 # -------------------------------------------------------------------------
 print('Density figure')
 
@@ -870,5 +903,6 @@ plt.yscale('log')
 
 # plt.ylim(0, 60)
 
-plt.savefig('outputs/srd_compar_log.png')
+plt.savefig('outputs/srd_compar_log.png', bbox_inches='tight')
+plt.savefig('outputs/srd_compar_log.pdf', bbox_inches='tight')
 plt.show()
