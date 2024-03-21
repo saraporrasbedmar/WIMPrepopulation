@@ -21,7 +21,7 @@ plt.rc('axes', titlesize=all_size)
 plt.rc('axes', labelsize=all_size)
 plt.rc('xtick', labelsize=all_size)
 plt.rc('ytick', labelsize=all_size)
-plt.rc('legend', fontsize=16)
+plt.rc('legend', fontsize=20)
 plt.rc('figure', titlesize=all_size)
 plt.rc('xtick', top=True, direction='in')
 plt.rc('ytick', right=True, direction='in')
@@ -30,57 +30,29 @@ plt.rc('ytick.major', size=10, width=2, right=True, pad=10)
 plt.rc('xtick.minor', size=7, width=1.5, top=False)
 plt.rc('ytick.minor', size=7, width=1.5)
 
-#        Rmax[kpc]        Vmax[km/s]      Radius[Mpc]
-try:
-    Grand_dmo = np.loadtxt(
-        '../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
-    Grand_hydro = np.loadtxt(
-        '../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
+data_release_dmo = np.loadtxt(
+    '../Data_subhalo_simulations/dmo_table.txt', skiprows=3)
+data_release_hydro = np.loadtxt(
+    '../Data_subhalo_simulations/hydro_table.txt', skiprows=3)
 
-    data_release_dmo = np.loadtxt(
-        '../Data_subhalos_simulations/dmo_table.txt')
-    data_release_hydro = np.loadtxt(
-        '../Data_subhalos_simulations/hydro_table.txt')
 
-except:
-    Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
-    Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
+data_release_dmo = data_release_dmo[
+                   data_release_dmo[:, 0] > 1e-4, :]
 
-Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > 1e-4, :]
-Grand_dmo[:, 2] *= 1e3
-Grand_hydro[:, 2] *= 1e3
-Grand_dmo = Grand_dmo[Grand_dmo[:, 2] < 220., :]
-Grand_hydro = Grand_hydro[Grand_hydro[:, 1] < 220., :]
-
-Grand_dmo = Grand_dmo[np.argsort(Grand_dmo[:, 1])]
-Grand_hydro = Grand_hydro[np.argsort(Grand_hydro[:, 1])]
+data_release_dmo = data_release_dmo[
+                   data_release_dmo[:, 0] > 0.184, :]
+data_release_hydro = data_release_hydro[
+                     data_release_hydro[:, 0] > 0.184, :]
 
 data_release_dmo = data_release_dmo[np.argsort(data_release_dmo[:, 1])]
 data_release_hydro = data_release_hydro[np.argsort(data_release_hydro[:, 1])]
 
-paper2012_dmo = np.loadtxt('dmo_2012.txt')
-paper2012_hydro = np.loadtxt('hydro_2012.txt')
-
-# datos_repop_hydro = np.loadtxt(
-# '/home/saraporras/Desktop/TFM/Repopulation_codes/Hydro_complete.txt')
-# datos_repop_dmo   = np.loadtxt(
-# '/home/saraporras/Desktop/TFM/Repopulation_codes/DMO_complete.txt')
-
-# vl2_data = np.loadtxt(
-# '/home/saraporras/Desktop/TFM/Repopulation_codes/newVLtable.txt')
-plt.close('all')
-
-# %%
-
-# x_cumul = np.geomspace(Grand_hydro[0, 1],
-#                       Grand_hydro[-1, 1], num=26)
-
-x_cumul = np.geomspace(1.,
-                       100., num=26)
+x_cumul = np.geomspace(1., 120., num=25)
 
 
 def calcular_dNdV(Vmax):
     Vmax_cumul = np.zeros(len(x_cumul) - 1)
+    num_cumul = np.zeros(len(x_cumul) - 1)
 
     for radius in range(len(Vmax_cumul)):
         aa = Vmax >= x_cumul[radius]
@@ -88,12 +60,14 @@ def calcular_dNdV(Vmax):
 
         Vmax_cumul[radius] = sum(aa * bb) / (
                 x_cumul[radius + 1] - x_cumul[radius])
+        num_cumul[radius] = sum(aa * bb)
 
-    return Vmax_cumul
+    return Vmax_cumul, num_cumul
 
 
 def calcular_VdNdV(Vmax):
     Vmax_cumul = np.zeros(len(x_cumul) - 1)
+    num_cumul = np.zeros(len(x_cumul) - 1)
 
     for radius in range(len(Vmax_cumul)):
         aa = Vmax >= x_cumul[radius]
@@ -102,30 +76,19 @@ def calcular_VdNdV(Vmax):
         Vmax_cumul[radius] = (sum(aa * bb) / (
                 x_cumul[radius + 1] - x_cumul[radius])
                               * (x_cumul[radius] + x_cumul[radius + 1]) / 2.)
+        num_cumul[radius] = sum(aa * bb)
 
-    return Vmax_cumul
+    return Vmax_cumul, num_cumul
 
 
-Vmax_cumul_dmo = calcular_dNdV(Grand_dmo[:, 1])
-Vmax_cumul_hydro = calcular_dNdV(Grand_hydro[:, 1])
+Vmax_cumul_dmo_release, num_dmo = calcular_dNdV(data_release_dmo[:, 1])
+Vmax_cumul_hydro_release, num_hydro = calcular_dNdV(data_release_hydro[:, 1])
 
-Vmax_cumul_dmo_release = calcular_dNdV(data_release_dmo[:, 1])
-Vmax_cumul_hydro_release = calcular_dNdV(data_release_hydro[:, 1])
-
-Vmax_paper_dmo = calcular_VdNdV(Grand_dmo[:, 1])
-Vmax_paper_hydro = calcular_VdNdV(Grand_hydro[:, 1])
 
 x_cumul = (x_cumul[:-1] + x_cumul[1:]) / 2.
 
 
-# Vhydro_repop = calcular_dNdV(datos_repop_hydro[:,3])
-# Vdmo_repop   = calcular_dNdV(datos_repop_dmo[:,3])
-
-# vl2_dndv = calcular_dNdV(vl2_data[:,3])
-
-
-def find_PowerLaw(xx, yy, lim_inf, lim_sup, plot=True, color='k', label='',
-                  style=''):
+def find_PowerLaw(xx, yy, lim_inf, lim_sup):
     X1limit = np.where(xx >= lim_inf)[0][0]
     try:
         X2limit = np.where(xx >= lim_sup)[0][0]
@@ -146,72 +109,51 @@ def find_PowerLaw(xx, yy, lim_inf, lim_sup, plot=True, color='k', label='',
     #          cov_matrix[0, 0] ** 0.5, fits[1],
     #          cov_matrix[1, 1] ** 0.5))
 
-    if plot:
-        plt.plot(xx, yy, label=label, color=color, linestyle=style)
-        plt.plot(xx, yy, '.', color=color, zorder=10)
-
-        xxx = np.logspace(np.log10(2), np.log10(xx[-1]), 100)
-        plt.plot(xxx, 10 ** fits[1] * xxx ** fits[0],
-                 color=color, alpha=0.7,
-                 linestyle='-', lw=2)
-
     return fits[0], fits[1], perr[0], perr[1]
 
 
-plt.figure()
-# plt.plot(paper2012_dmo[:, 0], paper2012_dmo[:, 1], color='blue')
-# plt.plot(paper2012_hydro[:, 0], paper2012_hydro[:, 1], color='red')
-
-fits_dmo_paper = np.polyfit(x=np.log10(paper2012_dmo[:, 0]),
-                            y=np.log10(paper2012_dmo[:, 1]),
-                            deg=1)
-print(fits_dmo_paper)
-
-fits_hydro_paper = np.polyfit(x=np.log10(paper2012_hydro[:, 0]),
-                              y=np.log10(paper2012_hydro[:, 1]),
-                              deg=1)
-print(fits_hydro_paper)
-
+fig, ax = plt.subplots(figsize=(9, 8))
+print(num_dmo)
+print(num_hydro)
 limit_infG = 8
-limit_supG = 35
-fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(x_cumul, Vmax_cumul_dmo / 6.,
-                                           limit_infG, limit_supG,
-                                           label='DMO')
-
-fitsM_Hydro, fitsB_Hydro, _, _ = find_PowerLaw(x_cumul, Vmax_cumul_hydro / 6.,
-                                               limit_infG, limit_supG,
-                                               color='limegreen', label='Hyd')
-print('Old')
-print(fitsM_DMO, fitsB_DMO)
-print(fitsM_Hydro, fitsB_Hydro)
-
-limit_infG = 8
-limit_supG = 35
+limit_supG = 120
 fitsM_DMO_release, fitsB_DMO_release, _, _ = find_PowerLaw(
-    x_cumul, Vmax_cumul_dmo_release / 6.,
-    limit_infG, limit_supG, color='purple',
-    # ms=15, marker='+', markeredgewidth=3,
-    label='DMO')
+    x_cumul[num_dmo > 10],
+    Vmax_cumul_dmo_release[num_dmo > 10] / 6.,
+    limit_infG, limit_supG)
 
 xxx = np.logspace(np.log10(2), np.log10(92), 100)
 fitsM_Hydro_release, fitsB_Hydro_release, _, _ = find_PowerLaw(
-    x_cumul, Vmax_cumul_hydro_release / 6.,
-    limit_infG, 25, plot=False)
+    x_cumul[num_hydro > 10],
+    Vmax_cumul_hydro_release[num_hydro > 10] / 6.,
+    limit_infG, limit_supG)
+
+plt.axvline(x_cumul[np.where(num_dmo < 10)[0][1]] * 0.9,
+            color='k',
+            alpha=1,
+            linewidth=2, ls='-.',
+            zorder=0, label='Fit limits')
+
+plt.axvline(x_cumul[np.where(num_hydro < 10)[0][1]] * 0.9,
+            color='green',
+            alpha=1,
+            linewidth=2, ls='-.',
+            zorder=0)
 
 plt.plot(x_cumul, Vmax_cumul_dmo_release / 6.,
-         linestyle='', ms=10, marker='+', markeredgewidth=2,
-         color='purple', zorder=10)
+         linestyle='', ms=10, marker='.', markeredgewidth=2,
+         color='k', zorder=10)
 plt.plot(xxx, 10 ** fitsB_DMO_release * xxx ** fitsM_DMO_release,
-                 color='purple', alpha=0.7,
-                 linestyle='-', lw=2)
+                 color='dimgray', alpha=1,
+                 linestyle='-', lw=2.5, label='Power-law fit')
 
 plt.plot(x_cumul, Vmax_cumul_hydro_release / 6.,
          linestyle='',
-         ms=10, marker='+', markeredgewidth=2,
-         color='orange', zorder=10)
+         ms=10, marker='.', markeredgewidth=2,
+         color='green', zorder=10)
 plt.plot(xxx, 10 ** fitsB_Hydro_release * xxx ** fitsM_Hydro_release,
-                 color='orange', alpha=0.7,
-                 linestyle='-', lw=2)
+                 color='limegreen', alpha=1,
+                 linestyle='-', lw=2.5)
 
 print('Release')
 print(fitsM_DMO_release, fitsB_DMO_release)
@@ -220,74 +162,11 @@ print(fitsM_Hydro_release, fitsB_Hydro_release)
 plt.xscale('log')
 plt.yscale('log')
 
-plt.show()
-
-# %%
-# plt.close('all')
-# fig = plt.figure(5)
-# print('Fig 5')
-
-limit_infG = 7
-limit_supG = 35
-
-# NEW DATA CALCULUS dV/dN (dividing by 6) ----------------------
-
-# fitsM_DMO, fitsB_DMO, fitsM_DMOerr, fitsB_DMOerr = find_PowerLaw(x_cumul,
-#                                                                  Vmax_cumul_dmo / 6.,
-#                                                                  limit_infG,
-#                                                                  limit_supG,
-#                                                                  label='DMO')
-#
-# fitsM_Hydro, fitsB_Hydro, fitsM_Hydroerr, fitsB_Hydroerr = find_PowerLaw(
-#     x_cumul, Vmax_cumul_hydro / 6.,
-#     limit_infG, limit_supG,
-#     color='limegreen', label='Hyd')
-#
-# print('fits')
-# print(fitsM_DMO, fitsB_DMO, fitsM_DMOerr, fitsB_DMOerr)
-# print(fitsM_Hydro, fitsB_Hydro, fitsM_Hydroerr, fitsB_Hydroerr)
-
-
-# COMPARISON MOLINE21 --------------------------------------------
-
-def SHVF_Mol2021(V, inputs=[3.91, 9.72, 0.57, 0.92]):
-    # SubHalo Velocity Function - number of subhs defined by their Vmax
-    # Moline et al. 2110.02097
-    #
-    # V - max radial velocity of a bound particle in the subhalo [km/s]
-    return ((V / Vmax / inputs[2]) ** (-inputs[0])
-            * np.exp(-(V / Vmax / inputs[3]) ** inputs[1]))
-
-
-Vmax_sub = 10
-Vmax = 201.033  # from VLII website
-
-# x = np.logspace(np.log10(3), np.log10(80))
-# plt.plot(x, SHVF_Mol2021(x), label='Moline+21', color='r')
-
-# bb = np.logspace(np.log10(limit_inf), np.log10(limit_sup))
-# plt.plot(x, dNdV, '--', color='b', alpha=0.8)
-# plt.plot(bb, -fitsM * bb**(fitsM-1) * 10**fitsB, '-', color='b',
-# label='Hydro repop')
-
-
-#  FIGURE DEFINITIONS ---------------------------------------------
-
-# plt.plot(x_cumul, Vhydro_repop)
-# plt.plot(x_cumul, Vdmo_repop)
-
-plt.xscale('log')
-plt.yscale('log')
-
 plt.xlabel(r'$V_{\mathrm{max}}$ [km s$^{-1}$]', size=24)
 plt.ylabel(r'$\frac{dN(V_{\mathrm{max}})}{dV_{\mathrm{max}}}$', size=27)
 
-# fig.set_xticklabels( )
 
-plt.legend()
 plt.axvline(limit_infG, linestyle='-.', color='k', alpha=0.3,
-            linewidth=2, label='Fit limits')
-plt.axvline(limit_supG, linestyle='-.', color='k', alpha=0.3,
             linewidth=2)
 
 handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
@@ -295,7 +174,12 @@ handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
            )
 
 legend11 = plt.legend(handles=handles,
-                      loc=1)  # , bbox_to_anchor=(1.001, 0.99))
+                      loc=1, framealpha=1)
+
+legend22 = plt.legend(loc=3, framealpha=1)
+
+ax.add_artist(legend11)
+ax.add_artist(legend22)
 
 plt.savefig('outputs/shvf.pdf', bbox_inches='tight')
 plt.savefig('outputs/shvf.png', bbox_inches='tight')
