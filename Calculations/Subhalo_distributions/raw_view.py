@@ -57,10 +57,10 @@ plt.scatter(Grand_hydro[:, 1], Grand_hydro[:, 0],
 
 
 plt.scatter(data_release_dmo[:, 1], data_release_dmo[:, 0],
-            color='grey', s=20, zorder=10, marker='x', alpha=0.6,
+            color='purple', s=20, zorder=10, marker='+', alpha=0.6,
             label='New release data')
 plt.scatter(data_release_hydro[:, 1], data_release_hydro[:, 0],
-            color='limegreen', s=20, zorder=10, marker='x', alpha=0.6)
+            color='orange', s=20, zorder=10, marker='+', alpha=0.8)
 
 
 plt.axhline(0.184, linestyle='-.', color='k', alpha=0.6,

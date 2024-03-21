@@ -173,7 +173,7 @@ fits_hydro_paper = np.polyfit(x=np.log10(paper2012_hydro[:, 0]),
 print(fits_hydro_paper)
 
 limit_infG = 8
-limit_supG = 70
+limit_supG = 35
 fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(x_cumul, Vmax_cumul_dmo / 6.,
                                            limit_infG, limit_supG,
                                            label='DMO')
@@ -181,22 +181,37 @@ fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(x_cumul, Vmax_cumul_dmo / 6.,
 fitsM_Hydro, fitsB_Hydro, _, _ = find_PowerLaw(x_cumul, Vmax_cumul_hydro / 6.,
                                                limit_infG, limit_supG,
                                                color='limegreen', label='Hyd')
-
 print('Old')
 print(fitsM_DMO, fitsB_DMO)
 print(fitsM_Hydro, fitsB_Hydro)
 
 limit_infG = 8
-limit_supG = 100
+limit_supG = 35
 fitsM_DMO_release, fitsB_DMO_release, _, _ = find_PowerLaw(
     x_cumul, Vmax_cumul_dmo_release / 6.,
     limit_infG, limit_supG, color='purple',
+    # ms=15, marker='+', markeredgewidth=3,
     label='DMO')
 
+xxx = np.logspace(np.log10(2), np.log10(92), 100)
 fitsM_Hydro_release, fitsB_Hydro_release, _, _ = find_PowerLaw(
     x_cumul, Vmax_cumul_hydro_release / 6.,
-    limit_infG, 25,
-    color='orange', label='Hyd')
+    limit_infG, 25, plot=False)
+
+plt.plot(x_cumul, Vmax_cumul_dmo_release / 6.,
+         linestyle='', ms=10, marker='+', markeredgewidth=2,
+         color='purple', zorder=10)
+plt.plot(xxx, 10 ** fitsB_DMO_release * xxx ** fitsM_DMO_release,
+                 color='purple', alpha=0.7,
+                 linestyle='-', lw=2)
+
+plt.plot(x_cumul, Vmax_cumul_hydro_release / 6.,
+         linestyle='',
+         ms=10, marker='+', markeredgewidth=2,
+         color='orange', zorder=10)
+plt.plot(xxx, 10 ** fitsB_Hydro_release * xxx ** fitsM_Hydro_release,
+                 color='orange', alpha=0.7,
+                 linestyle='-', lw=2)
 
 print('Release')
 print(fitsM_DMO_release, fitsB_DMO_release)
@@ -205,7 +220,7 @@ print(fitsM_Hydro_release, fitsB_Hydro_release)
 plt.xscale('log')
 plt.yscale('log')
 
-# plt.show()
+plt.show()
 
 # %%
 # plt.close('all')
@@ -284,7 +299,7 @@ legend11 = plt.legend(handles=handles,
 
 plt.savefig('outputs/shvf.pdf', bbox_inches='tight')
 plt.savefig('outputs/shvf.png', bbox_inches='tight')
-
+plt.show()
 # %% STUDY THE LIMITS OF THE VMAX IN THE FIT
 
 print('Study')

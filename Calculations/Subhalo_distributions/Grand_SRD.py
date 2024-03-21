@@ -61,7 +61,7 @@ Grand_hydro = Grand_hydro[np.argsort(Grand_hydro[:, 2])]
 
 data_release_dmo = data_release_dmo[np.argsort(data_release_dmo[:, 2])]
 data_release_hydro = data_release_hydro[np.argsort(data_release_hydro[:, 2])]
-
+print(data_release_dmo[0, 2], data_release_hydro[0, 2])
 
 data_release_dmo[:, 2] = data_release_dmo[:, 2]*1e-3
 data_release_hydro[:, 2] = data_release_hydro[:, 2]*1e-3
@@ -763,11 +763,11 @@ for ni, ii in enumerate(v_cut):
              alpha=1, zorder=15)
 
 
-    plt.plot(bins_mean, srd_dmo_over_release, ls='', color='k',
+    plt.plot(bins_mean, srd_dmo_over_release, ls='', color='purple',
              ms=15, marker='+', markeredgewidth=3,
              alpha=1, zorder=15, label='Release data')
 
-    plt.plot(bins_mean, srd_hydro_over_release, ls='', color='forestgreen',
+    plt.plot(bins_mean, srd_hydro_over_release, ls='', color='orange',
              ms=15, marker='+', markeredgewidth=3,
              alpha=1, zorder=15)
 
@@ -789,7 +789,7 @@ print('Funct Ale: ', cts_hydro[0])
 
 plt.plot(xxx, funct_ale(xxx, cts_dmo[0][0], cts_dmo[0][1]),
          'k', linestyle='--', lw=2, alpha=0.7,
-         label='Fragile fit', zorder=5)
+         zorder=5)
 plt.plot(xxx, funct_ale(xxx, cts_hydro[0][0], cts_hydro[0][1]),
          'limegreen', linestyle='--', lw=2, zorder=5)
 
@@ -799,7 +799,25 @@ plt.plot(xxx, np.ones(len(xxx)) * cts_dmo[0][1],
 plt.plot(xxx, np.ones(len(xxx)) * cts_hydro[0][1],
          marker=None, linestyle='dotted', color='limegreen', lw=4)
 
+# --------------
+print('Release')
+cts_dmo = opt.curve_fit(funct_ale, xdata=bins_mean,
+                        ydata=srd_dmo_over_release,
+                        p0=[-20, 0.1])
+print('Funct Ale: ', cts_dmo[0])
 
+cts_hydro = opt.curve_fit(funct_ale, xdata=bins_mean,
+                        ydata=srd_hydro_over_release,
+                        p0=[-20, 0.1])
+print('Funct Ale: ', cts_hydro[0])
+
+
+plt.plot(xxx, funct_ale(xxx, cts_dmo[0][0], cts_dmo[0][1]),
+         'purple', linestyle='--', lw=2, alpha=0.7,
+         label='Fragile fit', zorder=5)
+plt.plot(xxx, funct_ale(xxx, cts_hydro[0][0], cts_hydro[0][1]),
+         'orange', linestyle='--', lw=2, zorder=5)
+# ----------------
 
 plt.axvline(R_max * 1e3, alpha=0.7, linestyle='-.')
 plt.annotate(r'R$_\mathrm{vir}$', (190, 2e-2), color='b', rotation=45,
@@ -809,9 +827,14 @@ plt.axvline(8.5, linestyle='-.', alpha=1, color='Sandybrown')
 plt.annotate('Earth', (10, 0.15), color='Saddlebrown', rotation=0.,
              fontsize=18, zorder=10)
 
-plt.axvline(6.61, alpha=0.5, color='k', linestyle='-',
+plt.axvline(Grand_dmo[0, 2]*1e3, alpha=0.5, color='k', linestyle='-',
             label='Last subhalo', lw=2)
-plt.axvline(13.6, alpha=0.5, color='limegreen', linestyle='-', lw=2)
+plt.axvline(Grand_hydro[0, 2]*1e3, alpha=0.5, color='limegreen', linestyle='-',
+            lw=2)
+plt.axvline(data_release_dmo[0, 2]*1e3, alpha=0.5, color='purple', linestyle='-',
+            lw=2)
+plt.axvline(data_release_hydro[0, 2]*1e3, alpha=0.5, color='orange',
+            linestyle='-', lw=2)
 
 plt.ylabel(r'$N(D_\mathrm{GC}) \, / \, N_{Total}$')
 plt.xlabel(r'D$_\mathrm{GC}$ [kpc]', size=24)
