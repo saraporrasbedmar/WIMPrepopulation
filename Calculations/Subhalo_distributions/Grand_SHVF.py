@@ -31,9 +31,9 @@ plt.rc('xtick.minor', size=7, width=1.5, top=False)
 plt.rc('ytick.minor', size=7, width=1.5)
 
 data_release_dmo = np.loadtxt(
-    '../Data_subhalo_simulations/dmo_table.txt', skiprows=3)
+    '../Data_subhalo_simulations/dmo_table_fixed.txt', skiprows=3)
 data_release_hydro = np.loadtxt(
-    '../Data_subhalo_simulations/hydro_table.txt', skiprows=3)
+    '../Data_subhalo_simulations/hydro_table_fixed.txt', skiprows=3)
 
 
 data_release_dmo = data_release_dmo[
@@ -88,45 +88,29 @@ Vmax_cumul_hydro_release, num_hydro = calcular_dNdV(data_release_hydro[:, 1])
 x_cumul = (x_cumul[:-1] + x_cumul[1:]) / 2.
 
 
-def find_PowerLaw(xx, yy, lim_inf, lim_sup):
-    X1limit = np.where(xx >= lim_inf)[0][0]
-    try:
-        X2limit = np.where(xx >= lim_sup)[0][0]
-    except:
-        X2limit = len(xx)
-    xx_copy = np.log10(xx[X1limit:X2limit])
-    yy_copy = np.log10(yy[X1limit:X2limit])
-
-    xx_copy = xx_copy[np.isfinite(yy_copy)]
-    yy_copy = yy_copy[np.isfinite(yy_copy)]
-
-    fits, cov_matrix = np.polyfit(xx_copy, yy_copy, 1, cov=True, full=False)
-    perr = np.sqrt(np.diag(cov_matrix))
-    # print(perr)
-    #
-    # print('%r: %.2f pm %.2f ---- %.2f pm %.2f'
-    #       % (label, fits[0],
-    #          cov_matrix[0, 0] ** 0.5, fits[1],
-    #          cov_matrix[1, 1] ** 0.5))
-
-    return fits[0], fits[1], perr[0], perr[1]
-
-
 fig, ax = plt.subplots(figsize=(9, 8))
 print(num_dmo)
 print(num_hydro)
-limit_infG = 8
-limit_supG = 120
-fitsM_DMO_release, fitsB_DMO_release, _, _ = find_PowerLaw(
-    x_cumul[num_dmo > 10],
-    Vmax_cumul_dmo_release[num_dmo > 10] / 6.,
-    limit_infG, limit_supG)
 
-xxx = np.logspace(np.log10(2), np.log10(92), 100)
-fitsM_Hydro_release, fitsB_Hydro_release, _, _ = find_PowerLaw(
-    x_cumul[num_hydro > 10],
-    Vmax_cumul_hydro_release[num_hydro > 10] / 6.,
-    limit_infG, limit_supG)
+limit_infG = 8
+
+true_values = ((x_cumul > limit_infG) * (num_dmo > 10))
+fits, cov_matrix = np.polyfit(
+    np.log10(x_cumul[true_values]),
+    np.log10(Vmax_cumul_dmo_release[true_values] / 6.),
+    deg=1, cov=True, full=False)
+print(fits, cov_matrix)
+
+fitsM_DMO_release, fitsB_DMO_release = fits[0], fits[1]
+
+true_values = ((x_cumul > limit_infG) * (num_hydro > 10))
+fits, cov_matrix = np.polyfit(
+    np.log10(x_cumul[true_values]),
+    np.log10(Vmax_cumul_hydro_release[true_values] / 6.),
+    deg=1, cov=True, full=False)
+print(fits, cov_matrix)
+
+fitsM_hydro_release, fitsB_hydro_release = fits[0], fits[1]
 
 plt.axvline(x_cumul[np.where(num_dmo < 10)[0][1]] * 0.9,
             color='k',
@@ -135,11 +119,13 @@ plt.axvline(x_cumul[np.where(num_dmo < 10)[0][1]] * 0.9,
             zorder=0, label='Fit limits')
 
 plt.axvline(x_cumul[np.where(num_hydro < 10)[0][1]] * 0.9,
-            color='green',
+            color='limegreen',
             alpha=1,
             linewidth=2, ls='-.',
             zorder=0)
 
+
+xxx = np.logspace(np.log10(2), np.log10(92), 100)
 plt.plot(x_cumul, Vmax_cumul_dmo_release / 6.,
          linestyle='', ms=10, marker='.', markeredgewidth=2,
          color='k', zorder=10)
@@ -150,14 +136,14 @@ plt.plot(xxx, 10 ** fitsB_DMO_release * xxx ** fitsM_DMO_release,
 plt.plot(x_cumul, Vmax_cumul_hydro_release / 6.,
          linestyle='',
          ms=10, marker='.', markeredgewidth=2,
-         color='green', zorder=10)
-plt.plot(xxx, 10 ** fitsB_Hydro_release * xxx ** fitsM_Hydro_release,
-                 color='limegreen', alpha=1,
+         color='#00CC00', zorder=10)
+plt.plot(xxx, 10 ** fitsB_hydro_release * xxx ** fitsM_hydro_release,
+                 color='#00FF00', alpha=1,
                  linestyle='-', lw=2.5)
 
 print('Release')
 print(fitsM_DMO_release, fitsB_DMO_release)
-print(fitsM_Hydro_release, fitsB_Hydro_release)
+print(fitsM_hydro_release, fitsB_hydro_release)
 
 plt.xscale('log')
 plt.yscale('log')

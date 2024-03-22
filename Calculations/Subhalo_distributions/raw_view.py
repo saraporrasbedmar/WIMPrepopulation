@@ -23,44 +23,20 @@ plt.rc('ytick.major', size=10, width=2, right=True, pad=10)
 plt.rc('xtick.minor', size=7, width=1.5, top=False)
 plt.rc('ytick.minor', size=7, width=1.5)
 
-#        Rmax[kpc]        Vmax[km/s]      Radius[Mpc]
-try:
-    Grand_dmo = np.loadtxt(
-        '../Data_subhalos_simulations/RmaxVmaxRadDMO0_1.txt')
-    Grand_hydro = np.loadtxt(
-        '../Data_subhalos_simulations/RmaxVmaxRadFP0_1.txt')
 
-    data_release_dmo = np.loadtxt(
-        '../Data_subhalos_simulations/dmo_table.txt')
-    data_release_hydro = np.loadtxt(
-        '../Data_subhalos_simulations/hydro_table.txt')
-
-except:
-    Grand_dmo = np.loadtxt('../../RmaxVmaxRadDMO0_1.txt')
-    Grand_hydro = np.loadtxt('../../RmaxVmaxRadFP0_1.txt')
-
-Grand_hydro = Grand_hydro[Grand_hydro[:, 1] > 1e-4, :]
-
-Grand_dmo[:, 2] *= 1e3
-Grand_hydro[:, 2] *= 1e3
-
-Grand_dmo = Grand_dmo[np.argsort(Grand_dmo[:, 1])]
-Grand_hydro = Grand_hydro[np.argsort(Grand_hydro[:, 1])]
+data_release_dmo = np.loadtxt(
+    '../Data_subhalo_simulations/dmo_table_fixed.txt', skiprows=3)
+data_release_hydro = np.loadtxt(
+    '../Data_subhalo_simulations/hydro_table_fixed.txt', skiprows=3)
+print(np.shape(data_release_dmo), np.shape(data_release_hydro))
 
 fig, ax = plt.subplots(figsize=(10, 8))
 
-plt.scatter(Grand_dmo[:, 1], Grand_dmo[:, 0],
-            color='k', s=10, zorder=10, alpha=0.5,
-            label='2 years old data')
-plt.scatter(Grand_hydro[:, 1], Grand_hydro[:, 0],
-            color='green', s=10, zorder=10, alpha=0.5)
-
 
 plt.scatter(data_release_dmo[:, 1], data_release_dmo[:, 0],
-            color='purple', s=20, zorder=10, marker='+', alpha=0.6,
-            label='New release data')
+            color='k', s=20, zorder=10, marker='.', alpha=0.7)
 plt.scatter(data_release_hydro[:, 1], data_release_hydro[:, 0],
-            color='orange', s=20, zorder=10, marker='+', alpha=0.8)
+            color='limegreen', s=20, zorder=10, marker='.', alpha=0.7)
 
 
 plt.axhline(0.184, linestyle='-.', color='k', alpha=0.6,
@@ -92,8 +68,6 @@ handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
            )
 
 legend11 = plt.legend(handles=handles, loc=2)
-legend22 = plt.legend(loc=4, title='Shapes')
-
 ax.add_artist(legend11)
 
 plt.ylabel(r'$R_\mathrm{max}$ [kpc]')
