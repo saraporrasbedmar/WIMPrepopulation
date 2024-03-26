@@ -35,9 +35,9 @@ plt.rc('xtick.minor', size=7, width=1.5)
 plt.rc('ytick.minor', size=7, width=1.5)
 
 data_release_dmo = np.loadtxt(
-    '../Data_subhalo_simulations/dmo_table_fixed.txt', skiprows=3)
+    '../Data_subhalo_simulations/dmo_table.txt', skiprows=3)
 data_release_hydro = np.loadtxt(
-    '../Data_subhalo_simulations/hydro_table_fixed.txt', skiprows=3)
+    '../Data_subhalo_simulations/hydro_table.txt', skiprows=3)
 
 data_release_dmo = data_release_dmo[
                    data_release_dmo[:, 0] > 0.184, :]
@@ -61,8 +61,8 @@ def encontrar_SRD_sinVol(data):
     n_final = []
 
     for delta in range(len(bins) - 1):
-        interval = ((data[:, 2] >= bins[delta])
-                    * (data[:, 2] <= bins[delta + 1]))
+        interval = ((data[:, 2]/data[:, 5] >= bins[delta])
+                    * (data[:, 2]/data[:, 5] <= bins[delta + 1]))
         n_final.append(sum(interval))
     print(sum(n_final))
     return np.array(n_final)
@@ -123,10 +123,10 @@ from matplotlib import cm
 colors = [cm.jet(x) for x in cm_subsection]
 
 num_bins = 15
-bins = np.linspace(0, R_last, num=num_bins)
+bins = np.linspace(0, 1., num=num_bins)
 bins_mean = (bins[:-1] + bins[1:]) / 2.
 
-xxx = np.linspace(0., 249., num=200)
+xxx = np.linspace(0., 1.2, num=200)
 
 for ni, ii in enumerate(v_cut):
     print('v_cut: ', ii, ni)
@@ -167,7 +167,7 @@ print('Funct Ale: ', cts_dmo[0])
 
 cts_hydro = opt.curve_fit(funct_ale, xdata=bins_mean,
                           ydata=srd_hydro_over_release,
-                          p0=[-20, 0.1])
+                          p0=[0, 0.1])
 print('Funct Ale: ', cts_hydro[0])
 
 plt.plot(xxx, funct_ale(xxx, cts_dmo[0][0], cts_dmo[0][1]),
@@ -183,27 +183,30 @@ plt.plot(xxx, np.ones(len(xxx)) * cts_hydro[0][1],
          '#00FF00', linestyle='dotted', lw=4, zorder=5)
 # ----------------
 
-plt.axvline(R_vir, alpha=0.7, linestyle='-.',
+plt.axvline(1., alpha=0.7, linestyle='-.',
             lw=3, color='royalblue')
-plt.annotate(r'R$_\mathrm{vir}$', (190, 2e-2), color='b', rotation=45,
+plt.annotate(r'R$_\mathrm{vir}$', (1, 2e-2), color='b', rotation=45,
              alpha=0.7, zorder=0)
 
-plt.axvline(8.5, linestyle='-.', alpha=1, color='Sandybrown', lw=3)
-plt.annotate('Earth', (10, 0.15), color='Saddlebrown', rotation=0.,
-             fontsize=18, zorder=10)
+plt.axvline(8.5/220., linestyle='-.', alpha=1, color='Sandybrown', lw=3)
+plt.annotate('Earth', (0.086, 0.117), color='Saddlebrown', rotation=0.,
+             fontsize=20, zorder=10)
 
-plt.axvline(data_release_dmo[0, 2], alpha=0.5, color='k', linestyle='-',
+plt.axvline(data_release_dmo[0, 2]/data_release_dmo[0, 5],
+            alpha=0.5, color='k', linestyle='-',
             lw=3, label='Last subhalo')
-plt.axvline(data_release_hydro[0, 2], alpha=0.5, color='limegreen',
+plt.axvline(data_release_hydro[0, 2]/data_release_hydro[0, 5],
+            alpha=0.5, color='limegreen',
             linestyle='-', lw=3)
 
 plt.ylabel(r'$N(D_\mathrm{GC}) \, / \, N_{Total}$')
-plt.xlabel(r'D$_\mathrm{GC}$ [kpc]', size=24)
+plt.xlabel(r'D$_\mathrm{GC} \, / \, R_{vir}$ ', size=24)
+# plt.xlabel(r'D$_\mathrm{GC}$ [kpc]', size=24)
 
 plt.xscale('linear')
 plt.yscale('log')
 
-plt.xlim(0, 250)
+plt.xlim(0, 1.15)
 plt.ylim(1e-3, 2e-1)
 
 # plt.legend(framealpha=1, fontsize=10, loc=4)
@@ -216,28 +219,18 @@ legend_colors = plt.legend(handles=handles, bbox_to_anchor=(0.13, 0.2),
 
 legend11 = plt.legend(loc=4, framealpha=1)
 
-# colors = ['k', 'limegreen']
-# legend33 = plt.legend([plt.Line2D([], [],
-#                                   linestyle='', marker='o',
-#                                   color=colors[i])
-#                        for i in range(2)],
-#                       ['DMO', 'Hydro'],
-#                       loc=8, title='Simulation', framealpha=1,
-#                       # bbox_to_anchor=(0.99, 0.6)
-#                       )
-
 ax1.add_artist(legend11)
 ax1.add_artist(legend_colors)
 plt.savefig('outputs/srd_compar_lin.png', bbox_inches='tight')
 plt.savefig('outputs/srd_compar_lin.pdf', bbox_inches='tight')
-plt.show()
+
 # -------------------------------------------------------------------------
 print('Density figure')
 
-# plt.figure(figsize=(10, 8))
-plt.subplot(122)
+plt.figure(figsize=(10, 8))
+# plt.subplot(122)
 
-xxx = np.linspace(3e-3, R200 * 1e3, num=100)
+xxx = np.linspace(3e-3, R_vir * 1e3, num=100)
 
 vol = 4 / 3 * np.pi * (bins[1:] ** 3 - bins[:-1] ** 3)
 
@@ -283,6 +276,6 @@ plt.yscale('log')
 
 # plt.ylim(0, 60)
 
-plt.savefig('outputs/srd_compar_log.png', bbox_inches='tight')
-plt.savefig('outputs/srd_compar_log.pdf', bbox_inches='tight')
+plt.savefig('outputs/srd_compar_den.png', bbox_inches='tight')
+plt.savefig('outputs/srd_compar_den.pdf', bbox_inches='tight')
 plt.show()

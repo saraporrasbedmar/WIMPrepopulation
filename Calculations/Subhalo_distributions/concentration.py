@@ -25,9 +25,9 @@ plt.rc('xtick.minor', size=7, width=1.5, top=False)
 plt.rc('ytick.minor', size=7, width=1.5)
 
 data_release_dmo = np.loadtxt(
-    '../Data_subhalo_simulations/dmo_table_fixed.txt', skiprows=3)
+    '../Data_subhalo_simulations/dmo_table.txt', skiprows=3)
 data_release_hydro = np.loadtxt(
-    '../Data_subhalo_simulations/hydro_table_fixed.txt', skiprows=3)
+    '../Data_subhalo_simulations/hydro_table.txt', skiprows=3)
 
 data_release_dmo = data_release_dmo[
                    data_release_dmo[:, 0] > 0.184, :]
@@ -205,7 +205,7 @@ legend11 = plt.legend(handles=handles,
 
 plt.ylabel(r'c$_\mathrm{V}$', size=28)
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
-
+plt.show()
 plt.subplot(122)  # -------------------------------------------------
 print()
 xx2_plot = np.geomspace(0.01, 100, num=100)

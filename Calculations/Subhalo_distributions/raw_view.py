@@ -25,9 +25,9 @@ plt.rc('ytick.minor', size=7, width=1.5)
 
 
 data_release_dmo = np.loadtxt(
-    '../Data_subhalo_simulations/dmo_table_fixed.txt', skiprows=3)
+    '../Data_subhalo_simulations/dmo_table.txt', skiprows=3)
 data_release_hydro = np.loadtxt(
-    '../Data_subhalo_simulations/hydro_table_fixed.txt', skiprows=3)
+    '../Data_subhalo_simulations/hydro_table.txt', skiprows=3)
 print(np.shape(data_release_dmo), np.shape(data_release_hydro))
 
 fig, ax = plt.subplots(figsize=(10, 8))
