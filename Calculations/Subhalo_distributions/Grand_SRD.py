@@ -47,9 +47,7 @@ data_release_hydro = data_release_hydro[
 data_release_dmo = data_release_dmo[np.argsort(data_release_dmo[:, 2])]
 data_release_hydro = data_release_hydro[np.argsort(data_release_hydro[:, 2])]
 print(data_release_dmo[0, 2], data_release_hydro[0, 2])
-
-data_release_dmo[:, 2] = data_release_dmo[:, 2]
-data_release_hydro[:, 2] = data_release_hydro[:, 2]
+print(data_release_dmo[-1, 2], data_release_hydro[-1, 2])
 
 R_vir = 211.834
 R_last = 251.400
