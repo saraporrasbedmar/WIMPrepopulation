@@ -152,8 +152,12 @@ plt.xlabel(r'$V_{\mathrm{max}}$ [km s$^{-1}$]', size=24)
 plt.ylabel(r'$\frac{dN(V_{\mathrm{max}})}{dV_{\mathrm{max}}}$', size=27)
 
 
-plt.axvline(limit_infG, linestyle='-.', color='k', alpha=0.3,
+plt.axvline(limit_infG, linestyle='-.', color='r', alpha=0.5,
             linewidth=2)
+plt.annotate(r'$V_\mathrm{'
+             r'C}$', (8.7, 12000), color='r',
+             rotation=0., alpha=0.8,
+             fontsize=20, zorder=10)
 
 handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
            mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)

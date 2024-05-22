@@ -124,7 +124,7 @@ num_bins = 15
 bins = np.linspace(0, 1., num=num_bins)
 bins_mean = (bins[:-1] + bins[1:]) / 2.
 
-xxx = np.linspace(0., 1.2, num=200)
+xxx = np.linspace(0., 1., num=200)
 
 for ni, ii in enumerate(v_cut):
     print('v_cut: ', ii, ni)
@@ -132,9 +132,11 @@ for ni, ii in enumerate(v_cut):
     release_hydro_over = data_release_hydro[data_release_hydro[:, 1] >= ii, :]
 
     srd_dmo_over_release = (encontrar_SRD_sinVol(release_dmo_over)
-                            / len(release_dmo_over))
+                            / len(release_dmo_over)
+                            )
     srd_hydro_over_release = (encontrar_SRD_sinVol(release_hydro_over)
-                              / len(release_hydro_over))
+                              / len(release_hydro_over)
+                              )
     print(release_dmo_over)
     print(srd_dmo_over_release)
 
@@ -160,13 +162,15 @@ def funct_ale(Dgc, a, b):
 print('Release')
 cts_dmo = opt.curve_fit(funct_ale, xdata=bins_mean,
                         ydata=srd_dmo_over_release,
-                        p0=[-20, 0.1])
+                        p0=[-0.5, 200])
 print('Funct Ale: ', cts_dmo[0])
+print(np.diag(cts_dmo[1])**0.5)
 
 cts_hydro = opt.curve_fit(funct_ale, xdata=bins_mean,
                           ydata=srd_hydro_over_release,
                           p0=[0, 0.1])
 print('Funct Ale: ', cts_hydro[0])
+print(np.diag(cts_hydro[1])**0.5)
 
 plt.plot(xxx, funct_ale(xxx, cts_dmo[0][0], cts_dmo[0][1]),
          'dimgray', linestyle='--', lw=3, alpha=0.7,
@@ -174,21 +178,27 @@ plt.plot(xxx, funct_ale(xxx, cts_dmo[0][0], cts_dmo[0][1]),
 plt.plot(xxx, funct_ale(xxx, cts_hydro[0][0], cts_hydro[0][1]),
          '#00FF00', linestyle='--', lw=3, zorder=5)
 
-plt.plot(xxx, np.ones(len(xxx)) * cts_dmo[0][1],
+plt.plot(xxx, np.ones(len(xxx)) * np.max(srd_dmo_over_release),
          'dimgray', linestyle='dotted', lw=4, alpha=0.7,
          label='Resilient fit', zorder=5)
-plt.plot(xxx, np.ones(len(xxx)) * cts_hydro[0][1],
+plt.plot(xxx, np.ones(len(xxx)) * np.max(srd_hydro_over_release),
          '#00FF00', linestyle='dotted', lw=4, zorder=5)
+print('resilient values: ',
+      np.max(srd_dmo_over_release), np.max(srd_hydro_over_release))
 # ----------------
 
 plt.axvline(1., alpha=0.7, linestyle='-.',
             lw=3, color='royalblue')
-plt.annotate(r'R$_\mathrm{vir}$', (1, 2e-2), color='b', rotation=45,
+plt.annotate(r'R$_\mathrm{vir}$', (0.9, 2e-2), color='b', rotation=45,
              alpha=0.7, zorder=0)
+# plt.annotate(r'R$_\mathrm{vir}$', (0.9, 25), color='b', rotation=45,
+#              alpha=0.7, zorder=0)
 
 plt.axvline(8.5/220., linestyle='-.', alpha=1, color='Sandybrown', lw=3)
-plt.annotate('Earth', (0.086, 0.117), color='Saddlebrown', rotation=0.,
+plt.annotate('Earth', (0.05, 0.130), color='Saddlebrown', rotation=0.,
              fontsize=20, zorder=10)
+# plt.annotate('Earth', (0.05, 140), color='Saddlebrown', rotation=0.,
+#              fontsize=20, zorder=10)
 
 plt.axvline(data_release_dmo[0, 2]/data_release_dmo[0, 5],
             alpha=0.5, color='k', linestyle='-',
@@ -197,15 +207,17 @@ plt.axvline(data_release_hydro[0, 2]/data_release_hydro[0, 5],
             alpha=0.5, color='limegreen',
             linestyle='-', lw=3)
 
-plt.ylabel(r'$N(D_\mathrm{GC}) \, / \, N_{Total}$')
-plt.xlabel(r'D$_\mathrm{GC} \, / \, R_{vir}$ ', size=24)
+plt.ylabel(r'$N(D_\mathrm{GC}) \, / \, N_\mathrm{Total}$')
+# plt.ylabel(r'$N(D_\mathrm{GC})$')
+plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=24)
 # plt.xlabel(r'D$_\mathrm{GC}$ [kpc]', size=24)
 
 plt.xscale('linear')
 plt.yscale('log')
 
-plt.xlim(0, 1.15)
+plt.xlim(0, 1.03)
 plt.ylim(1e-3, 2e-1)
+# plt.ylim(0.7, 300)
 
 # plt.legend(framealpha=1, fontsize=10, loc=4)
 handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
@@ -219,8 +231,8 @@ legend11 = plt.legend(loc=4, framealpha=1)
 
 ax1.add_artist(legend11)
 ax1.add_artist(legend_colors)
-plt.savefig('outputs/srd_compar_lin.png', bbox_inches='tight')
-plt.savefig('outputs/srd_compar_lin.pdf', bbox_inches='tight')
+plt.savefig('outputs/srd_compar_lin_after.png', bbox_inches='tight')
+plt.savefig('outputs/srd_compar_lin_after.pdf', bbox_inches='tight')
 
 # -------------------------------------------------------------------------
 print('Density figure')

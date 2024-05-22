@@ -75,4 +75,59 @@ plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]')
 
 fig.savefig('outputs/raw.pdf', bbox_inches='tight')
 fig.savefig('outputs/raw.png', bbox_inches='tight')
+
+
+# ----------------------------------------------------------------------
+fig, ax = plt.subplots(figsize=(10, 8))
+
+
+plt.hist2d(data_release_dmo[:, 1], data_release_dmo[:, 0],
+            bins=[np.geomspace(0.9, 120, 60),
+                  np.geomspace(0.09, 30, 60)],
+            cmap='Greys', zorder=20, alpha=0.8,
+           norm='log')
+plt.hist2d(data_release_hydro[:, 1], data_release_hydro[:, 0],
+            bins=[np.geomspace(0.9, 120, 60),
+                  np.geomspace(0.09, 30, 60)],
+            cmap='Greens',
+            zorder=10, alpha=0.8,
+           norm='log')
+
+
+plt.axhline(0.184, linestyle='-.', color='k', alpha=0.6,
+            linewidth=2, zorder=0)
+plt.text(x=30, y=0.20, s='softening length', color='k', alpha=0.8,
+         fontsize=18)
+
+
+# Arrows and text
+plt.axvline(7.5, linestyle='dotted', color='k', alpha=0.8,
+            linewidth=2)
+
+plt.arrow(x=6.5, y=11, dx=-2.5, dy=0, width=0.7, head_length=0.3,
+          facecolor='w')
+plt.text(x=6.5, y=14, s='Dark satellites\n(DM)', fontsize=18,
+         horizontalalignment='right')
+
+plt.arrow(x=8.7, y=11, dx=5, dy=0, width=0.7, head_length=1,
+          facecolor='w')
+plt.text(x=8.7, y=14, s='Dwarfs\n(DM + baryons)', fontsize=18,
+         horizontalalignment='left')
+
+
+plt.xscale('log')
+plt.yscale('log')
+
+handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
+           mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)
+           )
+
+legend11 = plt.legend(handles=handles, loc=2)
+ax.add_artist(legend11)
+
+plt.ylabel(r'$R_\mathrm{max}$ [kpc]')
+plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]')
+
+fig.savefig('outputs/raw_hist.pdf', bbox_inches='tight')
+fig.savefig('outputs/raw_hist.png', bbox_inches='tight')
 plt.show()
