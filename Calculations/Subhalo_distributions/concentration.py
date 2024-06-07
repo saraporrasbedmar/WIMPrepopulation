@@ -92,6 +92,25 @@ def calculate_med(xx, yy, num_interv, nmax=60):
     num_subs = num_subs[y_ceros]
 
     return x_approx, ymed, num_subs
+def calculate_med_numconst(xx, yy, nmax=10):
+    x_min = len(yy) % nmax
+
+    ymed =[]
+    xmed = []
+    xerrors = []
+    yerrors = []
+
+    for i in range(int(len(yy)/nmax)):
+        vv_min = x_min + i*nmax
+        vv_max = x_min+(i+1)*nmax
+        ymed.append(10**(np.log10(yy[vv_min:vv_max]).mean()))
+        xmed.append(10**(np.log10(xx[vv_min:vv_max]).mean()))
+        xerrors.append([xmed[-1] - xx[vv_min], xx[vv_max-1] - xmed[-1]])
+        yerrors.append(10**(np.log10(yy[vv_min:vv_max]).std()))
+        print(i, yy[vv_min:vv_max], np.log10(yy[vv_min:vv_max]))
+
+    return np.array(xmed), np.array(ymed), np.array(xerrors), np.array(yerrors)
+
 
 def calculate_mean_std(xx, yy, num_interv, nmax=60):
     x_approx = np.geomspace(1., nmax, num=num_interv)
@@ -141,14 +160,45 @@ cv_dmo_cloud_release = Cv_Grand_points(data_release_dmo[:, 1],
 cv_hydro_cloud_release = Cv_Grand_points(data_release_hydro[:, 1],
                                          data_release_hydro[:, 0])
 
-vv_medians_dmo_release, cv_dmo_median_release,\
-num_dmo = calculate_med(
-    data_release_dmo[:, 1], cv_dmo_cloud_release,
-    number_bins_dmo, nmax=120)
-vv_medians_hydro_release, cv_hydro_median_release, \
-num_hydro = calculate_med(
-    data_release_hydro[:, 1], cv_hydro_cloud_release,
-    number_bins_hydro, nmax=120)
+# vv_medians_dmo_release, cv_dmo_median_release,\
+# num_dmo = calculate_med(
+#     data_release_dmo[:, 1], cv_dmo_cloud_release,
+#     number_bins_dmo, nmax=120)
+# vv_medians_hydro_release, cv_hydro_median_release, \
+# num_hydro = calculate_med(
+#     data_release_hydro[:, 1], cv_hydro_cloud_release,
+#     number_bins_hydro, nmax=120)
+
+
+vv_medians_dmo_release, cv_dmo_median_release, xerr_dmo, yerr_dmo = calculate_med_numconst(
+    data_release_dmo[:, 1], cv_dmo_cloud_release, nmax=1000)
+vv_medians_hydro_release, cv_hydro_median_release, xerr_hydro, yerr_hydro = calculate_med_numconst(
+    data_release_hydro[:, 1], cv_hydro_cloud_release, nmax=10)
+
+fig0, ax0 = plt.subplots()
+plt.errorbar(vv_medians_dmo_release, cv_dmo_median_release,
+             xerr=xerr_dmo.T, yerr=yerr_dmo,
+             color='k', ls='', lw=3, zorder=10,
+                 capsize=5)
+plt.errorbar(vv_medians_hydro_release, cv_hydro_median_release,
+             xerr=xerr_hydro.T, yerr=yerr_hydro,
+             color='g', ls='', lw=3, zorder=10,
+                 capsize=5)
+
+plt.scatter(data_release_dmo[:, 1],
+            cv_dmo_cloud_release,
+            s=10, marker='x',
+            alpha=1, color='k', zorder=1, label='Data'
+            )
+plt.scatter(data_release_hydro[:, 1],
+            cv_hydro_cloud_release,
+            s=10, marker='x',
+            alpha=1, color='limegreen', zorder=1
+            )
+
+plt.xscale('log')
+plt.yscale('log')
+plt.show()
 
 plt.subplots(1, 2, figsize=(24, 8))
 plt.subplot(121)
@@ -298,7 +348,8 @@ plt.plot(xx_plot, np.log10(Cv_Mol2021_redshift0(xx_plot)), color='red',
 # print((std_dmo[0, :] + std_dmo[1, :])/2.,
 #       len((std_dmo[0, :] + std_dmo[1, :])/2.),)
 true_array_dmo = ((vv_means_dmo_release > dmoLimit)
-                  * (num_dmo >= 10))
+                  # * (num_dmo >= 10)
+                  )
 moline_fits_dmo_release, cov_dmo = curve_fit(
     Moline21_norm_log,
     xdata=vv_means_dmo_release[true_array_dmo],
@@ -337,10 +388,10 @@ ax0.fill_between(
 )
 
 dmo_inlims = ((data_release_dmo[:, 1] > dmoLimit)
-              * (data_release_dmo[:, 1] < 38.5)
+              # * (data_release_dmo[:, 1] < 38.5)
               )
 hydro_inlims = ((data_release_hydro[:, 1] > hydroLimit)
-              * (data_release_hydro[:, 1] < 26.6)
+              # * (data_release_hydro[:, 1] < 26.6)
                 )
 moline_fits_dmo_release, cov_dmo = curve_fit(
     Moline21_norm_log,
@@ -433,7 +484,8 @@ plt.plot(xx_plot, Cv_Mol2021_redshift0(xx_plot), color='red',
 # DMO fit -----------------------------------------------------
 
 true_array_dmo = ((vv_medians_dmo_release > dmoLimit)
-                  * (num_dmo >= 10))
+                  # * (num_dmo >= 10)
+                  )
 print('DMO data with V>Vmin and #subs in bin > 10: ', sum(true_array_dmo))
 
 moline_fits_dmo_release, cov_dmo = curve_fit(
@@ -469,7 +521,8 @@ ax.axvline(dmoLimit,
 # Hydro fit -----------------------------------------------------------
 print()
 true_array_hydro = ((vv_medians_hydro_release > hydroLimit)
-                    * (num_hydro >= 10))
+                    # * (num_hydro >= 10)
+                    )
 print('Hydro data with V>Vmin and #subs in bin > 10: ',
       sum(true_array_hydro))
 
@@ -507,7 +560,7 @@ legend11 = plt.legend(handles=handles,
 
 plt.ylabel(r'c$_\mathrm{V}$', size=28)
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
-# plt.show()
+plt.show()
 plt.subplot(122)  # -------------------------------------------------
 print()
 
