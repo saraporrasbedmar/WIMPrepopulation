@@ -12,7 +12,7 @@ Cv:
     - -0.07663688
     - 0.97226404
 SHVF:
-  RangeMax: 60.0
+  RangeMax: 120.0
   RangeMin: 0.5
   Vmax_completion: 8.0
   dmo:

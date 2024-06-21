@@ -23,7 +23,7 @@ SHVF:
     
     # Min and max velocities to repopulate [km/s]
     RangeMin: 0.8
-    RangeMax: 60.
+    RangeMax: 120.
 
     # Vmax at which the simulation is complete
     Vmax_completion: 8.

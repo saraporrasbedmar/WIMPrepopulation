@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import matplotlib.colorbar as colorbarr
 import matplotlib.patches as mpatches
 
+from scipy.integrate import simpson
+
 all_size = 24
 plt.rcParams['mathtext.fontset'] = 'stix'
 plt.rcParams['font.family'] = 'STIXGeneral'
@@ -34,10 +36,6 @@ data_release_dmo = np.loadtxt(
     '../Data_subhalo_simulations/dmo_table.txt', skiprows=3)
 data_release_hydro = np.loadtxt(
     '../Data_subhalo_simulations/hydro_table.txt', skiprows=3)
-
-
-data_release_dmo = data_release_dmo[
-                   data_release_dmo[:, 0] > 1e-4, :]
 
 data_release_dmo = data_release_dmo[
                    data_release_dmo[:, 0] > 0.184, :]
@@ -141,6 +139,15 @@ plt.plot(xxx, 10 ** fitsB_hydro_release * xxx ** fitsM_hydro_release,
                  color='#00FF00', alpha=1,
                  linestyle='-', lw=2.5)
 
+print('Integrated number of subhalos')
+xx_int = np.geomspace(8, 120, 100)
+print('dmo',
+      simpson(y=10 ** fitsB_DMO_release * xx_int ** fitsM_DMO_release,
+                     x=xx_int), sum(data_release_dmo[:, 1]>8)/6)
+print('hydro',
+      simpson(y=10 ** fitsB_hydro_release * xx_int ** fitsM_hydro_release,
+                     x=xx_int), sum(data_release_hydro[:, 1]>8)/6)
+
 print('Release')
 print(fitsM_DMO_release, fitsB_DMO_release)
 print(fitsM_hydro_release, fitsB_hydro_release)
@@ -155,7 +162,7 @@ plt.ylabel(r'$\frac{dN(V_{\mathrm{max}})}{dV_{\mathrm{max}}}$', size=27)
 plt.axvline(limit_infG, linestyle='-.', color='r', alpha=0.5,
             linewidth=2)
 plt.annotate(r'$V_\mathrm{'
-             r'C}$', (8.7, 12000), color='r',
+             r'cut}$', (8.7, 12000), color='r',
              rotation=0., alpha=0.8,
              fontsize=20, zorder=10)
 
