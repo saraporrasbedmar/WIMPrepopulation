@@ -111,11 +111,12 @@ def calculate_med_numconst(xx, yy, nmax=10):
         ymed.append(10 ** log10_ymean)
         xmed.append(10 ** (np.log10(xx[vv_min:vv_max]).mean()))
         xerrors.append([xmed[-1] - xx[vv_min], xx[vv_max - 1] - xmed[-1]])
-        yerrors.append(
-            [ymed[-1]
-             - 10 ** (log10_ymean - np.log10(yy[vv_min:vv_max]).std()),
-             10 ** (np.log10(yy[vv_min:vv_max]).std() + log10_ymean)
-             - ymed[-1]])
+        yerrors.append(np.log10(yy[vv_min:vv_max]).std())
+        # yerrors.append(
+        #     [ymed[-1]
+        #      - 10 ** (log10_ymean - np.log10(yy[vv_min:vv_max]).std()),
+        #      10 ** (np.log10(yy[vv_min:vv_max]).std() + log10_ymean)
+        #      - ymed[-1]])
         if i == 1384:
             print(i, yy[vv_min:vv_max], np.log10(yy[vv_min:vv_max]))
             print(10 ** (np.log10(yy[vv_min:vv_max]).std() + log10_ymean),
@@ -212,6 +213,43 @@ plt.scatter(data_release_hydro[:, 1],
 
 plt.xscale('log')
 plt.yscale('log')
+
+
+vcut_array = np.geomspace(5, 20, num=200)
+c0_array_dmo = np.zeros(len(vcut_array))
+c0_array_hydro = np.zeros(len(vcut_array))
+
+for ni, ii in enumerate(vcut_array):
+    xx_pos = np.where(vv_medians_dmo_release > ii)[0][0]
+    aaa, _ = curve_fit(
+        Moline21_norm_log,
+        xdata=vv_medians_dmo_release[xx_pos:],
+        ydata=np.log10(cv_dmo_median_release[xx_pos:]),
+        # p0=[4.],
+        sigma=yerr_dmo[xx_pos:]
+    )
+    c0_array_dmo[ni] = aaa[0]
+
+    xx_pos = np.where(vv_medians_hydro_release > ii)[0][0]
+    aaa, _ = curve_fit(
+        Moline21_norm_log,
+        xdata=vv_medians_hydro_release[xx_pos:],
+        ydata=np.log10(cv_hydro_median_release[xx_pos:]),
+        # p0=[4.],
+        sigma=yerr_hydro[xx_pos:]
+    )
+    c0_array_hydro[ni] = aaa[0]
+
+fig2, ax2 = plt.subplots()
+plt.scatter(vcut_array, c0_array_dmo, c='k')
+plt.scatter(vcut_array, c0_array_hydro, c='green')
+
+plt.xscale('log')
+plt.yscale('log')
+
+plt.ylabel(r'c$_0$')
+plt.xlabel(r'$V_\mathrm{cut}$ [km s$^{-1}$]', size=28)
+
 plt.show()
 
 plt.subplots(1, 2, figsize=(24, 8))
