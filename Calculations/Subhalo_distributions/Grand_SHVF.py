@@ -12,6 +12,7 @@ import matplotlib.colorbar as colorbarr
 import matplotlib.patches as mpatches
 
 from scipy.integrate import simpson
+from scipy.optimize import curve_fit
 
 all_size = 24
 plt.rcParams['mathtext.fontset'] = 'stix'
@@ -93,15 +94,30 @@ print(num_hydro)
 limit_infG = 8
 
 true_values = ((x_cumul > limit_infG) * (num_dmo > 10))
+print(sum((data_release_dmo[:, 1] > 8)*(data_release_dmo[:, 1]<45)))
 fits, cov_matrix = np.polyfit(
     np.log10(x_cumul[true_values]),
     np.log10(Vmax_cumul_dmo_release[true_values] / 6.),
     deg=1, cov=True, full=False)
 print(fits, cov_matrix)
 
+def funcc_lin (xx, mm, bb):
+    return bb + mm * xx
+
+fits, cov_matrix = curve_fit(
+    f=funcc_lin,
+    xdata=np.log10(x_cumul[true_values]),
+    ydata=np.log10(Vmax_cumul_dmo_release[true_values] / 6.),
+    )
+
+print('curvefit', fits, cov_matrix)
+
 fitsM_DMO_release, fitsB_DMO_release = fits[0], fits[1]
 
+limit_infG = 5
 true_values = ((x_cumul > limit_infG) * (num_hydro > 10))
+
+print(sum((data_release_hydro[:, 1] > 8)*(data_release_hydro[:, 1]<25)))
 fits, cov_matrix = np.polyfit(
     np.log10(x_cumul[true_values]),
     np.log10(Vmax_cumul_hydro_release[true_values] / 6.),

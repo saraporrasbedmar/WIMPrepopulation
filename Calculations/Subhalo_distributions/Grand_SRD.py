@@ -117,8 +117,9 @@ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
 plt.subplots_adjust(wspace=0.27)
 plt.subplot(121)
 
-v_cut = [8.]  # np.linspace(1., 8., num=10)
-cm_subsection = np.linspace(0, 1, 25)
+v_cut = [8.]  #
+v_cut = np.linspace(1., 8., num=10)
+cm_subsection = np.linspace(0, 1, 10)
 from matplotlib import cm
 
 colors = [cm.jet(x) for x in cm_subsection]
@@ -136,12 +137,13 @@ for ni, ii in enumerate(v_cut):
     release_dmo_over = data_release_dmo[data_release_dmo[:, 1] >= ii, :]
     release_hydro_over = data_release_hydro[data_release_hydro[:, 1] >= ii, :]
 
-    srd_dmo_over_release, std_dmo_num = (encontrar_SRD_sinVol(release_dmo_over)
-                                         # / len(release_dmo_over)
+    srd_dmo_over_release, std_dmo_num = (np.array(encontrar_SRD_sinVol(
+        release_dmo_over))
+                                         / len(release_dmo_over)
                                          )
-    srd_hydro_over_release, std_hydro_num = (encontrar_SRD_sinVol(
-        release_hydro_over)
-        # / len(release_hydro_over)
+    srd_hydro_over_release, std_hydro_num = (np.array(encontrar_SRD_sinVol(
+        release_hydro_over))
+        / len(release_hydro_over)
     )
     print('dmo')
     srddensity_dmo_over_release, std_dmo_den = (encontrar_SRD(
@@ -158,7 +160,8 @@ for ni, ii in enumerate(v_cut):
     ax1.errorbar(bins_mean, srd_dmo_over_release,
                  yerr=std_dmo_num,
                  ls='',
-                 color='k',
+                 # color='k',
+                 c=colors[ni],
                  ms=15, marker='.', markeredgewidth=2,
                  alpha=1, zorder=15,
                  label='Data',
@@ -169,7 +172,8 @@ for ni, ii in enumerate(v_cut):
     ax1.errorbar(bins_mean, srd_hydro_over_release,
                  yerr=std_hydro_num,
                  ls='',
-                 color='#00CC00',
+                 # color='#00CC00',
+                 c=colors[ni],
                  ms=15, marker='.', markeredgewidth=2,
                  alpha=1, zorder=15,
                  capsize=5)
