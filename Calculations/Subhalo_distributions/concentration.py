@@ -5,6 +5,8 @@ import matplotlib.patches as mpatches
 
 from scipy.optimize import curve_fit
 
+from matplotlib.lines import Line2D
+
 all_size = 24
 plt.rcParams['mathtext.fontset'] = 'stix'
 plt.rcParams['font.family'] = 'STIXGeneral'
@@ -19,9 +21,9 @@ plt.rc('legend', fontsize=20)
 plt.rc('figure', titlesize=all_size)
 plt.rc('xtick', top=True, direction='in')
 plt.rc('ytick', right=True, direction='in')
-plt.rc('xtick.major', size=10, width=2, top=False, pad=10)
+plt.rc('xtick.major', size=10, width=2, top=True, pad=10)
 plt.rc('ytick.major', size=10, width=2, right=True, pad=10)
-plt.rc('xtick.minor', size=7, width=1.5, top=False)
+plt.rc('xtick.minor', size=7, width=1.5, top=True)
 plt.rc('ytick.minor', size=7, width=1.5)
 
 data_release_dmo = np.loadtxt(
@@ -133,6 +135,134 @@ def calculate_med_numconst(xx, yy, nmax=10):
         yerrors).T
 
 
+def calculate_med_min10(xx, yy, nmin=10, num_bins=70):
+    x_min = len(yy) % nmin
+
+    x_array = np.geomspace(0.5, 120., num=num_bins)
+
+    ymed = []
+    xmed = []
+    xerrors = []
+    yerrors = []
+
+    vv_min = 0
+    vv_max = 1
+
+    for ii in range(num_bins):
+        number_subs = ((xx > x_array[vv_min]) * (xx < x_array[vv_max]))
+        while sum(number_subs) < nmin:
+            vv_max += 1
+            print(vv_max, sum(number_subs), vv_min, vv_max)
+            if vv_max >= num_bins:
+                vv_max = -1
+                print('first if', vv_min, vv_max,
+                      sum(((xx > x_array[vv_min]) * (xx < x_array[vv_max]))))
+                break
+            number_subs = ((xx > x_array[vv_min]) * (xx < x_array[vv_max]))
+        if vv_max >= num_bins:
+            print('second if')
+            vv_max = -1
+
+        if sum(number_subs) == 0:
+            print('this should break')
+            return np.array(xmed), np.array(ymed), np.array(xerrors), np.array(
+                yerrors).T
+
+        subs_here = np.where(((xx > x_array[vv_min]) * (xx < x_array[vv_max])))
+        print(vv_min, vv_max)
+
+        log10_ymean = np.log10(yy[subs_here]).mean()
+        # ymed.append(10 ** log10_ymean)
+        ymed.append(log10_ymean)
+        # xmed.append(10 ** (np.log10(xx[subs_here]).mean()))
+        xmed.append((x_array[vv_min] * x_array[vv_max]) ** 0.5)
+        # xerrors.append([xmed[-1] - xx[vv_min], xx[vv_max - 1] - xmed[-1]])
+        xerrors.append([xmed[-1] - x_array[vv_min],
+                        x_array[vv_max] - xmed[-1]])
+        yerrors.append(np.log10(yy[subs_here]).std())
+
+        if ii == 35:
+            print(ii, yy[subs_here], np.log10(yy[subs_here]))
+            print(10 ** (np.log10(yy[subs_here]).std() + log10_ymean),
+                  10 ** (np.log10(yy[subs_here]).std() + log10_ymean) -
+                  ymed[-1])
+
+        if vv_max == -1:
+            print('the end')
+            return np.array(xmed), np.array(ymed), np.array(xerrors), np.array(
+                yerrors).T
+
+        vv_min = vv_max
+        vv_max = vv_max + 1
+
+    return np.array(xmed), np.array(ymed), np.array(xerrors), np.array(
+        yerrors).T
+
+
+def calculate_med_min102(xx, yy, nmin=10, num_bins=30):
+    x_min = len(yy) % nmin
+
+    x_array = np.geomspace(0.5, 120., num=num_bins)
+
+    ymed = []
+    xmed = []
+    xerrors = []
+    yerrors = []
+
+    vv_min = num_bins - 2
+    vv_max = num_bins - 1
+
+    for ii in range(num_bins, 0, -1):
+        number_subs = ((xx > x_array[vv_min]) * (xx < x_array[vv_max]))
+        while sum(number_subs) < nmin:
+            vv_min -= 1
+            # print(vv_max, sum(number_subs), vv_min, vv_max)
+            if vv_min == 0:
+                # vv_max = -1
+                print('first if', vv_min, vv_max,
+                      sum(((xx > x_array[vv_min]) * (xx < x_array[vv_max]))))
+                break
+            number_subs = ((xx > x_array[vv_min]) * (xx < x_array[vv_max]))
+        # if vv_max >= num_bins:
+        #     print('second if')
+        #     vv_max = -1
+
+        if sum(number_subs) == 0:
+            print('this should break')
+            return (np.array(xmed)[::-1], np.array(ymed)[::-1],
+                    np.array(xerrors)[::-1], np.array(yerrors).T[::-1])
+
+        subs_here = np.where(((xx > x_array[vv_min]) * (xx < x_array[vv_max])))
+        # print(vv_min, vv_max)
+
+        log10_ymean = np.log10(yy[subs_here]).mean()
+        # ymed.append(10 ** log10_ymean)
+        ymed.append(log10_ymean)
+        # xmed.append(10 ** (np.log10(xx[subs_here]).mean()))
+        xmed.append((x_array[vv_min] * x_array[vv_max]) ** 0.5)
+        # xerrors.append([xmed[-1] - xx[vv_min], xx[vv_max - 1] - xmed[-1]])
+        xerrors.append([xmed[-1] - x_array[vv_min],
+                        x_array[vv_max] - xmed[-1]])
+        yerrors.append(np.log10(yy[subs_here]).std())
+
+        # if ii == 35:
+        #     print(ii, yy[subs_here], np.log10(yy[subs_here]))
+        #     print(10 ** (np.log10(yy[subs_here]).std() + log10_ymean),
+        #           10 ** (np.log10(yy[subs_here]).std() + log10_ymean) -
+        #           ymed[-1])
+
+        if vv_min == -1 or vv_min == 0:
+            print('the end')
+            return (np.array(xmed)[::-1], np.array(ymed)[::-1],
+                    np.array(xerrors)[::-1], np.array(yerrors).T[::-1])
+
+        vv_max = vv_min
+        vv_min = vv_max - 1
+
+    return (np.array(xmed)[::-1], np.array(ymed)[::-1],
+            np.array(xerrors)[::-1], np.array(yerrors).T[::-1])
+
+
 def calculate_mean_std(xx, yy, num_interv, nmax=60):
     x_approx = np.geomspace(1., nmax, num=num_interv)
 
@@ -191,20 +321,82 @@ cv_hydro_cloud_release = Cv_Grand_points(data_release_hydro[:, 1],
 #     number_bins_hydro, nmax=120)
 
 
-vv_medians_dmo_release, cv_dmo_median_release, xerr_dmo, yerr_dmo = calculate_med_numconst(
-    data_release_dmo[:, 1], cv_dmo_cloud_release, nmax=10)
-vv_medians_hydro_release, cv_hydro_median_release, xerr_hydro, yerr_hydro = calculate_med_numconst(
-    data_release_hydro[:, 1], cv_hydro_cloud_release, nmax=10)
+vv_medians_dmo_release, cv_dmo_median_release, xerr_dmo, yerr_dmo = \
+    calculate_med_min102(
+        data_release_dmo[:, 1], cv_dmo_cloud_release, num_bins=25)
+vv_medians_hydro_release, cv_hydro_median_release, xerr_hydro, yerr_hydro = \
+    calculate_med_min102(
+        data_release_hydro[:, 1], cv_hydro_cloud_release, num_bins=25)
 
-fig0, ax0 = plt.subplots(figsize=(10, 8))
-plt.errorbar(vv_medians_dmo_release, cv_dmo_median_release,
-             xerr=xerr_dmo.T, yerr=yerr_dmo,
-             color='k', ls='', lw=3, zorder=5,
-             capsize=5)
-plt.errorbar(vv_medians_hydro_release, cv_hydro_median_release,
-             xerr=xerr_hydro.T, yerr=yerr_hydro,
-             color='g', ls='', lw=3, zorder=5,
-                 capsize=5)
+# true_arr_dmo = np.where(data_release_dmo[:, 1] > 20)[0][0]
+# vv_medians_dmo_release1, cv_dmo_median_release1, xerr_dmo1, yerr_dmo1 = \
+#     calculate_med_numconst(
+#         data_release_dmo[:true_arr_dmo, 1], cv_dmo_cloud_release[
+#                                             :true_arr_dmo],
+# nmax=1000)
+# vv_medians_dmo_release2, cv_dmo_median_release2, xerr_dmo2, yerr_dmo2 = \
+#     calculate_med_numconst(
+#         data_release_dmo[true_arr_dmo:, 1], cv_dmo_cloud_release[
+#                                             true_arr_dmo:])
+#
+# vv_medians_dmo_release = np.concatenate((vv_medians_dmo_release1,
+#                                          vv_medians_dmo_release2))
+# cv_dmo_median_release = np.concatenate((cv_dmo_median_release1,
+#                                         cv_dmo_median_release2))
+# xerr_dmo = np.concatenate((xerr_dmo1, xerr_dmo2))
+# yerr_dmo = np.concatenate((yerr_dmo1, yerr_dmo2))
+#
+# true_arr_hydro = np.where(data_release_hydro[:, 1] > 20)[0][0]
+# vv_medians_hydro_release1, cv_hydro_median_release1, xerr_hydro1, yerr_hydro1\
+#     = calculate_med_numconst(
+#         data_release_hydro[:true_arr_hydro, 1],
+#     cv_hydro_cloud_release[:true_arr_hydro],
+# nmax=3000)
+#
+# vv_medians_hydro_release2, cv_hydro_median_release2, xerr_hydro2, yerr_hydro2\
+#     = calculate_med_numconst(
+#         data_release_hydro[true_arr_hydro:, 1], cv_hydro_cloud_release[
+#                                                 true_arr_hydro:])
+# vv_medians_hydro_release = np.concatenate((vv_medians_hydro_release1,
+#                                          vv_medians_hydro_release2))
+# cv_hydro_median_release = np.concatenate((cv_hydro_median_release1,
+#                                         cv_hydro_median_release2))
+# xerr_hydro = np.concatenate((xerr_hydro1, xerr_hydro2))
+# yerr_hydro = np.concatenate((yerr_hydro1, yerr_hydro2))
+
+
+fig0, (ax0, ax1) = plt.subplots(1, 2, figsize=(20, 8))
+
+plt.subplot(121)
+ax0.errorbar(vv_medians_dmo_release, cv_dmo_median_release,
+             xerr=xerr_dmo.T,
+             yerr=yerr_dmo,
+             marker='.', ms=16,
+             color='k', ls='', lw=3, zorder=11,
+             elinewidth=2,
+             capsize=5, label='Data', capthick=2.)
+
+out_shade = ((vv_medians_hydro_release > 6.2)
+             * (vv_medians_hydro_release < 50))
+ax0.errorbar(vv_medians_hydro_release[out_shade],
+             cv_hydro_median_release[out_shade],
+             xerr=xerr_hydro.T[:, out_shade],
+             yerr=yerr_hydro[out_shade],
+             marker='.', ms=16,
+             markerfacecolor='#00FF00', markeredgecolor='#00FF00',
+             elinewidth=1.5,
+             color='#00FF00', ls='', lw=3, zorder=11,
+             capsize=5, capthick=2.)
+
+ax0.errorbar(vv_medians_hydro_release[~out_shade],
+             cv_hydro_median_release[~out_shade],
+             xerr=xerr_hydro.T[:, ~out_shade],
+             yerr=yerr_hydro[~out_shade],
+             marker='.', ms=16,
+             markerfacecolor='#00E200', markeredgecolor='#00E200',
+             elinewidth=1.5,
+             color='#00E200', ls='', lw=3, zorder=11,
+             capsize=5, capthick=2.)
 
 # plt.scatter(data_release_dmo[:, 1],
 #             cv_dmo_cloud_release,
@@ -219,11 +411,12 @@ plt.errorbar(vv_medians_hydro_release, cv_hydro_median_release,
 
 plt.xscale('log')
 # plt.yscale('log')
-plt.ylabel(r'log$_{10}($c$_\mathrm{V}$)')
+plt.ylabel(r'log$_{10}($c$_\mathrm{V}$)', labelpad=10)
 
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
 
-vcut_array = np.geomspace(5, 20, num=10)
+# vcut_array = np.geomspace(5, 20, num=10)
+vcut_array = [10.]
 c0_array_dmo = np.zeros(len(vcut_array))
 c0_array_hydro = np.zeros(len(vcut_array))
 c0err_array_dmo = np.zeros(len(vcut_array))
@@ -231,6 +424,7 @@ c0err_array_hydro = np.zeros(len(vcut_array))
 
 for ni, ii in enumerate(vcut_array):
     xx_pos = np.where(vv_medians_dmo_release > ii)[0][0]
+
     aaa, aaa_cov = curve_fit(
         Moline21_norm_log,
         xdata=vv_medians_dmo_release[xx_pos:],
@@ -240,7 +434,7 @@ for ni, ii in enumerate(vcut_array):
     )
     print(aaa, aaa_cov)
     c0_array_dmo[ni] = aaa[0]
-    c0err_array_dmo[ni] = aaa_cov[0][0]**0.5
+    c0err_array_dmo[ni] = aaa_cov[0][0] ** 0.5
 
     xx_pos = np.where(vv_medians_hydro_release > ii)[0][0]
     aaa, aaa_cov = curve_fit(
@@ -251,36 +445,40 @@ for ni, ii in enumerate(vcut_array):
         sigma=yerr_hydro[xx_pos:]
     )
     c0_array_hydro[ni] = aaa[0]
-    c0err_array_hydro[ni] = aaa_cov[0][0]**0.5
+    c0err_array_hydro[ni] = aaa_cov[0][0] ** 0.5
 
 fig2, ax2 = plt.subplots(figsize=(10, 8))
 plt.errorbar(vcut_array, c0_array_dmo,
              yerr=c0err_array_dmo,
+             marker='.', elinewidth=1.5,
              c='k', ls='', lw=3, zorder=10,
              capsize=5)
 plt.errorbar(vcut_array, c0_array_hydro,
-            yerr=c0err_array_hydro,
-            c='green', ls='', lw=3, zorder=9,
+             yerr=c0err_array_hydro,
+             marker='.', elinewidth=1.5,
+             c='green', ls='', lw=3, zorder=9,
              capsize=5)
 
-xx_plot = np.geomspace(1., 120)
+xx_plot = np.geomspace(0.5, 120)
 for i in range(len(vcut_array)):
     ax0.plot(xx_plot,
              Moline21_norm_log(xx_plot, c0=c0_array_dmo[i]),
-             zorder=10, label='Vcut=%.2f' %vcut_array[i],
-             color=plt.cm.CMRmap(i / float(len(vcut_array))))
+             zorder=10, label='Fit to data',
+             color='dimgray', lw=3, ls='-')
 
     ax0.plot(xx_plot,
              Moline21_norm_log(xx_plot, c0=c0_array_hydro[i]),
-             zorder=10, ls='dotted',
-             color=plt.cm.CMRmap(i / float(len(vcut_array))))
+             zorder=10, lw=3,
+             color='forestgreen', alpha=0.75, ls='-')
+
     ax0.axvline(vcut_array[i],
-             color=plt.cm.CMRmap(i / float(len(vcut_array))))
+                color='k', alpha=0.5, ls='--')
+
 ax0.plot(xx_plot, np.log10(Cv_Mol2021_redshift0(xx_plot)),
-        c='r', zorder=15, ls='--', label='Original')
+         c='r', zorder=15, ls='dotted', label='Moliné21', lw=2.5)
 
-ax0.legend(ncol=3, fontsize=18)
 
+plt.figure(fig2)
 plt.xscale('log')
 plt.yscale('log')
 
@@ -290,18 +488,18 @@ plt.xlabel(r'$V_\mathrm{cut}$ [km s$^{-1}$]', size=28)
 plt.savefig('outputs/logc_euqalBins_c0fit.png', bbox_inches='tight')
 plt.savefig('outputs/logc_euqalBins_c0fit.pdf', bbox_inches='tight')
 
+# plt.figure(fig0)
+# plt.savefig('outputs/logc_euqalBins.png', bbox_inches='tight')
+# plt.savefig('outputs/logc_euqalBins.pdf', bbox_inches='tight')
+# plt.show()
 
 plt.figure(fig0)
-plt.savefig('outputs/logc_euqalBins.png', bbox_inches='tight')
-plt.savefig('outputs/logc_euqalBins.pdf', bbox_inches='tight')
-plt.show()
+plt.subplot(122)
+# plt.title('Subhalos over Vlimit')
 
-plt.subplots(1, 2, figsize=(24, 8))
-plt.subplot(121)
-plt.title('Subhalos over Vlimit')
-data_dmo = np.log10(cv_dmo_cloud_release[data_release_dmo[:, 1] > dmoLimit])
+data_dmo = np.log10(cv_dmo_cloud_release[data_release_dmo[:, 1] > 10])
 data_hydro = np.log10(
-    cv_hydro_cloud_release[data_release_hydro[:, 1] > hydroLimit])
+    cv_hydro_cloud_release[data_release_hydro[:, 1] > 10])
 n_dmo, bins_dmo, _ = plt.hist(
     data_dmo,
     # bins=np.geomspace(0.01, 10, num=40),
@@ -317,36 +515,64 @@ n_hydro, bins_hydro, _ = plt.hist(
     bins=20
 )
 
-plt.axvline(np.median(data_dmo)
-            , color='k', ls='--', lw=4, label='Median')
-plt.axvline(np.percentile(data_dmo, 75)
-            , color='k', ls='--', lw=2, label='25 and 75 perc')
-plt.axvline(np.percentile(data_dmo, 25)
-            , color='k', ls='--', lw=2, zorder=200)
-
-plt.axvline(np.median(data_hydro)
-            , color='lime', ls='--', lw=4)
-plt.axvline(np.percentile(data_hydro, 75)
-            , color='lime', ls='--', lw=2)
-plt.axvline(np.percentile(data_hydro, 25)
-            , color='lime', ls='--', lw=2)
+# plt.axvline(np.median(data_dmo)
+#             , color='k', ls='--', lw=4, label='Median')
+# plt.axvline(np.percentile(data_dmo, 75)
+#             , color='k', ls='--', lw=2, label='25 and 75 perc')
+# plt.axvline(np.percentile(data_dmo, 25)
+#             , color='k', ls='--', lw=2, zorder=200)
+#
+# plt.axvline(np.median(data_hydro)
+#             , color='lime', ls='--', lw=4)
+# plt.axvline(np.percentile(data_hydro, 75)
+#             , color='lime', ls='--', lw=2)
+# plt.axvline(np.percentile(data_hydro, 25)
+#             , color='lime', ls='--', lw=2)
 
 plt.axvline(np.mean(data_dmo)
             , color='k', ls='-', lw=3, label='Mean')
 plt.axvline(np.mean(data_dmo) + np.std(data_dmo)
-            , color='k', ls='-', lw=2, label='1 sigma from mean')
+            , color='k', ls='--', lw=2, label=r'$1\sigma$')
 plt.axvline(np.mean(data_dmo) - np.std(data_dmo)
-            , color='k', ls='-', lw=2)
+            , color='k', ls='--', lw=2)
 
 plt.axvline(np.mean(data_hydro)
-            , color='lime', ls='-', lw=4)
+            , color='lime', ls='-', lw=3)
 plt.axvline(np.mean(data_hydro) + np.std(data_hydro)
-            , color='lime', ls='-', lw=2)
+            , color='lime', ls='--', lw=2)
 plt.axvline(np.mean(data_hydro) - np.std(data_hydro)
-            , color='lime', ls='-', lw=2)
-plt.legend()
-plt.xlabel('log10(c_V)')
+            , color='lime', ls='--', lw=2)
 
+ax0.fill_between(
+    xx_plot,
+    Moline21_norm_log(xx_plot, c0=c0_array_dmo) - np.std(data_dmo),
+    Moline21_norm_log(xx_plot, c0=c0_array_dmo) + np.std(data_dmo),
+    color='grey', alpha=0.5, label=r'$1\sigma$', zorder=0)
+
+ax0.fill_between(
+    xx_plot,
+    Moline21_norm_log(xx_plot, c0=c0_array_hydro) - np.std(data_hydro),
+    Moline21_norm_log(xx_plot, c0=c0_array_hydro) + np.std(data_hydro),
+    color='#48DC48', alpha=0.3, zorder=0)
+
+ax0.text(x=10.5, y=5.65, s=r'$V_\mathrm{Cut}$', c='k')
+
+leg1 = plt.legend(loc=2, bbox_to_anchor=(0.05, 0.98), fontsize=20)
+
+handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
+           mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)
+           )
+legend_colors = plt.legend(handles=handles, loc=1,
+                           # bbox_to_anchor=(0.5, 0.04),
+                           fontsize=20, framealpha=1)
+
+ax1.add_artist(legend_colors)
+ax1.add_artist(leg1)
+plt.xlabel(r'log$_{10}(\mathrm{c}_V)$')
+plt.text(x=3.08, y=130, s=r'$V_\mathrm{max} > 10\,$km s$^{-1}$',
+         fontsize=22)
+
+'''
 plt.subplot(122)
 dmo_inlims = ((data_release_dmo[:, 1] > dmoLimit)
     # * (data_release_dmo[:, 1] < 38.5)
@@ -397,8 +623,33 @@ plt.xscale('log')
 plt.ylabel('log10(c_V)')
 
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
+'''
+plt.figure(fig0)
+plt.subplot(121)
+handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
+           mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)
+           )
+legend_colors = plt.legend(handles=handles, loc=8,
+                           bbox_to_anchor=(0.5, 0.04),
+                           fontsize=20, framealpha=1)
+
+handles, labels = ax0.get_legend_handles_labels()
+handles[3] = handles[3][0]
+print(labels)
+order = [3, 0, 2, 1]
+leg1 = plt.legend([handles[idx] for idx in order],
+                  [labels[idx] for idx in order],
+                  loc=4, bbox_to_anchor=(0.98, 0.04),)
+
+ax0.add_artist(legend_colors)
+ax0.add_artist(leg1)
+
+ax0.set_xlim(0.5, 121)
+
+
+plt.savefig('outputs/cv_hist.pdf', bbox_inches='tight')
 plt.savefig('outputs/cv_hist.png', bbox_inches='tight')
-# plt.show()
+plt.show()
 
 fig, ax0 = plt.subplots(figsize=(8, 8))
 
