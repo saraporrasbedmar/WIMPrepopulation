@@ -432,7 +432,7 @@ for ni, ii in enumerate(vcut_array):
         # p0=[4.],
         sigma=yerr_dmo[xx_pos:]
     )
-    print(aaa, aaa_cov)
+    print('dmo', aaa, aaa_cov**0.5)
     c0_array_dmo[ni] = aaa[0]
     c0err_array_dmo[ni] = aaa_cov[0][0] ** 0.5
 
@@ -444,6 +444,7 @@ for ni, ii in enumerate(vcut_array):
         # p0=[4.],
         sigma=yerr_hydro[xx_pos:]
     )
+    print('hydro', aaa, aaa_cov**0.5)
     c0_array_hydro[ni] = aaa[0]
     c0err_array_hydro[ni] = aaa_cov[0][0] ** 0.5
 

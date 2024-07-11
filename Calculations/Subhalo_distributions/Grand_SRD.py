@@ -55,7 +55,7 @@ R_last = 251.400
 
 # %% SRD
 
-def encontrar_SRD_sinVol(data):
+def encontrar_SRD_sinVol(data, bins):
     n_final = []
     std_fin = []
 
@@ -66,6 +66,7 @@ def encontrar_SRD_sinVol(data):
             interval = ((data_ind[:, 2] / data_ind[:, 5] >= bins[delta])
                         * (data_ind[:, 2] / data_ind[:, 5] <= bins[delta + 1]))
             aaa.append(sum(interval))
+
         if delta == 0:
             print(aaa, np.nanmean(aaa), np.std(aaa))
         n_final.append(np.nanmean(aaa))
@@ -73,7 +74,7 @@ def encontrar_SRD_sinVol(data):
     return np.array(n_final), np.array(std_fin)
 
 
-def encontrar_SRD(data):
+def encontrar_SRD(data, bins):
     n_final = []
     std_fin = []
 
@@ -88,9 +89,9 @@ def encontrar_SRD(data):
             aaa.append(sum(interval))
             vol.append(4 / 3 * np.pi * (
                     bins[delta + 1] ** 3 - bins[delta] ** 3)
-                       #* data_ind[0, 5]**3.
+                       # * data_ind[0, 5] ** 3.
                        # * 1e-9
-                       )  # * 1e9
+                       )
             if delta == 0:
                 print(int(halo), np.min(data_ind[:, 2]))
 
@@ -98,12 +99,9 @@ def encontrar_SRD(data):
         vol = np.array(vol)
         y = np.nanmean(aaa / vol)  # / len(data_ind))
         std = np.std(aaa / vol)
-        print(delta, y, std, aaa/vol, vol)
 
         n_final.append(y)
         std_fin.append(std)
-    print(n_final)
-    print(std_fin)
     return np.array(n_final), np.array(std_fin)
 
 
@@ -111,24 +109,20 @@ def encontrar_SRD(data):
 print()
 print('N/Ntot figures')
 
-# plt.figure(figsize=(10, 8))
-# ax1 = plt.gca()
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
 plt.subplots_adjust(wspace=0.27)
 plt.subplot(121)
+plt.title('dmo')
 
-v_cut = [8.]  #
-v_cut = np.linspace(1., 8., num=10)
-cm_subsection = np.linspace(0, 1, 10)
+v_cut = np.linspace(2., 10., num=1)
+
 from matplotlib import cm
-
-colors = [cm.jet(x) for x in cm_subsection]
 
 num_bins = 15
 bins = np.linspace(0, 1., num=num_bins)
 bins_mean = (bins[:-1] + bins[1:]) / 2.
 volume = 4 / 3 * np.pi * (bins[1:] ** 3 - bins[:-1] ** 3)
-print('bins: ', bins*220)
+print('bins: ', bins * 220)
 
 xxx = np.linspace(0., 1., num=200)
 
@@ -137,31 +131,106 @@ for ni, ii in enumerate(v_cut):
     release_dmo_over = data_release_dmo[data_release_dmo[:, 1] >= ii, :]
     release_hydro_over = data_release_hydro[data_release_hydro[:, 1] >= ii, :]
 
-    srd_dmo_over_release, std_dmo_num = (np.array(encontrar_SRD_sinVol(
-        release_dmo_over))
-                                         / len(release_dmo_over)
-                                         )
-    srd_hydro_over_release, std_hydro_num = (np.array(encontrar_SRD_sinVol(
-        release_hydro_over))
-        / len(release_hydro_over)
+    srd_dmo_over_release, std_dmo_num = (
+        np.array(encontrar_SRD_sinVol(release_dmo_over, bins))
+        # / len(release_dmo_over)
     )
+    srd_hydro_over_release, std_hydro_num = (
+        np.array(encontrar_SRD_sinVol(release_hydro_over, bins))
+        # / len(release_hydro_over)
+    )
+
+    print('under stuff')
+
+    srdnum_dmo_under, _ = np.array(encontrar_SRD_sinVol(
+        data_release_dmo[data_release_dmo[:, 1] < ii, :], bins))
+    srdnum_hydro_under, _ = np.array(encontrar_SRD_sinVol(
+        data_release_hydro[data_release_hydro[:, 1] < ii, :], bins))
+
+    ax1.plot(bins_mean, srd_dmo_over_release,
+             c=cm.CMRmap(ni / float(len(v_cut))), label='%.1f' % ii)
+    ax1.plot(bins_mean, srdnum_dmo_under,  # /sum(data_release_dmo[:, 1] < ii),
+             c=cm.CMRmap(ni / float(len(v_cut))), ls='--')
+
+    ax2.plot(bins_mean, srd_hydro_over_release,
+             c=cm.CMRmap(ni / float(len(v_cut))))
+    ax2.plot(bins_mean, srdnum_hydro_under,
+             # /sum(data_release_hydro[:, 1] < ii),
+             c=cm.CMRmap(ni / float(len(v_cut))),
+             ls='--')
+
+plt.ylabel(r'$N(D_\mathrm{GC})$')
+plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
+
+plt.xscale('linear')
+plt.yscale('log')
+
+plt.xlim(0, 1.)
+# plt.ylim(0.1, 50)
+
+legend11 = plt.legend(loc=4, framealpha=1)
+ax1.add_artist(legend11)
+
+plt.subplot(122)
+plt.title('hydro')
+plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
+
+plt.yscale('log')
+plt.xlim(0., 1.)
+
+# plt.show()
+# ------------------------ N(r)/Ntot figure ------------------------------
+print()
+print('N/Ntot figures')
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
+plt.subplots_adjust(wspace=0.27)
+plt.subplot(121)
+
+v_cut = [8.]  #
+# v_cut = np.linspace(1., 8., num=10)
+
+xxx = np.linspace(0., 1., num=200)
+
+for ni, ii in enumerate(v_cut):
+    print('v_cut: ', ii, ni)
+    release_dmo_over = data_release_dmo[data_release_dmo[:, 1] >= ii, :]
+    release_hydro_over = data_release_hydro[data_release_hydro[:, 1] >= ii, :]
+
+    minnDgc = np.argmin(data_release_dmo[:, 2])
+
+    bins_dmo = np.linspace(
+        data_release_dmo[minnDgc, 2] / data_release_dmo[minnDgc, 5],
+        1., num=num_bins)
+    bins_mean_dmo = (bins_dmo[:-1] + bins_dmo[1:]) / 2.
+    volume_dmo = 4 / 3 * np.pi * (bins_dmo[1:] ** 3 - bins_dmo[:-1] ** 3)
+    srd_dmo_over_release, std_dmo_num = (np.array(encontrar_SRD_sinVol(
+        release_dmo_over, bins_dmo))
+        # / len(release_dmo_over)
+    )
+
     print('dmo')
     srddensity_dmo_over_release, std_dmo_den = (encontrar_SRD(
-        release_dmo_over))
+        release_dmo_over, bins_dmo))
+
+    bins_hydro = np.linspace(
+        data_release_hydro[minnDgc, 2] / data_release_hydro[minnDgc, 5],
+        1., num=num_bins)
+    bins_mean_hydro = (bins_hydro[:-1] + bins_hydro[1:]) / 2.
+    volume_hydro = 4 / 3 * np.pi * (bins_hydro[1:] ** 3 - bins_hydro[:-1] ** 3)
+    srd_hydro_over_release, std_hydro_num = (np.array(encontrar_SRD_sinVol(
+        release_hydro_over, bins_hydro))
+        # / len(release_hydro_over)
+    )
+
     print('\nhydro')
     srddensity_hydro_over_release, std_hydro_den = (encontrar_SRD(
-        release_hydro_over))
-    print(release_dmo_over)
-    print(srd_dmo_over_release)
-    print('errorbars density')
-    print(std_dmo_den)
-    print(std_hydro_den)
+        release_hydro_over, bins_hydro))
 
-    ax1.errorbar(bins_mean, srd_dmo_over_release,
+    ax1.errorbar(bins_mean_dmo, srd_dmo_over_release,
                  yerr=std_dmo_num,
                  ls='',
-                 # color='k',
-                 c=colors[ni],
+                 c='k',
                  ms=15, marker='.', markeredgewidth=2,
                  alpha=1, zorder=15,
                  label='Data',
@@ -169,16 +238,15 @@ for ni, ii in enumerate(v_cut):
                  # label=ii
                  )
 
-    ax1.errorbar(bins_mean, srd_hydro_over_release,
+    ax1.errorbar(bins_mean_hydro, srd_hydro_over_release,
                  yerr=std_hydro_num,
                  ls='',
-                 # color='#00CC00',
-                 c=colors[ni],
+                 c='#00CC00',
                  ms=15, marker='.', markeredgewidth=2,
                  alpha=1, zorder=15,
                  capsize=5)
 
-    ax2.errorbar(bins_mean, srddensity_dmo_over_release,
+    ax2.errorbar(bins_mean_dmo, srddensity_dmo_over_release,
                  yerr=std_dmo_den,
                  ls='',
                  color='k',
@@ -189,11 +257,11 @@ for ni, ii in enumerate(v_cut):
                  # label=ii
                  )
 
-    ax2.errorbar(bins_mean, srddensity_hydro_over_release,
+    ax2.errorbar(bins_mean_hydro, srddensity_hydro_over_release,
                  yerr=std_hydro_den,
                  ls='',
                  color='#00CC00',
-                 ms=15, marker='.', #markeredgewidth=3,
+                 ms=15, marker='.',  # markeredgewidth=3,
                  alpha=1, zorder=15,
                  capthick=2.,
                  capsize=5)
@@ -205,14 +273,14 @@ def funct_ale(Dgc, a, b):
 
 # --------------
 print('Release')
-cts_dmo = opt.curve_fit(funct_ale, xdata=bins_mean,
+cts_dmo = opt.curve_fit(funct_ale, xdata=bins_mean_dmo,
                         ydata=srd_dmo_over_release,
                         sigma=std_dmo_num,
                         p0=[-0.5, 200])
 print('Funct Ale: ', cts_dmo[0])
 print(np.diag(cts_dmo[1]) ** 0.5)
 
-cts_hydro = opt.curve_fit(funct_ale, xdata=bins_mean,
+cts_hydro = opt.curve_fit(funct_ale, xdata=bins_mean_hydro,
                           ydata=srd_hydro_over_release,
                           sigma=std_hydro_num,
                           p0=[0, 200])
@@ -233,16 +301,14 @@ plt.plot(xxx, np.ones(len(xxx))
          * funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]),
          '#00FF00', linestyle='dotted', lw=4, zorder=5)
 print('resilient values: ',
-      np.max(srd_dmo_over_release), np.max(srd_hydro_over_release))
+      funct_ale(1., cts_dmo[0][0], cts_dmo[0][1]),
+      funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]))
+
+print('resilient errors: ',
+      funct_ale(1., cts_dmo[0][0], cts_dmo[0][1]),
+      funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]))
+
 # ----------------
-
-# plt.axvline(1., alpha=0.7, linestyle='-.',
-#             lw=3, color='royalblue')
-# plt.annotate(r'R$_\mathrm{vir}$', (0.9, 2e-2), color='b', rotation=45,
-#              alpha=0.7, zorder=0)
-# plt.annotate(r'R$_\mathrm{vir}$', (0.9, 25), color='b', rotation=45,
-#              alpha=0.7, zorder=0)
-
 plt.axvline(8.5 / 220., linestyle='-.', alpha=1, color='Sandybrown', lw=3)
 # plt.annotate('Earth', (0.05, 0.130), color='Saddlebrown', rotation=0.,
 #              fontsize=20, zorder=10)
@@ -291,31 +357,35 @@ print('Density figure')
 plt.subplot(122)
 
 xxx = np.linspace(3e-3, R_vir * 1e3, num=100)
-volume_220 = volume #* 0.220**3.
+volume_220_dmo = volume_dmo# * 0.220 ** 3.
+volume_220_hydro = volume_hydro# * 0.220 ** 3.
 
-print((bins[:-1] - bins[1:]))
+# print((bins[:-1] - bins[1:]))
 # print(cts_hydro[0][1] / volume / (cts_dmo[0][1] / volume))
 
-plt.plot(bins_mean, funct_ale(bins_mean, cts_dmo[0][0], cts_dmo[0][1])
-         / volume_220
+plt.plot(bins_mean_dmo, funct_ale(bins_mean_dmo, cts_dmo[0][0], cts_dmo[0][1])
+         / volume_220_dmo
          # / len(release_dmo_over)
          ,
          '--', marker='', ms=20, lw=3,
          color='grey', alpha=1, label='Fragile fit')
-plt.plot(bins_mean,
-         funct_ale(bins_mean, cts_hydro[0][0], cts_hydro[0][1])
-         / volume_220
+plt.plot(bins_mean_hydro,
+         funct_ale(bins_mean_hydro, cts_hydro[0][0], cts_hydro[0][1])
+         / volume_220_hydro
          # / len(release_hydro_over)
          ,
          '--', marker='', ms=20, color='limegreen', alpha=1, lw=3)
 
-plt.plot(bins_mean, funct_ale(1., cts_dmo[0][0], cts_dmo[0][1]) / volume_220
+plt.plot(bins_mean_dmo, funct_ale(1., cts_dmo[0][0], cts_dmo[0][1])
+         / volume_220_dmo
          # / len(release_dmo_over)
          ,  # * (bins[1:] - bins[
          # :-1])*1e3,
          marker='', ms=10, lw=3,
          color='grey', alpha=1, linestyle='dotted', label='Resilient fit')
-plt.plot(bins_mean, funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]) / volume_220
+plt.plot(bins_mean_hydro,
+         funct_ale(1., cts_hydro[0][0], cts_hydro[0][1])
+         / volume_220_hydro
          # / len(release_hydro_over)
          ,
          marker='', linestyle='dotted', ms=10, color='limegreen',
@@ -336,10 +406,10 @@ plt.axvline(data_release_hydro[0, 2] / data_release_hydro[0, 5],
             alpha=0.5, color='limegreen',
             linestyle='-', lw=3)
 
-# plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{N_{Tot}\,Volume}$ [Mpc$^{-3}$]',
-#            size=24)
-plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{Volume}$ [Mpc$^{-3}$]',
+plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{\mathrm{Unit\,\,volume}}$',
            size=24)
+# plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{Volume}$ [Mpc$^{-3}$]',
+#            size=24)
 plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
 
 legend_elements = [Line2D([0], [0], marker='o', color='w',
@@ -347,8 +417,8 @@ legend_elements = [Line2D([0], [0], marker='o', color='w',
                    Line2D([0], [0], marker='o', color='w',
                           markerfacecolor='limegreen', markersize=8)]
 legend1 = plt.legend(handles, ['DMO', 'Hydro'], loc=1,
-                           bbox_to_anchor=(0.995, 0.67),
-                           fontsize=20)
+                     bbox_to_anchor=(0.995, 0.67),
+                     fontsize=20)
 leg = plt.legend(framealpha=1, loc=1)
 plt.gca().add_artist(legend1)
 
@@ -360,4 +430,4 @@ plt.xlim(0., 1.)
 
 plt.savefig('outputs/srd_compar_den.png', bbox_inches='tight')
 plt.savefig('outputs/srd_compar_den.pdf', bbox_inches='tight')
-plt.show()
+# plt.show()
