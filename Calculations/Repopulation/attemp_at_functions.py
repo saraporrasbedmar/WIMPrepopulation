@@ -186,33 +186,7 @@ def ff(c):
 
 # SHVF --------------------------------------
 #@njit
-def SHVF_Grand2012(V,
-                   sim_type, res_string,
-                   cosmo_G,
-                   cosmo_H_0,
-                   cosmo_rho_crit,
-
-                   host_R_vir,
-                   host_rho_0,
-                   host_r_s,
-
-                   pathname,
-                   repop_its,
-                   repop_print_freq,
-                   repop_inc_factor,
-
-                   SHVF_cts_RangeMin,
-                   SHVF_cts_RangeMax,
-                   SHVF_bb,
-                   SHVF_mm,
-
-                   Cv_bb,
-                   Cv_mm,
-                   Cv_sigma,
-
-                   srd_args_repop,
-                   srd_args_visible,
-                   srd_last_sub):
+def SHVF_Grand2012(V):
     """
     SubHalo Velocity Function (SHVF) - number of subhalos as a
     function of Vmax. Power law formula.
@@ -297,8 +271,8 @@ def C_Scatt(C, Cv_sigma):
     :return: float or array-like
         Subhalos with scattered concentrations.
     """
-    scatter = np.random.normal(loc=0, scale=Cv_sigma, size=C.size)
-    return C * 10 ** scatter
+    scatter = np.random.normal(loc=1, scale=Cv_sigma, size=C.size)
+    return C * (10 ** scatter - 1.)
     # return np.random.lognormal(
     #     np.log(C) + Cv_sigma[0], Cv_sigma[1], C.size)
 
@@ -1056,70 +1030,70 @@ def interior_loop_singularbrightest(
             bright_Js = np.argmax(new_data[:, 0])
             bright_J03 = np.argmax(new_data[:, 1])
 
-            # if res_string == 'fragile':
-                # while (R_t(new_data[bright_Js, 4],
-                #            new_data[bright_Js, 6],
-                #            new_data[bright_Js, 2],
-                #            cosmo_H_0, cosmo_G,
-                #            host_rho_0, host_r_s,
-                #            singular_case=True)
-                #        < R_s(new_data[bright_Js, 4],
-                #              new_data[bright_Js, 6],
-                #              cosmo_H_0)):
-                #     # print('subhalo broken (Js)')
-                #     progress = open(pathname + '/progress_' +
-                #                     sim_type + '_'
-                #                     + str(res_string)
-                #                     + '_results.txt', 'a')
-                #     progress.write('subhalo broken (Js)'
-                #                    + str(new_data[bright_Js, :])
-                #                    + str(R_t(new_data[bright_Js, 4],
-                #                              new_data[bright_Js, 6],
-                #                              new_data[bright_Js, 2],
-                #                              cosmo_H_0, cosmo_G,
-                #                              host_rho_0, host_r_s,
-                #                              singular_case=True))
-                #                    + str(R_s(new_data[bright_Js, 4],
-                #                              new_data[bright_Js, 6],
-                #                              cosmo_H_0))
-                #                    + '\n')
-                #     # progress.write(bright_Js + '\n')
-                #     new_data[bright_Js, 0] = 0.
-                #     bright_Js = np.argmax(new_data[:, 0])
-                #     # progress.write(bright_Js + '\n')
-                #     progress.close()
+            if res_string == 'fragile':
+                while (R_t(new_data[bright_Js, 4],
+                           new_data[bright_Js, 6],
+                           new_data[bright_Js, 2],
+                           cosmo_H_0, cosmo_G,
+                           host_rho_0, host_r_s,
+                           singular_case=True)
+                       < R_s(new_data[bright_Js, 4],
+                             new_data[bright_Js, 6],
+                             cosmo_H_0)):
+                    # print('subhalo broken (Js)')
+                    progress = open(pathname + '/progress_' +
+                                    sim_type + '_'
+                                    + str(res_string)
+                                    + '_results.txt', 'a')
+                    progress.write('subhalo broken (Js)'
+                                   + str(new_data[bright_Js, :])
+                                   + str(R_t(new_data[bright_Js, 4],
+                                             new_data[bright_Js, 6],
+                                             new_data[bright_Js, 2],
+                                             cosmo_H_0, cosmo_G,
+                                             host_rho_0, host_r_s,
+                                             singular_case=True))
+                                   + str(R_s(new_data[bright_Js, 4],
+                                             new_data[bright_Js, 6],
+                                             cosmo_H_0))
+                                   + '\n')
+                    # progress.write(bright_Js + '\n')
+                    new_data[bright_Js, 0] = 0.
+                    bright_Js = np.argmax(new_data[:, 0])
+                    # progress.write(bright_Js + '\n')
+                    progress.close()
 
-                # while (R_t(new_data[bright_J03, 4],
-                #            new_data[bright_J03, 6],
-                #            new_data[bright_J03, 2],
-                #            cosmo_H_0, cosmo_G,
-                #            host_rho_0, host_r_s,
-                #            singular_case=True)
-                #        < R_s(new_data[bright_J03, 4],
-                #              new_data[bright_J03, 6],
-                #              cosmo_H_0)):
-                #     # print('subhalo broken (J03)')
-                #     progress = open(pathname + '/progress_' +
-                #                     sim_type + '_'
-                #                     + str(res_string)
-                #                     + '_results.txt', 'a')
-                #     progress.write('subhalo broken (J03)'
-                #                    + str(new_data[bright_J03, :])
-                #                    + str(R_t(new_data[bright_J03, 4],
-                #                              new_data[bright_J03, 6],
-                #                              new_data[bright_J03, 2],
-                #                              cosmo_H_0, cosmo_G,
-                #                              host_rho_0, host_r_s,
-                #                              singular_case=True))
-                #                    + str(R_s(new_data[bright_J03, 4],
-                #                              new_data[bright_J03, 6],
-                #                              cosmo_H_0))
-                #                    + '\n')
-                #     # progress.write(bright_J03 + '\n')
-                #     new_data[bright_J03, 1] = 0.
-                #     bright_J03 = np.argmax(new_data[:, 1])
-                #     # progress.write(bright_J03 + '\n')
-                #     progress.close()
+                while (R_t(new_data[bright_J03, 4],
+                           new_data[bright_J03, 6],
+                           new_data[bright_J03, 2],
+                           cosmo_H_0, cosmo_G,
+                           host_rho_0, host_r_s,
+                           singular_case=True)
+                       < R_s(new_data[bright_J03, 4],
+                             new_data[bright_J03, 6],
+                             cosmo_H_0)):
+                    # print('subhalo broken (J03)')
+                    progress = open(pathname + '/progress_' +
+                                    sim_type + '_'
+                                    + str(res_string)
+                                    + '_results.txt', 'a')
+                    progress.write('subhalo broken (J03)'
+                                   + str(new_data[bright_J03, :])
+                                   + str(R_t(new_data[bright_J03, 4],
+                                             new_data[bright_J03, 6],
+                                             new_data[bright_J03, 2],
+                                             cosmo_H_0, cosmo_G,
+                                             host_rho_0, host_r_s,
+                                             singular_case=True))
+                                   + str(R_s(new_data[bright_J03, 4],
+                                             new_data[bright_J03, 6],
+                                             cosmo_H_0))
+                                   + '\n')
+                    # progress.write(bright_J03 + '\n')
+                    new_data[bright_J03, 1] = 0.
+                    bright_J03 = np.argmax(new_data[:, 1])
+                    # progress.write(bright_J03 + '\n')
+                    progress.close()
 
             brightest_Js[
             repop_num_brightest + new_sub, :] = new_data[

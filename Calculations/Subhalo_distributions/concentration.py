@@ -536,6 +536,8 @@ plt.axvline(np.mean(data_dmo) + np.std(data_dmo)
             , color='k', ls='--', lw=2, label=r'$1\sigma$')
 plt.axvline(np.mean(data_dmo) - np.std(data_dmo)
             , color='k', ls='--', lw=2)
+print(np.mean(data_dmo), np.std(data_dmo),
+      10**np.mean(data_dmo) * (10**np.std(data_dmo) - 1.))
 
 plt.axvline(np.mean(data_hydro)
             , color='lime', ls='-', lw=3)
@@ -543,6 +545,8 @@ plt.axvline(np.mean(data_hydro) + np.std(data_hydro)
             , color='lime', ls='--', lw=2)
 plt.axvline(np.mean(data_hydro) - np.std(data_hydro)
             , color='lime', ls='--', lw=2)
+print(np.mean(data_hydro), np.std(data_hydro),
+      10**np.mean(data_hydro) * (10**np.std(data_hydro) - 1.))
 
 ax0.fill_between(
     xx_plot,
@@ -650,6 +654,45 @@ ax0.set_xlim(0.5, 121)
 
 plt.savefig('outputs/cv_hist.pdf', bbox_inches='tight')
 plt.savefig('outputs/cv_hist.png', bbox_inches='tight')
+
+plt.subplots(1, 3)
+plt.subplot(131)
+
+rng1 = np.random.default_rng()
+
+plt.loglog(xx_plot,
+           Moline21_normalization(xx_plot, c0=c0_array_dmo[0]),
+           ls='-', zorder=10, c='k')
+
+lalala = 10**(rng1.random(size=100) * np.log10(120)) + 9.
+sigma = rng1.normal(loc=0, scale=0.29765, size=100)
+
+new_dmo = (Moline21_normalization(lalala, c0=c0_array_dmo[0])
+           * 10 ** sigma)
+plt.loglog(lalala, new_dmo, ls='', marker='.')
+print(c0_array_dmo, np.log10(c0_array_dmo))
+
+plt.subplot(132)
+plt.hist(np.log10(new_dmo), zorder=0)
+plt.axvline(np.nanmean(np.log10(new_dmo)), c='k')
+plt.axvline(
+    np.nanmean(np.log10(new_dmo)) - np.nanstd(np.log10(new_dmo)),
+    c='k', ls='--')
+plt.axvline(
+    np.nanmean(np.log10(new_dmo)) + np.nanstd(np.log10(new_dmo)),
+    c='k', ls='--')
+print(
+    np.nanmean(np.log10(new_dmo)),
+    np.nanstd(np.log10(new_dmo)))
+print(
+    np.nanmean(np.log10(new_dmo/Moline21_normalization(
+        lalala, c0=c0_array_dmo[0]))),
+    np.nanstd(np.log10(new_dmo/Moline21_normalization(
+        lalala, c0=c0_array_dmo[0]))))
+
+plt.subplot(133)
+plt.hist(lalala)
+plt.xscale('log')
 plt.show()
 
 fig, ax0 = plt.subplots(figsize=(8, 8))

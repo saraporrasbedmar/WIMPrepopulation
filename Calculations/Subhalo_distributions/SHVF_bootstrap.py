@@ -44,6 +44,10 @@ x_mean = (x_cumul[:-1] + x_cumul[1:]) / 2.
 
 rng = np.random.default_rng()
 
+print(sum(data_release_dmo[:, 1]<54), sum(data_release_dmo[:, 1]>54),
+sum((data_release_dmo[:, 1]<54)*(data_release_dmo[:, 1]>7.4)))
+print(sum(data_release_hydro[:, 1]<54),sum(data_release_hydro[:, 1]>54),
+sum((data_release_hydro[:, 1]<54)*(data_release_hydro[:, 1]>5.)))
 
 def calcular_dNdV(Vmax):
     Vmax_cumul = np.zeros(len(x_cumul) - 1)

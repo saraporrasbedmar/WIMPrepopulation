@@ -89,7 +89,7 @@ def encontrar_SRD(data, bins):
             aaa.append(sum(interval))
             vol.append(4 / 3 * np.pi * (
                     bins[delta + 1] ** 3 - bins[delta] ** 3)
-                       # * data_ind[0, 5] ** 3.
+                       * data_ind[0, 5] ** 3.
                        # * 1e-9
                        )
             if delta == 0:
@@ -98,7 +98,7 @@ def encontrar_SRD(data, bins):
         aaa = np.array(aaa)
         vol = np.array(vol)
         y = np.nanmean(aaa / vol)  # / len(data_ind))
-        std = np.std(aaa / vol)
+        std = np.nanstd(aaa / vol)
 
         n_final.append(y)
         std_fin.append(std)
@@ -312,7 +312,8 @@ print('resilient errors: ',
 plt.axvline(8.5 / 220., linestyle='-.', alpha=1, color='Sandybrown', lw=3)
 # plt.annotate('Earth', (0.05, 0.130), color='Saddlebrown', rotation=0.,
 #              fontsize=20, zorder=10)
-plt.annotate('Earth', (0.05, 35), color='Saddlebrown', rotation=0.,
+plt.annotate('Earth', (0.05, 35),  color='chocolate',
+             rotation=0., weight='bold',
              fontsize=20, zorder=10)
 
 plt.axvline(data_release_dmo[0, 2] / data_release_dmo[0, 5],
@@ -356,9 +357,8 @@ print('Density figure')
 # plt.figure(figsize=(10, 8))
 plt.subplot(122)
 
-xxx = np.linspace(3e-3, R_vir * 1e3, num=100)
-volume_220_dmo = volume_dmo# * 0.220 ** 3.
-volume_220_hydro = volume_hydro# * 0.220 ** 3.
+volume_220_dmo = volume_dmo * 220. ** 3.
+volume_220_hydro = volume_hydro * 220. ** 3.
 
 # print((bins[:-1] - bins[1:]))
 # print(cts_hydro[0][1] / volume / (cts_dmo[0][1] / volume))
@@ -396,7 +396,8 @@ plt.plot(bins_mean_hydro,
 plt.axvline(8.5 / 220., linestyle='-.', alpha=1, color='Sandybrown', lw=3)
 # plt.annotate('Earth', (0.05, 0.130), color='Saddlebrown', rotation=0.,
 #              fontsize=20, zorder=10)
-plt.annotate('Earth', (0.05, 1.7e4), color='Saddlebrown', rotation=0.,
+plt.annotate('Earth', (0.05, 8e-4), color='chocolate',
+             rotation=0., weight='bold',
              fontsize=20, zorder=10)
 
 plt.axvline(data_release_dmo[0, 2] / data_release_dmo[0, 5],
@@ -406,10 +407,10 @@ plt.axvline(data_release_hydro[0, 2] / data_release_hydro[0, 5],
             alpha=0.5, color='limegreen',
             linestyle='-', lw=3)
 
-plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{\mathrm{Unit\,\,volume}}$',
-           size=24)
-# plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{Volume}$ [Mpc$^{-3}$]',
+# plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{\mathrm{Unit\,\,volume}}$',
 #            size=24)
+plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{Volume}$ [kpc$^{-3}$]',
+           size=24)
 plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
 
 legend_elements = [Line2D([0], [0], marker='o', color='w',

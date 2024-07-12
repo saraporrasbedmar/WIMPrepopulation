@@ -1,35 +1,33 @@
 Cv:
   dmo:
-    bb: 231354.639
+    bb: 283862.7023
     mm: None
     sigma:
-    - -0.0148812
-    - 0.78462799
+    - 0.297659
   hydro:
-    bb: 158864.97
+    bb: 192879.057
     mm: None
     sigma:
-    - -0.07663688
-    - 0.97226404
+    - 0.374942
 SHVF:
   RangeMax: 120.0
-  RangeMin: 0.5
+  RangeMin: 1.0
   Vmax_completion: 8.0
   dmo:
-    bb: 5.7313
-    mm: -3.9557
+    bb: 5.68
+    mm: -3.92
   hydro:
-    bb: 5.0796
-    mm: -3.9313
+    bb: 5.3
+    mm: -4.08
 SRD:
   dmo:
     fragile:
       args:
-      - -22.85776246
-      - 0.09600103
-      last_subhalo: 6.61
+      - -0.151
+      - 0.01817
+      last_subhalo: 5.57
     resilient:
-      args: 0.09600103
+      args: 1.0
       last_subhalo: 0.0
   formula:
     fragile: ''
@@ -37,15 +35,15 @@ SRD:
   hydro:
     fragile:
       args:
-      - -41.98649489
-      - 0.1141631
-      last_subhalo: 13.6
+      - -0.27
+      - 0.02257
+      last_subhalo: 15.71
     resilient:
-      args: 0.1141631
+      args: 1.0
       last_subhalo: 0.0
 cosmo_constants:
   G: 4.297e-06
-  H_0: 71.1
+  H_0: 67.7
   rho_crit: 135.73
 host:
   R_vir: 220
@@ -53,7 +51,7 @@ host:
   rho_0: 9.04e6
 repopulations:
   inc_factor: 1.5
-  its: 500
-  num_brightest: 1
+  its: 1
+  num_brightest: 64782
   num_subs_max: 5e5
   print_freq: 1
