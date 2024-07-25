@@ -65,7 +65,7 @@ def calcular_dNdV(Vmax):
 
     return Vmax_cumul/6., num_cumul
 
-if 1 == 0:
+if 1 == 1:
 
     num_subs_dmo = np.shape(data_release_dmo)[0]
     num_subs_hydro = np.shape(data_release_hydro)[0]
@@ -103,7 +103,7 @@ if 1 == 0:
         bb_dmo.append(fits[1])
 
         limit_inf = rng.random(1) * 3. + 5.
-        limit_sup = -rng.random(1) * 34 + 54.
+        limit_sup = -rng.random(1) * 15. + 30.
 
         true_values = ((x_mean > limit_inf) * (x_mean < limit_sup))
         true_values = (true_values * (Vmax_cumul_hydro_release > 0.))
