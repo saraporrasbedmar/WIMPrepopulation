@@ -99,7 +99,6 @@ if rerun_sims:
     funct_repop.main(['hydro', 'resilient', path_input, path_outputs])
     funct_repop.main(['hydro', 'fragile', path_input, path_outputs])
 
-input_data = read_config_file(path_outputs + '/input_data.yml')
 
 datos_frag_hyd = np.loadtxt(path_outputs + '/Js_hydro_fragile_results.txt')
 datos_frag_dmo = np.loadtxt(path_outputs + '/Js_dmo_fragile_results.txt')
@@ -157,7 +156,7 @@ Vmax_cumul_dmo_res = calcular_dNdV(datos_resi_dmo[:, 3])
 Vmax_cumul_dmo_frag = calcular_dNdV(datos_frag_dmo[:, 3])
 Vmax_cumul_hydro_res = calcular_dNdV(datos_resi_hyd[:, 3])
 Vmax_cumul_hydro_frag = calcular_dNdV(datos_frag_hyd[:, 3])
-
+'''
 x_cumul = (x_cumul[:-1] + x_cumul[1:]) / 2.
 
 plt.figure(figsize=(10, 10))
@@ -184,7 +183,7 @@ plt.legend()
 
 plt.savefig(path_outputs + '/SHVF.png', bbox_inches='tight')
 plt.savefig(path_outputs + '/SHVF.pdf', bbox_inches='tight')
-
+'''
 
 # SRD ------------------------------------------------------------------
 
@@ -201,30 +200,29 @@ def encontrar_SRD(data):
     for delta in range(len(bins) - 1):
         interval = (data >= bins[delta]) * (data <= bins[delta + 1])
         vol = 4 / 3 * np.pi * (
-                bins[delta + 1] ** 3 - bins[delta] ** 3) / 1e9
+                bins[delta + 1] ** 3 - bins[delta] ** 3) / R_vir**3.
         n_final.append(sum(interval)/vol)
     return np.array(n_final)
 
 
-R200 = input_data['host']['R_vir'] + 1.  # input_data['host']['R_vir']
-R_max = input_data['host']['R_vir']
+R_vir = input_data['host']['R_vir']
 
 num_bins = 50
-bins = np.geomspace(1e-1, R200, num=num_bins)
+bins = np.geomspace(1e-1, R_vir+1., num=num_bins)
 x_med_kpc = (bins[:-1] + bins[1:]) / 2.
 
 print('Density figure')
-
+'''
 fig = plt.figure(figsize=(12, 10))
 ax1 = fig.gca()
 
 # --- Resilient all of it ---
 plt.plot(x_med_kpc, (encontrar_SRD(datos_resi_dmo[:, 1])
-                     # / len(datos_resi_dmo[:, 1])
+                     / len(datos_resi_dmo[:, 1])
                      ),
          color='k', marker='+', linestyle='-', ms=14)
 plt.plot(x_med_kpc, (encontrar_SRD(datos_resi_hyd[:, 1])
-                     # / len(datos_resi_hyd[:, 1])
+                     / len(datos_resi_hyd[:, 1])
                      ),
          color='g', marker='+', linestyle='-', ms=14)
 
@@ -234,10 +232,10 @@ data_used_dmo = datos_resi_dmo[
 data_used_hyd = datos_resi_hyd[
     datos_resi_hyd[:, 3] > input_data['SHVF']['Vmax_completion'], 1]
 srd_dmo_frag_sinVol = (encontrar_SRD(data_used_dmo)
-                       # / len(data_used_dmo)
+                       / len(data_used_dmo)
                        )
 srd_hydro_frag_sinVol = (encontrar_SRD(data_used_hyd)
-                         # / len(data_used_hyd)
+                         / len(data_used_hyd)
                          )
 
 plt.plot(x_med_kpc, srd_dmo_frag_sinVol,
@@ -253,10 +251,10 @@ data_used_hyd = datos_resi_hyd[
     datos_resi_hyd[:, 3] < input_data['SHVF']['Vmax_completion'], 1]
 
 srd_dmo_frag_sinVol = (encontrar_SRD(data_used_dmo)
-                       # / len(data_used_dmo)
+                       / len(data_used_dmo)
                        )
 srd_hydro_frag_sinVol = (encontrar_SRD(data_used_hyd)
-                         # / len(data_used_hyd)
+                         / len(data_used_hyd)
                          )
 
 plt.plot(x_med_kpc, srd_dmo_frag_sinVol,
@@ -266,16 +264,17 @@ plt.plot(x_med_kpc, srd_hydro_frag_sinVol,
 
 # --- Fragile all of it ---
 plt.plot(x_med_kpc, (encontrar_SRD(datos_frag_dmo[:, 1])
-                     # / len(datos_frag_dmo[:, 1])
+                     / len(datos_frag_dmo[:, 1])
                      ),
          color='k', marker='.', linestyle='-', ms=10, label='DMO')
 plt.plot(x_med_kpc, (encontrar_SRD(datos_frag_hyd[:, 1])
-                     # / len(datos_frag_hyd[:, 1])
+                     / len(datos_frag_hyd[:, 1])
                      ),
          color='g', marker='.', linestyle='-', ms=10, label='Hydro')
 
+
 # --- Figure information ---
-plt.axvline(R_max, alpha=0.7, linestyle='--')  # , label='220 kpc')
+plt.axvline(R_vir, alpha=0.7, linestyle='--')  # , label='220 kpc')
 plt.annotate(r'R$_\mathrm{vir}$', (170, 32), color='b',
              rotation=45, alpha=0.7)
 
@@ -321,7 +320,7 @@ plt.yscale('log')
 
 plt.savefig(path_outputs + '/srd_density.png', bbox_inches='tight')
 plt.savefig(path_outputs + '/srd_density.pdf', bbox_inches='tight')
-
+'''
 # ------------ N(r)/Ntot figure -------------------------------
 print()
 print('N/Ntot figures')
@@ -400,12 +399,65 @@ plt.plot(x_med_kpc, N_subs_fragile(x_med_kpc, aaa[0][0], aaa[0][1]),
 plt.plot(x_med_kpc, N_subs_fragile(x_med_kpc, bbb[0][0], bbb[0][1]),
          color='orange')
 
+# Original Auriga simulations --------------------------------------
+release_dmo_over = Grand_dmo[Grand_dmo[:, 1]
+                             >= input_data['SHVF']['Vmax_completion'], :]
+release_hydro_over = Grand_hydro[Grand_hydro[:, 1]
+                                     >= input_data['SHVF']['Vmax_completion'], :]
+
+minnDgc = np.argmin(Grand_dmo[:, 2])
+
+bins = np.linspace(
+        Grand_dmo[minnDgc, 2] / Grand_dmo[minnDgc, 5],
+        1., num=num_bins)
+bins_mean_dmo = (bins[:-1] + bins[1:]) / 2.
+# volume_dmo = 4 / 3 * np.pi * (bins_dmo[1:] ** 3 - bins_dmo[:-1] ** 3)
+srd_dmo_over_release = (np.array(encontrar_SRD_sinVol(release_dmo_over))
+        # / len(release_dmo_over)
+    )
+
+minnDgc = np.argmin(Grand_hydro[:, 2])
+bins = np.linspace(
+    Grand_hydro[minnDgc, 2] / Grand_hydro[minnDgc, 5],
+        1., num=num_bins)
+bins_mean_hydro = (bins[:-1] + bins[1:]) / 2.
+# volume_hydro = 4 / 3 * np.pi * (bins_hydro[1:] ** 3 - bins_hydro[:-1] ** 3)
+srd_hydro_over_release = (np.array(encontrar_SRD_sinVol(release_hydro_over))
+        # / len(release_hydro_over)
+    )
+
+plt.errorbar(bins_mean_dmo, srd_dmo_over_release,
+                 ls='',
+                 c='k',
+                 ms=15, marker='.',
+                 alpha=1, zorder=15,
+                 label='Data',
+                 # label=ii
+                 )
+
+plt.errorbar(bins_mean_hydro, srd_hydro_over_release,
+                 ls='',
+                 c='#00CC00',
+                 ms=15, marker='.',
+                 alpha=1, zorder=15)
+
+xx_plot = np.geomspace(1e-6, R_vir, num=100)
+plt.plot(
+    xx_plot,
+    funct_repop.N_subs_fragile(
+        xx_plot, args=input_data['SRD']['dmo']['fragile']['args']),
+    c='k', ls='dotted')
+plt.plot(
+    xx_plot,
+    funct_repop.N_subs_fragile(
+        xx_plot, args=input_data['SRD']['hydro']['fragile']['args']),
+    c='green', ls='dotted')
 
 
 
 
 # --- Figure information ---
-plt.axvline(R_max, alpha=0.7, linestyle='--')  # , label='220 kpc')
+plt.axvline(R_vir, alpha=0.7, linestyle='--')  # , label='220 kpc')
 plt.annotate(r'R$_\mathrm{vir}$', (203, 2e-2), color='b', rotation=45,
              alpha=0.7)
 
@@ -450,7 +502,7 @@ plt.yscale('log')
 
 plt.savefig(path_outputs + '/srd_number.png', bbox_inches='tight')
 plt.savefig(path_outputs + '/srd_number.pdf', bbox_inches='tight')
-
+plt.show()
 # Cv -------------------------------------------------------------------
 
 plt.figure(figsize=(12, 10))
