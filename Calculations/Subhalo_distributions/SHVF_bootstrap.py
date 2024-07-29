@@ -65,7 +65,16 @@ def calcular_dNdV(Vmax):
 
     return Vmax_cumul/6., num_cumul
 
-if 1 == 1:
+Vmax_cumul_dmo_original, num_dmo = calcular_dNdV(data_release_dmo)
+vmax_dmo = x_cumul[np.argwhere(num_dmo >= 10.)[-1][0] + 1]
+
+Vmax_cumul_hydro_original, num_hydro = calcular_dNdV(data_release_hydro)
+vmax_hydro = x_cumul[np.argwhere(num_hydro >= 10.)[-1][0] + 1]
+
+repop = True
+# repop = False
+
+if repop:
 
     num_subs_dmo = np.shape(data_release_dmo)[0]
     num_subs_hydro = np.shape(data_release_hydro)[0]
@@ -89,38 +98,75 @@ if 1 == 1:
 
 
         # Fit to the power laws
-        limit_inf = rng.random(1) * 2. + 7.4
-        limit_sup = -rng.random(1) * 34 + 54.
+        limit_inf_dmo = rng.random(1) * 2. + 7.4
+        limit_sup_dmo = -rng.random(1) * 20. + vmax_dmo
 
-        true_values = ((x_mean > limit_inf) * (x_mean < limit_sup))
+        true_values = ((x_mean > limit_inf_dmo) * (x_mean < limit_sup_dmo))
         true_values = (true_values * (Vmax_cumul_dmo_release > 0.))
+        true_values = (true_values * num_dmo >= 10)
+        # try:
         fits, cov_matrix = np.polyfit(
-            np.log10(x_mean[true_values]),
-            np.log10(Vmax_cumul_dmo_release[true_values]),
-            deg=1, cov=True, full=False)
-        # print(fits, cov_matrix)
+                np.log10(x_mean[true_values]),
+                np.log10(Vmax_cumul_dmo_release[true_values]),
+                deg=1, cov=True, full=False)
+            # print(fits, cov_matrix)
         mm_dmo.append(fits[0])
         bb_dmo.append(fits[1])
+        # except np.linalg.LinAlgError:
+        #     plt.figure()
+        #     plt.plot(x_mean, Vmax_cumul_hydro_release,
+        #              marker='.', c='k')
+        #     plt.axvline(limit_inf_dmo)
+        #     plt.axvline(limit_sup_dmo)
+        #     mm_dmo.append(np.nan)
+        #     bb_dmo.append(np.nan)
 
-        limit_inf = rng.random(1) * 3. + 5.
-        limit_sup = -rng.random(1) * 15. + 30.
 
-        true_values = ((x_mean > limit_inf) * (x_mean < limit_sup))
+        limit_inf_hyd = rng.random(1) * 3. + 5.
+        limit_sup_hyd = -rng.random(1) *10. + 30.
+
+        true_values = ((x_mean > limit_inf_hyd) * (x_mean < limit_sup_hyd))
         true_values = (true_values * (Vmax_cumul_hydro_release > 0.))
+        true_values = (true_values * (num_hydro >= 10))
+
         fits, cov_matrix = np.polyfit(
-            np.log10(x_mean[true_values]),
-            np.log10(Vmax_cumul_hydro_release[true_values]),
-            deg=1, cov=True, full=False)
+                np.log10(x_mean[true_values]),
+                np.log10(Vmax_cumul_hydro_release[true_values]),
+                deg=1, cov=True, full=False)
         mm_hyd.append(fits[0])
         bb_hyd.append(fits[1])
-        # print(fits, type(fits[0]))
-        if np.isnan(fits[0]):
-            print('aaaa')
+
+        if mm_dmo[-1] < -4.6 or mm_hyd[-1] < -4.6\
+                or mm_dmo[-1] > -3.5 or mm_hyd[-1] > -3.5:
             plt.figure()
-            plt.plot(x_mean, Vmax_cumul_hydro_release,
-                     marker='.')
-            plt.axvline(limit_inf)
-            plt.axvline(limit_sup)
+            plt.title('%i  %.2f  %.2f' % (i, mm_dmo[-1], mm_hyd[-1]))
+            xx_plot = np.geomspace(0.5, 120)
+
+            if mm_dmo[-1] < -4.6 or mm_dmo[-1] > -3.5:
+                plt.plot(x_mean, Vmax_cumul_dmo_release,
+                         marker='.', c='k')
+                plt.plot(xx_plot, 10**bb_dmo[-1] * xx_plot**mm_dmo[-1],
+                         c='k')
+                plt.plot(x_mean, Vmax_cumul_dmo_original,
+                         marker='x',  c='k')
+                plt.axvline(limit_inf_dmo, c='k')
+                plt.axvline(limit_sup_dmo, c='k')
+            if mm_hyd[-1] < -4.6 or mm_hyd[-1] > -3.5:
+                plt.plot(x_mean, Vmax_cumul_hydro_release,
+                         marker='.', c='g')
+                plt.plot(x_mean, Vmax_cumul_hydro_original,
+                         marker='x',  c='g')
+                plt.plot(xx_plot, 10**bb_hyd[-1] * xx_plot**mm_hyd[-1],
+                         c='g')
+                plt.axvline(limit_inf_hyd, c='g')
+                plt.axvline(limit_sup_hyd, c='g')
+
+            plt.xscale('log')
+            plt.yscale('log')
+
+            plt.show()
+
+
 
     np.savetxt('outputs/data_shvf.txt',
                np.column_stack((mm_dmo, bb_dmo, mm_hyd, bb_hyd)),
@@ -133,8 +179,20 @@ mm_hyd = data[:, 2]
 bb_hyd = data[:, 3]
 
 plt.subplots(1, 2, figsize=(20, 8))
-num_bins_bb = np.linspace(4.4, 7, num=30)
-num_bins_mm = np.linspace(-5., -3.2, num=20)
+
+print('min and max values')
+print(np.nanmax(mm_dmo), np.nanmin(mm_dmo),
+      np.nanmax(mm_hyd), np.nanmin(mm_hyd))
+
+num_bins_bb = np.linspace(
+    min(np.nanmin(bb_dmo), np.nanmin(bb_hyd)),
+    max(np.nanmax(bb_dmo), np.nanmax(bb_hyd)),
+    num=20)
+
+num_bins_mm = np.linspace(
+    min(np.nanmin(mm_dmo), np.nanmin(mm_hyd)),
+    max(np.nanmax(mm_dmo), np.nanmax(mm_hyd)),
+    num=20)
 
 plt.subplot(121)
 plt.suptitle(r'$log_{10}\left(\frac{dN(V_{\mathrm{max}})}'
@@ -161,6 +219,7 @@ plt.axvline(np.nanmean(mm_hyd) - np.nanstd(mm_hyd),
 
 plt.xlabel('m')
 
+print('means')
 print(np.nanmean(mm_dmo), np.nanstd(mm_dmo))
 print(np.nanmean(mm_hyd), np.nanstd(mm_hyd))
 

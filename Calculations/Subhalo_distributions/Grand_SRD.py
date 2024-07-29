@@ -357,8 +357,19 @@ print('Density figure')
 # plt.figure(figsize=(10, 8))
 plt.subplot(122)
 
-volume_220_dmo = volume_dmo * 220. ** 3.
-volume_220_hydro = volume_hydro * 220. ** 3.
+
+mean_r_dmo = sum([
+    i * sum(data_release_dmo[:, 5] == i)
+    for i in np.unique(data_release_dmo[:, 5])]) / len(data_release_dmo)
+
+mean_r_hyd = sum([
+    i * sum(data_release_hydro[:, 5] == i)
+    for i in np.unique(data_release_hydro[:, 5])]) / len(data_release_hydro)
+
+print(mean_r_dmo, mean_r_hyd)
+
+volume_220_dmo = volume_dmo * mean_r_dmo ** 3.
+volume_220_hydro = volume_hydro * mean_r_hyd ** 3.
 
 # print((bins[:-1] - bins[1:]))
 # print(cts_hydro[0][1] / volume / (cts_dmo[0][1] / volume))
@@ -409,7 +420,8 @@ plt.axvline(data_release_hydro[0, 2] / data_release_hydro[0, 5],
 
 # plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{\mathrm{Unit\,\,volume}}$',
 #            size=24)
-plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{Volume}$ [kpc$^{-3}$]',
+plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{Volume}$'
+           r' $\left[\mathrm{kpc}^{-3}\right]$',
            size=24)
 plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
 
@@ -431,4 +443,4 @@ plt.xlim(0., 1.)
 
 plt.savefig('outputs/srd_compar_den.png', bbox_inches='tight')
 plt.savefig('outputs/srd_compar_den.pdf', bbox_inches='tight')
-# plt.show()
+plt.show()
