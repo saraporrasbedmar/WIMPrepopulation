@@ -511,7 +511,7 @@ def N_subs_fragile(DistGC, args):
     #                           k=3, s=0, ext=0)
     # return args[1] * np.exp(args[0] / DistGC)
 
-    return args[1] * np.exp(args[0] / DistGC*220.)
+    return args[1] * np.exp(args[0] / DistGC * args[2])
 
 
 #@jit(forceobj=True)

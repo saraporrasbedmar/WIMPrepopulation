@@ -11,7 +11,7 @@ Cv:
     - 0.374942
 SHVF:
   RangeMax: 120.0
-  RangeMin: 2.0
+  RangeMin: 0.1
   Vmax_completion: 8.0
   dmo:
     bb: 5.68
@@ -25,7 +25,7 @@ SRD:
       args:
       - -0.151
       - 39.27964
-      - 220.0
+      - 220.
       last_subhalo: 5.57
     resilient:
       args: 1.0
@@ -38,7 +38,7 @@ SRD:
       args:
       - -0.27
       - 16.16391
-      - 220.0
+      - 220.
       last_subhalo: 15.71
     resilient:
       args: 1.0
@@ -53,7 +53,7 @@ host:
   rho_0: 9.04e6
 repopulations:
   inc_factor: 1.5
-  its: 1
-  num_brightest: 7661
+  its: 500
+  num_brightest: 1
   num_subs_max: 5e5
-  print_freq: 1
+  print_freq: 20

@@ -47,8 +47,8 @@ path_outputs = 'outputs/' \
                'test_srds_and_Cv'
 path_outputs = 'outputs/test1repop'
 
-# rerun_sims = True
-rerun_sims = False
+rerun_sims = True
+# rerun_sims = False
 
 if rerun_sims:
 
