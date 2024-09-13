@@ -376,27 +376,16 @@ ax0.errorbar(vv_medians_dmo_release, cv_dmo_median_release,
              elinewidth=2,
              capsize=5, label='Data', capthick=2.)
 
-out_shade = ((vv_medians_hydro_release > 6.2)
-             * (vv_medians_hydro_release < 50))
-ax0.errorbar(vv_medians_hydro_release[out_shade],
-             cv_hydro_median_release[out_shade],
-             xerr=xerr_hydro.T[:, out_shade],
-             yerr=yerr_hydro[out_shade],
+ax0.errorbar(vv_medians_hydro_release,
+             cv_hydro_median_release,
+             xerr=xerr_hydro.T,
+             yerr=yerr_hydro,
              marker='.', ms=16,
-             markerfacecolor='#00FF00', markeredgecolor='#00FF00',
-             elinewidth=1.5,
-             color='#00FF00', ls='', lw=3, zorder=11,
+             markerfacecolor='g', markeredgecolor='g',
+             elinewidth=2,
+             color='g', ls='', lw=3, zorder=11,
              capsize=5, capthick=2.)
 
-ax0.errorbar(vv_medians_hydro_release[~out_shade],
-             cv_hydro_median_release[~out_shade],
-             xerr=xerr_hydro.T[:, ~out_shade],
-             yerr=yerr_hydro[~out_shade],
-             marker='.', ms=16,
-             markerfacecolor='#00E200', markeredgecolor='#00E200',
-             elinewidth=1.5,
-             color='#00E200', ls='', lw=3, zorder=11,
-             capsize=5, capthick=2.)
 
 # plt.scatter(data_release_dmo[:, 1],
 #             cv_dmo_cloud_release,
@@ -462,21 +451,34 @@ plt.errorbar(vcut_array, c0_array_hydro,
 
 xx_plot = np.geomspace(0.5, 120)
 for i in range(len(vcut_array)):
-    ax0.plot(xx_plot,
-             Moline21_norm_log(xx_plot, c0=c0_array_dmo[i]),
-             zorder=10, label='Fit to data',
-             color='dimgray', lw=3, ls='-')
 
-    ax0.plot(xx_plot,
-             Moline21_norm_log(xx_plot, c0=c0_array_hydro[i]),
+    fit_range = xx_plot > 10
+    ax0.plot(xx_plot[fit_range],
+             Moline21_norm_log(xx_plot, c0=c0_array_dmo[i])[fit_range],
+             zorder=10, label='Fit to data',
+             color='k', alpha=0.7, lw=3, ls='-')
+
+    ax0.plot(xx_plot[~fit_range],
+             Moline21_norm_log(xx_plot, c0=c0_array_dmo[i])[~fit_range],
+             zorder=10,
+             color='k', alpha=0.7, lw=3, ls='--')
+
+    ax0.plot(xx_plot[fit_range],
+             Moline21_norm_log(xx_plot, c0=c0_array_hydro[i])[fit_range],
              zorder=10, lw=3,
              color='forestgreen', alpha=0.75, ls='-')
+
+    ax0.plot(xx_plot[~fit_range],
+             Moline21_norm_log(xx_plot, c0=c0_array_hydro[i])[~fit_range],
+             zorder=10, lw=3,
+             color='forestgreen', alpha=0.75, ls='--')
+
 
     ax0.axvline(vcut_array[i],
                 color='k', alpha=0.5, ls='--')
 
 ax0.plot(xx_plot, np.log10(Cv_Mol2021_redshift0(xx_plot)),
-         c='r', zorder=15, ls='dotted', label='Moliné21', lw=2.5)
+         c='r', zorder=15, ls='dotted', label='Moliné+ \'21', lw=2.5)
 
 
 plt.figure(fig2)
@@ -492,7 +494,7 @@ plt.savefig('outputs/logc_euqalBins_c0fit.pdf', bbox_inches='tight')
 # plt.figure(fig0)
 # plt.savefig('outputs/logc_euqalBins.png', bbox_inches='tight')
 # plt.savefig('outputs/logc_euqalBins.pdf', bbox_inches='tight')
-# plt.show()
+# #plt.show(
 
 plt.figure(fig0)
 plt.subplot(122)
@@ -540,11 +542,11 @@ print(np.mean(data_dmo), np.std(data_dmo),
       10**np.mean(data_dmo) * (10**np.std(data_dmo) - 1.))
 
 plt.axvline(np.mean(data_hydro)
-            , color='lime', ls='-', lw=3)
+            , color='g', ls='-', lw=3)
 plt.axvline(np.mean(data_hydro) + np.std(data_hydro)
-            , color='lime', ls='--', lw=2)
+            , color='g', ls='--', lw=2)
 plt.axvline(np.mean(data_hydro) - np.std(data_hydro)
-            , color='lime', ls='--', lw=2)
+            , color='g', ls='--', lw=2)
 print(np.mean(data_hydro), np.std(data_hydro),
       10**np.mean(data_hydro) * (10**np.std(data_hydro) - 1.))
 
@@ -574,7 +576,9 @@ legend_colors = plt.legend(handles=handles, loc=1,
 ax1.add_artist(legend_colors)
 ax1.add_artist(leg1)
 plt.xlabel(r'log$_{10}(\mathrm{c}_V)$')
-plt.text(x=3.08, y=130, s=r'$V_\mathrm{max} > 10\,$km s$^{-1}$',
+# plt.text(x=3.08, y=130, s=r'$V_\mathrm{max} > 10\,$km s$^{-1}$',
+#          fontsize=22)
+plt.text(x=3.23, y=130, s=r'$V_\mathrm{max} > V_\mathrm{Cut}$',
          fontsize=22)
 
 '''
@@ -693,7 +697,7 @@ print(
 plt.subplot(133)
 plt.hist(lalala)
 plt.xscale('log')
-plt.show()
+#plt.show(
 
 fig, ax0 = plt.subplots(figsize=(8, 8))
 
@@ -840,7 +844,7 @@ ax0.axvline(dmoLimit,
 # plt.yscale('log')
 plt.xscale('log')
 
-# plt.show()
+# #plt.show(
 # FIGURE start ---------------------------------------------------------
 fig, (ax, ax2) = plt.subplots(1, 2, figsize=(20, 8))
 plt.subplot(121)
@@ -952,7 +956,7 @@ legend11 = plt.legend(handles=handles,
 
 plt.ylabel(r'c$_\mathrm{V}$', size=28)
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
-plt.show()
+#plt.show(
 plt.subplot(122)  # -------------------------------------------------
 print()
 
@@ -1249,4 +1253,4 @@ ax.add_artist(legend_types)
 
 fig.savefig('outputs/cv_median.pdf', bbox_inches='tight')
 fig.savefig('outputs/cv_median.png', bbox_inches='tight')
-plt.show()
+#plt.show(

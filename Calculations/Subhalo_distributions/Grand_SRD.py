@@ -241,7 +241,7 @@ for ni, ii in enumerate(v_cut):
     ax1.errorbar(bins_mean_hydro, srd_hydro_over_release,
                  yerr=std_hydro_num,
                  ls='',
-                 c='#00CC00',
+                 c='g',
                  ms=15, marker='.', markeredgewidth=2,
                  alpha=1, zorder=15,
                  capsize=5)
@@ -260,7 +260,7 @@ for ni, ii in enumerate(v_cut):
     ax2.errorbar(bins_mean_hydro, srddensity_hydro_over_release,
                  yerr=std_hydro_den,
                  ls='',
-                 color='#00CC00',
+                 color='g',
                  ms=15, marker='.',  # markeredgewidth=3,
                  alpha=1, zorder=15,
                  capthick=2.,
@@ -291,7 +291,7 @@ plt.plot(xxx, funct_ale(xxx, cts_dmo[0][0], cts_dmo[0][1]),
          'dimgray', linestyle='--', lw=3, alpha=0.7,
          label='Fragile fit', zorder=5)
 plt.plot(xxx, funct_ale(xxx, cts_hydro[0][0], cts_hydro[0][1]),
-         '#00FF00', linestyle='--', lw=3, zorder=5)
+         'limegreen', linestyle='--', lw=3, zorder=5)
 
 plt.plot(xxx, np.ones(len(xxx))
          * funct_ale(1., cts_dmo[0][0], cts_dmo[0][1]),
@@ -299,7 +299,7 @@ plt.plot(xxx, np.ones(len(xxx))
          label='Resilient fit', zorder=5)
 plt.plot(xxx, np.ones(len(xxx))
          * funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]),
-         '#00FF00', linestyle='dotted', lw=4, zorder=5)
+         'limegreen', linestyle='dotted', lw=4, zorder=5)
 print('resilient values: ',
       funct_ale(1., cts_dmo[0][0], cts_dmo[0][1]),
       funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]))
@@ -316,12 +316,12 @@ plt.annotate('Earth', (0.05, 35),  color='chocolate',
              rotation=0., weight='bold',
              fontsize=20, zorder=10)
 
-plt.axvline(data_release_dmo[0, 2] / data_release_dmo[0, 5],
-            alpha=0.5, color='k', linestyle='-',
-            lw=3, label='Last subhalo')
-plt.axvline(data_release_hydro[0, 2] / data_release_hydro[0, 5],
-            alpha=0.5, color='limegreen',
-            linestyle='-', lw=3)
+# plt.axvline(data_release_dmo[0, 2] / data_release_dmo[0, 5],
+#             alpha=0.5, color='k', linestyle='-',
+#             lw=3, label='Last subhalo')
+# plt.axvline(data_release_hydro[0, 2] / data_release_hydro[0, 5],
+#             alpha=0.5, color='limegreen',
+#             linestyle='-', lw=3)
 
 # plt.ylabel(r'$N(D_\mathrm{GC}) \, / \, N_\mathrm{Total}$')
 plt.ylabel(r'$N(D_\mathrm{GC})$')
@@ -379,7 +379,7 @@ plt.plot(bins_mean_dmo, funct_ale(bins_mean_dmo, cts_dmo[0][0], cts_dmo[0][1])
          # / len(release_dmo_over)
          ,
          '--', marker='', ms=20, lw=3,
-         color='grey', alpha=1, label='Fragile fit')
+         color='dimgray', alpha=0.7, label='Fragile fit')
 plt.plot(bins_mean_hydro,
          funct_ale(bins_mean_hydro, cts_hydro[0][0], cts_hydro[0][1])
          / volume_220_hydro
@@ -393,7 +393,7 @@ plt.plot(bins_mean_dmo, funct_ale(1., cts_dmo[0][0], cts_dmo[0][1])
          ,  # * (bins[1:] - bins[
          # :-1])*1e3,
          marker='', ms=10, lw=3,
-         color='grey', alpha=1, linestyle='dotted', label='Resilient fit')
+         color='dimgray', alpha=0.7, linestyle='dotted', label='Resilient fit')
 plt.plot(bins_mean_hydro,
          funct_ale(1., cts_hydro[0][0], cts_hydro[0][1])
          / volume_220_hydro
@@ -411,12 +411,12 @@ plt.annotate('Earth', (0.05, 8e-4), color='chocolate',
              rotation=0., weight='bold',
              fontsize=20, zorder=10)
 
-plt.axvline(data_release_dmo[0, 2] / data_release_dmo[0, 5],
-            alpha=0.5, color='k', linestyle='-',
-            lw=3, label='Last subhalo')
-plt.axvline(data_release_hydro[0, 2] / data_release_hydro[0, 5],
-            alpha=0.5, color='limegreen',
-            linestyle='-', lw=3)
+# plt.axvline(data_release_dmo[0, 2] / data_release_dmo[0, 5],
+#             alpha=0.5, color='k', linestyle='-',
+#             lw=3, label='Last subhalo')
+# plt.axvline(data_release_hydro[0, 2] / data_release_hydro[0, 5],
+#             alpha=0.5, color='limegreen',
+#             linestyle='-', lw=3)
 
 # plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{\mathrm{Unit\,\,volume}}$',
 #            size=24)
