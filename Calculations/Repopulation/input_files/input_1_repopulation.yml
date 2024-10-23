@@ -11,13 +11,13 @@ Cv:
     - 0.374942
 SHVF:
   RangeMax: 120.0
-  RangeMin: 2.0
+  RangeMin: 3.0
   Vmax_completion: 8.0
   dmo:
-    bb: 5.68
+    bb: 5.78
     mm: -3.92
   hydro:
-    bb: 5.3
+    bb: 5.49
     mm: -4.08
 SRD:
   dmo:
@@ -53,7 +53,7 @@ host:
   rho_0: 9.04e6
 repopulations:
   inc_factor: 1.5
-  its: 1
-  num_brightest: 7661
+  its: 20
+  num_brightest: 3404
   num_subs_max: 5e5
-  print_freq: 1
+  print_freq: 5

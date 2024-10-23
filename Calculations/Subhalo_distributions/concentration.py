@@ -371,8 +371,9 @@ plt.subplot(121)
 ax0.errorbar(vv_medians_dmo_release, cv_dmo_median_release,
              xerr=xerr_dmo.T,
              yerr=yerr_dmo,
-             marker='.', ms=16,
-             color='k', ls='', lw=3, zorder=11,
+             marker='.', ms=16, markerfacecolor='k', markeredgecolor='k',
+             markeredgewidth=2.,
+             color='k', ls='', lw=10, zorder=11,
              elinewidth=2,
              capsize=5, label='Data', capthick=2.)
 
@@ -382,6 +383,7 @@ ax0.errorbar(vv_medians_hydro_release,
              yerr=yerr_hydro,
              marker='.', ms=16,
              markerfacecolor='g', markeredgecolor='g',
+             markeredgewidth=2.,
              elinewidth=2,
              color='g', ls='', lw=3, zorder=11,
              capsize=5, capthick=2.)
@@ -562,7 +564,8 @@ ax0.fill_between(
     Moline21_norm_log(xx_plot, c0=c0_array_hydro) + np.std(data_hydro),
     color='#48DC48', alpha=0.3, zorder=0)
 
-ax0.text(x=10.5, y=5.65, s=r'$V_\mathrm{Cut}$', c='k')
+# ax0.text(x=10.5, y=5.65, s=r'$V_\mathrm{Cut}$', c='k')
+ax0.text(x=10.5, y=5.6, s='resolution\nlimit', c='k', fontsize=20)
 
 leg1 = plt.legend(loc=2, bbox_to_anchor=(0.05, 0.98), fontsize=20)
 
@@ -639,7 +642,7 @@ handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
            mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)
            )
 legend_colors = plt.legend(handles=handles, loc=8,
-                           bbox_to_anchor=(0.5, 0.04),
+                           bbox_to_anchor=(0.45, 0.04),
                            fontsize=20, framealpha=1)
 
 handles, labels = ax0.get_legend_handles_labels()

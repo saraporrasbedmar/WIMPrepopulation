@@ -71,11 +71,11 @@ legend11 = plt.legend(handles=handles, loc=2)
 ax.add_artist(legend11)
 
 plt.ylabel(r'$R_\mathrm{max}$ [kpc]')
-plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]')
+plt.xlabel(r'                 $V_\mathrm{max}$ [km s$^{-1}$]')
 
 fig.savefig('outputs/raw.pdf', bbox_inches='tight')
 fig.savefig('outputs/raw.png', bbox_inches='tight')
-
+plt.show()
 
 # ----------------------------------------------------------------------
 fig, ax = plt.subplots(figsize=(10, 8))

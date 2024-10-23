@@ -543,8 +543,15 @@ def Nr_Ntot_visible(
         srd_args_repop,
         srd_args_visible,
         srd_last_sub):
-    return (N_subs_fragile(DistGC, srd_args_visible)
-            * (DistGC >= srd_last_sub))
+    if res_string == 'resilient':
+        return (N_subs_resilient(DistGC, srd_args_repop)
+                * (DistGC >= srd_last_sub))
+
+    else:
+        return (N_subs_fragile(DistGC, srd_args_repop)
+                * (DistGC >= srd_last_sub))
+    # return (N_subs_fragile(DistGC, srd_args_visible)
+    #         * (DistGC >= srd_last_sub))
 
 
 #@jit(forceobj=True)

@@ -407,7 +407,7 @@ plt.plot(bins_mean_hydro,
 plt.axvline(8.5 / 220., linestyle='-.', alpha=1, color='Sandybrown', lw=3)
 # plt.annotate('Earth', (0.05, 0.130), color='Saddlebrown', rotation=0.,
 #              fontsize=20, zorder=10)
-plt.annotate('Earth', (0.05, 8e-4), color='chocolate',
+plt.annotate('Earth', (0.05, 6.5e-4), color='chocolate',
              rotation=0., weight='bold',
              fontsize=20, zorder=10)
 
