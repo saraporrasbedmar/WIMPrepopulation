@@ -1,0 +1,59 @@
+Cv:
+  dmo:
+    bb: 283862.7023
+    mm: None
+    sigma:
+    - 0.297659
+  hydro:
+    bb: 192879.057
+    mm: None
+    sigma:
+    - 0.374942
+SHVF:
+  RangeMax: 120.0
+  RangeMin: 0.1
+  Vmax_completion: 8.0
+  dmo:
+    bb: 5.78
+    mm: -3.92
+  hydro:
+    bb: 5.49
+    mm: -4.08
+SRD:
+  dmo:
+    fragile:
+      args:
+      - -0.151
+      - 39.27964
+      - 220.
+      last_subhalo: 5.57
+    resilient:
+      args: 1.0
+      last_subhalo: 0.0
+  formula:
+    fragile: ''
+    resilient: ''
+  hydro:
+    fragile:
+      args:
+      - -0.27
+      - 16.16391
+      - 220.
+      last_subhalo: 15.71
+    resilient:
+      args: 1.0
+      last_subhalo: 0.0
+cosmo_constants:
+  G: 4.297e-06
+  H_0: 67.7
+  rho_crit: 135.73
+host:
+  R_vir: 220
+  r_s: 20.0
+  rho_0: 9.04e6
+repopulations:
+  inc_factor: 1.5
+  its: 500
+  num_brightest: 1
+  num_subs_max: 5e5
+  print_freq: 20
