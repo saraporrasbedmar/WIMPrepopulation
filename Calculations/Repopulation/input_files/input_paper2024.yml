@@ -25,7 +25,7 @@ SRD:
       args:
       - -0.151
       - 39.27964
-      - 220.
+      - 220.0
       last_subhalo: 5.57
     resilient:
       args: 1.0
@@ -38,7 +38,7 @@ SRD:
       args:
       - -0.27
       - 16.16391
-      - 220.
+      - 220.0
       last_subhalo: 15.71
     resilient:
       args: 1.0
@@ -53,7 +53,7 @@ host:
   rho_0: 9.04e6
 repopulations:
   inc_factor: 1.5
-  its: 500
-  num_brightest: 1
+  its: 1
+  num_brightest: 136338072
   num_subs_max: 5e5
   print_freq: 20

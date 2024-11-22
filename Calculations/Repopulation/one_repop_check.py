@@ -55,11 +55,26 @@ if rerun_sims:
     if not os.path.exists(path_outputs):
         os.makedirs(path_outputs)
 
-    path_input = 'input_files/input_1_repopulation.yml'
+    path_input = 'input_files/input_paper2024.yml'
 
     input_data = read_config_file(path_input)
     print('dmo num subs over completion: ',
           funct_repop.SHVF_Grand2012_int(input_data['SHVF']['Vmax_completion'],
+                                         input_data['SHVF']['RangeMax'],
+                                         input_data['SHVF']['dmo']['bb'],
+                                         input_data['SHVF']['dmo']['mm']))
+    print('dmo num subs over completion: ',
+          funct_repop.SHVF_Grand2012_int(0.2,
+                                         input_data['SHVF']['RangeMax'],
+                                         input_data['SHVF']['dmo']['bb'],
+                                         input_data['SHVF']['dmo']['mm']))
+    print('dmo num subs over completion: ',
+          funct_repop.SHVF_Grand2012_int(0.25,
+                                         input_data['SHVF']['RangeMax'],
+                                         input_data['SHVF']['dmo']['bb'],
+                                         input_data['SHVF']['dmo']['mm']))
+    print('dmo num subs over completion: ',
+          funct_repop.SHVF_Grand2012_int(0.4,
                                          input_data['SHVF']['RangeMax'],
                                          input_data['SHVF']['dmo']['bb'],
                                          input_data['SHVF']['dmo']['mm']))
