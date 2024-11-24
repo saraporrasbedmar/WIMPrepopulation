@@ -31,9 +31,12 @@ plt.rc('ytick.major', size=7, width=1.5, right=True, pad=7)
 plt.rc('xtick.minor', size=4, width=1)
 plt.rc('ytick.minor', size=4, width=1)
 
-path_name = '/home/porrassa/Desktop/WIMPS_project/' \
-            'Physnet_outputs_repops/2024/compiled_results' \
+# path_name = '/home/porrassa/Desktop/WIMPS_project/' \
+#             'Physnet_outputs_repops/2024/compiled_results' \
+#             '/final_2024_8max'
+path_name = '/home/saraporras/Desktop/WIMPSproject/compiled_results'\
             '/final_2024_8max'
+
 print(os.getcwd())
 print(os.listdir(path_name))
 final_size = (500, 1, 6)
@@ -66,10 +69,10 @@ datos_J03_resi_dmo = np.loadtxt(path_name + '/J03_dmo_resilient_results.txt')
 # datos_J03_resi_hyd = datos_J03_resi_hyd.reshape(final_size)[:, 0, :]
 # datos_J03_resi_dmo = datos_J03_resi_dmo.reshape(final_size)[:, 0, :]
 
-constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
-constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')
-sigmav_bb_2204 = np.loadtxt('../Constraints_2204/sigmav_bb.txt')
-sigmav_tau_2204 = np.loadtxt('../Constraints_2204/sigmav_tau.txt')
+constraints_bb_2204 = np.loadtxt('Constraints_2204/Limit_bb.txt')
+constraints_tau_2204 = np.loadtxt('Constraints_2204/Limit_tau.txt')
+sigmav_bb_2204 = np.loadtxt('Constraints_2204/sigmav_bb.txt')
+sigmav_tau_2204 = np.loadtxt('Constraints_2204/sigmav_tau.txt')
 
 sigmav_bb_2204 = sigmav_bb_2204[sigmav_bb_2204[:, 0].argsort()[::], :]
 sigmav_tau_2204 = sigmav_tau_2204[sigmav_tau_2204[:, 0].argsort()[::], :]
@@ -105,6 +108,15 @@ def minnmaxx03(i):
 
     return minn, maxx
 
+def perc_total(i, number):
+    data = (
+        np.concatenate((datos_Js_frag_dmo[:, i], datos_Js_frag_hyd[:, i],
+                    datos_Js_resi_dmo[:, i], datos_Js_resi_hyd[:, i],
+                    datos_J03_frag_dmo[:, i], datos_J03_frag_hyd[:, i],
+                    datos_J03_resi_dmo[:, i], datos_J03_resi_hyd[:, i]),
+                    axis=None))
+    return np.percentile(data, number)
+
 darkgreen = (0.024, 0.278, 0.047)
 
 # ------------------------ DEarthJs -------------------------------------------
@@ -121,9 +133,10 @@ legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
 
 cmap = cm.viridis
 colormapp = 'viridis'
-vminn = np.log10(3)
-vmaxx = np.log10(100)
+vminn = np.log10(perc_total(3, 5))  # np.log10(3)
+vmaxx = np.log10(perc_total(3, 95))  # np.log10(100)
 norm = mcb.Normalize(vminn, vmaxx)
+print(vminn, vmaxx)
 
 plt.subplot(221)
 minn, maxx = minnmaxxS(0)
@@ -219,7 +232,12 @@ plt.xscale('log')
 cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 c2 = plt.colorbar(sm, cax=cax,)
-c2.set_label(r'log$_{10}$(V$_\mathrm{max}$ [km/s])', fontsize=20)
+# c2.set_label(r'log$_{10}$(V$_\mathrm{max}$ [km/s])', fontsize=20)
+c2.set_label(r'V$_\mathrm{max}$ [km/s])', fontsize=20)
+yticks = c2.get_ticks()
+c2.set_ticks(yticks)
+# c2.set_ticklabels([str(10**i)[:4] for i in yticks])
+c2.set_ticklabels(['%.2f' % 10**i for i in yticks])
 
 plt.savefig(path_name + '/DEarthJs.png', bbox_inches='tight')
 plt.savefig(path_name + '/DEarthJs.pdf', bbox_inches='tight')
@@ -237,6 +255,9 @@ legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
                           markersize=8, mew=2.5)]
 vminn = 19
 vmaxx = 23
+vminn = np.log10(perc_total(0, 5))
+vmaxx = np.log10(perc_total(0, 95))
+print(vminn, vmaxx)
 norm = mcb.Normalize(vminn, vmaxx)
 
 plt.subplot(221)
@@ -318,10 +339,10 @@ plt.scatter(datos_J03_resi_hyd[:, 2], np.log10(datos_J03_resi_hyd[:, 0]),
             edgecolors=cmap(norm(np.log10(datos_J03_resi_hyd[:, 3]))),
             label='Resilient')
 
-im = plt.scatter(datos_J03_frag_hyd[:, 2], np.log10(datos_J03_frag_hyd[:, 0]),
-                 c=np.log10(datos_J03_frag_hyd[:, 3]),
-                 lw=0, marker='P', s=75,
-                 cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
+plt.scatter(datos_J03_frag_hyd[:, 2], np.log10(datos_J03_frag_hyd[:, 0]),
+            c=np.log10(datos_J03_frag_hyd[:, 3]),
+            lw=0, marker='P', s=75,
+            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
 plt.xscale('log')
 # plt.yticks((19, 20), labels=('', ''))
@@ -334,7 +355,12 @@ plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
 cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 c2 = plt.colorbar(sm, cax=cax,)
-c2.set_label(r'log$_{10}$(V$_\mathrm{max}$ [km/s])', fontsize=20)
+# c2.set_label(r'log$_{10}$(V$_\mathrm{max}$ [km/s])', fontsize=20)
+c2.set_label(r'V$_\mathrm{max}$ [km/s]', fontsize=20)
+yticks = c2.get_ticks()
+c2.set_ticks(yticks)
+# c2.set_ticklabels([str(10**i)[:4] for i in yticks])
+c2.set_ticklabels(['%.2f' % 10**i for i in yticks])
 
 plt.savefig(path_name + '/Dgc_Dearth.png', bbox_inches='tight')
 plt.savefig(path_name + '/Dgc_Dearth.pdf', bbox_inches='tight')
@@ -352,6 +378,9 @@ legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
                           markersize=8, mew=2.5)]
 vminn = 1.
 vmaxx = np.log10(100)  # 10 ** 1.5
+vminn = np.log10(perc_total(3, 5))
+vmaxx = np.log10(perc_total(3, 95))
+print('Vmax perc', 10**vminn, 10**vmaxx)
 norm = mcb.Normalize(vminn, vmaxx)
 
 plt.subplot(221)
@@ -447,7 +476,12 @@ plt.ylim(minn - 0.1, maxx + 0.1)
 cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 c2 = plt.colorbar(sm, cax=cax,)
-c2.set_label(r'log$_{10}$(V$_\mathrm{max}$ [km/s])', fontsize=20)
+# c2.set_label(r'log$_{10}$(V$_\mathrm{max}$ [km/s])', fontsize=20)
+c2.set_label(r'V$_\mathrm{max}$ [km/s]', fontsize=20)
+yticks = c2.get_ticks()
+c2.set_ticks(yticks)
+# c2.set_ticklabels([str(10**i)[:4] for i in yticks])
+c2.set_ticklabels(['%.2f' % 10**i for i in yticks])
 
 plt.savefig(path_name + '/DgcJs.png', bbox_inches='tight')
 plt.savefig(path_name + '/DgcJs.pdf', bbox_inches='tight')
@@ -466,6 +500,9 @@ legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
                           markersize=8, mew=2.5)]
 vminn = 0.1
 vmaxx = 50
+vminn = np.log10(perc_total(4, 5))
+vmaxx = np.log10(perc_total(4, 95))
+print(vminn, vmaxx)
 norm = mcb.Normalize(vminn, vmaxx)
 
 print(10**minnmaxxS(4)[0], 10**minnmaxxS(4)[1],
@@ -485,7 +522,7 @@ plt.scatter(datos_Js_resi_dmo[:, 3], np.log10(datos_Js_resi_dmo[:, 2]),
             label='Resilient')
 
 plt.scatter(datos_Js_frag_dmo[:, 3], np.log10(datos_Js_frag_dmo[:, 2]),
-            c=(datos_Js_frag_dmo[:, 4]),
+            c=np.log10(datos_Js_frag_dmo[:, 4]),
             lw=0, marker='P', s=75,
             cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
@@ -507,7 +544,7 @@ plt.scatter(datos_Js_resi_hyd[:, 3], np.log10(datos_Js_resi_hyd[:, 2]),
             label='Resilient')
 
 plt.scatter(datos_Js_frag_hyd[:, 3], np.log10(datos_Js_frag_hyd[:, 2]),
-            c=(datos_Js_frag_hyd[:, 4]),
+            c=np.log10(datos_Js_frag_hyd[:, 4]),
             lw=0, marker='P', s=75,
             cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
@@ -527,7 +564,7 @@ plt.scatter(datos_J03_resi_dmo[:, 3], np.log10(datos_J03_resi_dmo[:, 2]),
             label='Resilient')
 
 plt.scatter(datos_J03_frag_dmo[:, 3], np.log10(datos_J03_frag_dmo[:, 2]),
-            c=(datos_J03_frag_dmo[:, 2]),
+            c=np.log10(datos_J03_frag_dmo[:, 4]),
             lw=0, marker='P', s=75,
             cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
@@ -547,10 +584,10 @@ plt.scatter(datos_J03_resi_hyd[:, 3], np.log10(datos_J03_resi_hyd[:, 2]),
             edgecolors=cmap(norm(np.log10(datos_J03_resi_hyd[:, 4]))),
             label='Resilient')
 
-im = plt.scatter(datos_J03_frag_hyd[:, 3], np.log10(datos_J03_frag_hyd[:, 2]),
-                 c=(datos_J03_frag_hyd[:, 2]),
-                 lw=0, marker='P', s=75,
-                 cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
+plt.scatter(datos_J03_frag_hyd[:, 3], np.log10(datos_J03_frag_hyd[:, 2]),
+            c=np.log10(datos_J03_frag_hyd[:, 4]),
+            lw=0, marker='P', s=75,
+            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
 plt.ylim(minn - 0.1, maxx + 0.1)
 # plt.yticks((19, 20), labels=('', ''))
@@ -565,6 +602,10 @@ cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 c2 = plt.colorbar(sm, cax=cax,)
 c2.set_label(r'Angular size', fontsize=20)
+yticks = c2.get_ticks()
+c2.set_ticks(yticks)
+# c2.set_ticklabels([str(10**i)[:4] for i in yticks])
+c2.set_ticklabels(['%.2f' % 10**i for i in yticks])
 
 plt.savefig(path_name + '/VmaxDEarth.png', bbox_inches='tight')
 plt.savefig(path_name + '/VmaxDEarth.pdf', bbox_inches='tight')
@@ -699,7 +740,7 @@ ax4.tick_params(labelleft=False)
 plt.savefig(path_name + '/J_hist.png', bbox_inches='tight')
 plt.savefig(path_name + '/J_hist.pdf', bbox_inches='tight')
 
-# -------------- Vmax_hist -----------------------------------------------
+# -------------- Vmax_hist ----------------------------------------------------
 
 fig, _ = plt.subplots(2, 2, figsize=(12, 9))
 
@@ -794,6 +835,9 @@ legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
                           markersize=8, mew=2.5)]
 vminn = 1e-3
 vmaxx = np.log10(150)  # 10 ** 1.5
+vminn = np.log10(perc_total(2, 5))
+vmaxx = np.log10(perc_total(2, 95))
+print(vminn, vmaxx)
 norm = mcb.Normalize(vminn, vmaxx)
 
 plt.subplot(221)
@@ -884,7 +928,12 @@ plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
 cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 c2 = plt.colorbar(sm, cax=cax,)
-c2.set_label(r'log$_{10}$(D$_\mathrm{Earth}$ [kpc])', fontsize=20)
+# c2.set_label(r'log$_{10}$(D$_\mathrm{Earth}$ [kpc])', fontsize=20)
+yticks = c2.get_ticks()
+c2.set_label(r'D$_\mathrm{Earth}$ [kpc]', fontsize=20)
+c2.set_ticks(yticks)
+# c2.set_ticklabels([str(10**i)[:4] for i in yticks])
+c2.set_ticklabels(['%4.2f' % 10**i for i in yticks])
 
 plt.savefig(path_name + '/VmaxJs.png', bbox_inches='tight')
 plt.savefig(path_name + '/VmaxJs.pdf', bbox_inches='tight')
