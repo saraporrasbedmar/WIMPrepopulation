@@ -31,11 +31,11 @@ plt.rc('ytick.major', size=7, width=1.5, right=True, pad=7)
 plt.rc('xtick.minor', size=4, width=1)
 plt.rc('ytick.minor', size=4, width=1)
 
-# path_name = '/home/porrassa/Desktop/WIMPS_project/' \
-#             'Physnet_outputs_repops/2024/compiled_results' \
+path_name = '/home/porrassa/Desktop/WIMPS_project/' \
+            'Physnet_outputs_repops/2024/compiled_results_allRoche' \
+            '/final_2024_120max'
+# path_name = '/home/saraporras/Desktop/WIMPSproject/compiled_results'\
 #             '/final_2024_8max'
-path_name = '/home/saraporras/Desktop/WIMPSproject/compiled_results'\
-            '/final_2024_8max'
 
 print(os.getcwd())
 print(os.listdir(path_name))
@@ -56,23 +56,48 @@ datos_J03_frag_dmo = np.loadtxt(path_name + '/J03_dmo_fragile_results.txt')
 #     (int(datos_J03_frag_dmo.size/6), 1, 6))[:, 0, :]
 
 
-# path_name = '/home/saraporras/Desktop/WIMPSproject/WIMPrepopulation/' \
-#             'Calculations/Repopulation/outputs/2024_resilient_const'
+path_name_res = path_name + '/2024_resilient_const_SHVFnorm_to120_roche_many2'
 final_size = (500, 100, 6)
-datos_Js_resi_hyd = np.loadtxt(path_name + '/Js_hydro_resilient_results.txt')
-datos_Js_resi_dmo = np.loadtxt(path_name + '/Js_dmo_resilient_results.txt')
+
+datos_Js_resi_hyd = np.zeros((1, 6))
+datos_Js_resi_dmo = np.zeros((1, 6))
+
+datos_J03_resi_hyd = np.zeros((1, 6))
+datos_J03_resi_dmo = np.zeros((1, 6))
+
+for i in range(1, 6, 1):
+    print(i)
+    datos_Js_resi_dmo = np.concatenate((datos_Js_resi_dmo,
+        np.loadtxt(path_name_res + '/' + str(i) +
+                                 '/Js_dmo_resilient_results.txt')))
+    datos_Js_resi_hyd = np.concatenate((datos_Js_resi_hyd,
+        np.loadtxt(path_name_res + '/' + str(i) +
+                                 '/Js_hydro_resilient_results.txt')))
+    datos_J03_resi_dmo = np.concatenate((datos_J03_resi_dmo,
+        np.loadtxt(path_name_res + '/' + str(i) +
+                                 '/J03_dmo_resilient_results.txt')))
+    datos_J03_resi_hyd = np.concatenate((datos_J03_resi_hyd,
+        np.loadtxt(path_name_res + '/' + str(i) +
+                                 '/J03_hydro_resilient_results.txt')))
+
+datos_Js_resi_hyd = datos_Js_resi_hyd[1:, :]
+datos_Js_resi_dmo = datos_Js_resi_dmo[1:, :]
+datos_J03_resi_hyd = datos_J03_resi_hyd[1:, :]
+datos_J03_resi_dmo = datos_J03_resi_dmo[1:, :]
+# datos_Js_resi_hyd = np.loadtxt(path_name + '/Js_hydro_resilient_results.txt')
+# datos_Js_resi_dmo = np.loadtxt(path_name + '/Js_dmo_resilient_results.txt')
 # datos_Js_resi_hyd = datos_Js_resi_hyd.reshape(final_size)[:, 0, :]
 # datos_Js_resi_dmo = datos_Js_resi_dmo.reshape(final_size)[:, 0, :]
 
-datos_J03_resi_hyd = np.loadtxt(path_name + '/J03_hydro_resilient_results.txt')
-datos_J03_resi_dmo = np.loadtxt(path_name + '/J03_dmo_resilient_results.txt')
+# datos_J03_resi_hyd = np.loadtxt(path_name + '/J03_hydro_resilient_results.txt')
+# datos_J03_resi_dmo = np.loadtxt(path_name + '/J03_dmo_resilient_results.txt')
 # datos_J03_resi_hyd = datos_J03_resi_hyd.reshape(final_size)[:, 0, :]
 # datos_J03_resi_dmo = datos_J03_resi_dmo.reshape(final_size)[:, 0, :]
 
-constraints_bb_2204 = np.loadtxt('Constraints_2204/Limit_bb.txt')
-constraints_tau_2204 = np.loadtxt('Constraints_2204/Limit_tau.txt')
-sigmav_bb_2204 = np.loadtxt('Constraints_2204/sigmav_bb.txt')
-sigmav_tau_2204 = np.loadtxt('Constraints_2204/sigmav_tau.txt')
+constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
+constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')
+sigmav_bb_2204 = np.loadtxt('../Constraints_2204/sigmav_bb.txt')
+sigmav_tau_2204 = np.loadtxt('../Constraints_2204/sigmav_tau.txt')
 
 sigmav_bb_2204 = sigmav_bb_2204[sigmav_bb_2204[:, 0].argsort()[::], :]
 sigmav_tau_2204 = sigmav_tau_2204[sigmav_tau_2204[:, 0].argsort()[::], :]
@@ -136,7 +161,7 @@ colormapp = 'viridis'
 vminn = np.log10(perc_total(3, 5))  # np.log10(3)
 vmaxx = np.log10(perc_total(3, 95))  # np.log10(100)
 norm = mcb.Normalize(vminn, vmaxx)
-print(vminn, vmaxx)
+print(10**vminn, 10**vmaxx)
 
 plt.subplot(221)
 minn, maxx = minnmaxxS(0)
@@ -231,13 +256,11 @@ plt.xscale('log')
 
 cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-c2 = plt.colorbar(sm, cax=cax,)
+c2 = plt.colorbar(sm, cax=cax, extend='both')
 # c2.set_label(r'log$_{10}$(V$_\mathrm{max}$ [km/s])', fontsize=20)
 c2.set_label(r'V$_\mathrm{max}$ [km/s])', fontsize=20)
 yticks = c2.get_ticks()
-c2.set_ticks(yticks)
-# c2.set_ticklabels([str(10**i)[:4] for i in yticks])
-c2.set_ticklabels(['%.2f' % 10**i for i in yticks])
+c2.set_ticklabels([str(10**i)[:4] for i in yticks])
 
 plt.savefig(path_name + '/DEarthJs.png', bbox_inches='tight')
 plt.savefig(path_name + '/DEarthJs.pdf', bbox_inches='tight')
@@ -257,7 +280,6 @@ vminn = 19
 vmaxx = 23
 vminn = np.log10(perc_total(0, 5))
 vmaxx = np.log10(perc_total(0, 95))
-print(vminn, vmaxx)
 norm = mcb.Normalize(vminn, vmaxx)
 
 plt.subplot(221)
@@ -354,13 +376,11 @@ plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
 
 cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-c2 = plt.colorbar(sm, cax=cax,)
+c2 = plt.colorbar(sm, cax=cax, extend='both')
 # c2.set_label(r'log$_{10}$(V$_\mathrm{max}$ [km/s])', fontsize=20)
 c2.set_label(r'V$_\mathrm{max}$ [km/s]', fontsize=20)
 yticks = c2.get_ticks()
-c2.set_ticks(yticks)
-# c2.set_ticklabels([str(10**i)[:4] for i in yticks])
-c2.set_ticklabels(['%.2f' % 10**i for i in yticks])
+c2.set_ticklabels([str(10**i)[:4] for i in yticks])
 
 plt.savefig(path_name + '/Dgc_Dearth.png', bbox_inches='tight')
 plt.savefig(path_name + '/Dgc_Dearth.pdf', bbox_inches='tight')
@@ -475,13 +495,11 @@ plt.ylim(minn - 0.1, maxx + 0.1)
 
 cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-c2 = plt.colorbar(sm, cax=cax,)
+c2 = plt.colorbar(sm, cax=cax, extend='both')
 # c2.set_label(r'log$_{10}$(V$_\mathrm{max}$ [km/s])', fontsize=20)
 c2.set_label(r'V$_\mathrm{max}$ [km/s]', fontsize=20)
 yticks = c2.get_ticks()
-c2.set_ticks(yticks)
-# c2.set_ticklabels([str(10**i)[:4] for i in yticks])
-c2.set_ticklabels(['%.2f' % 10**i for i in yticks])
+c2.set_ticklabels([str(10**i)[:4] for i in yticks])
 
 plt.savefig(path_name + '/DgcJs.png', bbox_inches='tight')
 plt.savefig(path_name + '/DgcJs.pdf', bbox_inches='tight')
@@ -600,12 +618,10 @@ plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
 
 cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-c2 = plt.colorbar(sm, cax=cax,)
+c2 = plt.colorbar(sm, cax=cax, extend='both')
 c2.set_label(r'Angular size', fontsize=20)
 yticks = c2.get_ticks()
-c2.set_ticks(yticks)
-# c2.set_ticklabels([str(10**i)[:4] for i in yticks])
-c2.set_ticklabels(['%.2f' % 10**i for i in yticks])
+c2.set_ticklabels([str(10**i)[:4] for i in yticks])
 
 plt.savefig(path_name + '/VmaxDEarth.png', bbox_inches='tight')
 plt.savefig(path_name + '/VmaxDEarth.pdf', bbox_inches='tight')
@@ -642,7 +658,7 @@ plt.axvline(Js95_frag_dmo, color='teal')  # , alpha=0.6)
 plt.axvline(Js95_resi_dmo, color='k')  # , alpha=0.5)
 
 plt.xlim(minn, maxx)
-plt.ylim(bottom=0.9, top=130)
+plt.ylim(bottom=0.9, top=170)
 
 plt.yscale('log')
 
@@ -751,7 +767,7 @@ min03, max03 = minnmaxx03(3)
 minn = 10**np.min((minS, min03))
 maxx = 10**np.max((maxS, max03))
 
-bines = np.geomspace(minn, maxx, 30)
+bines = np.linspace(minn, maxx, 30)
 
 ax1 = plt.subplot(221)
 
@@ -765,7 +781,7 @@ plt.hist(datos_Js_resi_dmo[:, 3], log=False,
          bins=bines)
 
 plt.xlim(minn, maxx)
-plt.ylim(bottom=0.9, top=130)
+plt.ylim(bottom=0.9, top=240)
 
 plt.yscale('log')
 
@@ -818,8 +834,10 @@ fig.text(0.06, 0.5, 'Number of repops', ha='center',
 
 ax4.tick_params(labelleft=False)
 
-plt.savefig(path_name + '/Vmax_hist_geom.png', bbox_inches='tight')
-plt.savefig(path_name + '/Vmax_hist_geom.pdf', bbox_inches='tight')
+# plt.savefig(path_name + '/Vmax_hist_geom.png', bbox_inches='tight')
+# plt.savefig(path_name + '/Vmax_hist_geom.pdf', bbox_inches='tight')
+plt.savefig(path_name + '/Vmax_hist_linear.png', bbox_inches='tight')
+plt.savefig(path_name + '/Vmax_hist_linear.pdf', bbox_inches='tight')
 
 #----------------------- Vmax - J (z==DistEarth) 2x2 --------------------------
 
@@ -927,13 +945,11 @@ plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
 
 cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-c2 = plt.colorbar(sm, cax=cax,)
+c2 = plt.colorbar(sm, cax=cax, extend='both')
 # c2.set_label(r'log$_{10}$(D$_\mathrm{Earth}$ [kpc])', fontsize=20)
-yticks = c2.get_ticks()
 c2.set_label(r'D$_\mathrm{Earth}$ [kpc]', fontsize=20)
-c2.set_ticks(yticks)
-# c2.set_ticklabels([str(10**i)[:4] for i in yticks])
-c2.set_ticklabels(['%4.2f' % 10**i for i in yticks])
+yticks = c2.get_ticks()
+c2.set_ticklabels([str(10**i)[:4] for i in yticks])
 
 plt.savefig(path_name + '/VmaxJs.png', bbox_inches='tight')
 plt.savefig(path_name + '/VmaxJs.pdf', bbox_inches='tight')
@@ -1047,16 +1063,14 @@ xxlabel = r'D$_\mathrm{GC}$ [kpc]'
 
 minS, maxS = minnmaxxS(1)
 min03, max03 = minnmaxx03(1)
-minn = 10**np.min((minS, min03))
-maxx = 10**np.max((maxS, max03))
+minn = np.min((minS, min03))
+maxx = np.max((maxS, max03))
 
 # bines = np.linspace(minn, maxx, 25)
-bines = np.logspace(np.log10(minn), np.log10(maxx), 30)
+bines = np.logspace(minn*1.001, maxx*1.001, 30)
 locc = 2
 
 ax1 = plt.subplot(221)
-plt.xlim(0.5, 250)
-plt.yscale('log')
 
 plt.title('DMO', size=18)
 
@@ -1069,9 +1083,11 @@ plt.hist((datos_Js_resi_dmo[:, column]), log=False,
 
 plt.axvline(8.5, color='Sandybrown', alpha=1, linestyle='--')
 plt.legend(title=r'J$_\mathrm{S}$', loc=locc)
-plt.xscale('log')
 
-plt.xlim(minn * 0.9, maxx * 1.1)
+plt.xscale('log')
+plt.yscale('log')
+
+plt.xlim(bines[0], bines[-1])
 
 ax2 = plt.subplot(222, sharex=ax1, sharey=ax1)
 plt.title('Hydro', size=18)

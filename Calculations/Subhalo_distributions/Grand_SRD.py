@@ -114,7 +114,7 @@ plt.subplots_adjust(wspace=0.27)
 plt.subplot(121)
 plt.title('dmo')
 
-v_cut = np.linspace(2., 10., num=1)
+v_cut = [2., 10., 20., 30., 40., 50.]
 
 from matplotlib import cm
 
@@ -135,10 +135,12 @@ for ni, ii in enumerate(v_cut):
         np.array(encontrar_SRD_sinVol(release_dmo_over, bins))
         # / len(release_dmo_over)
     )
+    srd_dmo_over_release[srd_dmo_over_release==0] = 0.01
     srd_hydro_over_release, std_hydro_num = (
         np.array(encontrar_SRD_sinVol(release_hydro_over, bins))
         # / len(release_hydro_over)
     )
+    srd_hydro_over_release[srd_hydro_over_release==0] = 0.01
 
     print('under stuff')
 
@@ -148,12 +150,12 @@ for ni, ii in enumerate(v_cut):
         data_release_hydro[data_release_hydro[:, 1] < ii, :], bins))
 
     ax1.plot(bins_mean, srd_dmo_over_release,
-             c=cm.CMRmap(ni / float(len(v_cut))), label='%.1f' % ii)
+             c=cm.CMRmap(ni / float(len(v_cut))))
     ax1.plot(bins_mean, srdnum_dmo_under,  # /sum(data_release_dmo[:, 1] < ii),
              c=cm.CMRmap(ni / float(len(v_cut))), ls='--')
 
     ax2.plot(bins_mean, srd_hydro_over_release,
-             c=cm.CMRmap(ni / float(len(v_cut))))
+             c=cm.CMRmap(ni / float(len(v_cut))), label='%.1f' % ii)
     ax2.plot(bins_mean, srdnum_hydro_under,
              # /sum(data_release_hydro[:, 1] < ii),
              c=cm.CMRmap(ni / float(len(v_cut))),
@@ -166,19 +168,29 @@ plt.xscale('linear')
 plt.yscale('log')
 
 plt.xlim(0, 1.)
-# plt.ylim(0.1, 50)
-
-legend11 = plt.legend(loc=4, framealpha=1)
-ax1.add_artist(legend11)
+plt.ylim(0.009, 630)
 
 plt.subplot(122)
+plt.ylim(0.009, 630)
 plt.title('hydro')
 plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
+
+legend11 = plt.legend(loc=2, framealpha=1,
+                      bbox_to_anchor=(1.04, 1), fontsize=12)
+handles = (Line2D([0], [0], color='k', ls='-', label='Over'),
+           Line2D([0], [0], color='k', ls='--', label='Below')
+           )
+legend22 = plt.legend(
+    handles=handles,
+    loc=3, framealpha=1,
+    bbox_to_anchor=(1.04, 0), fontsize=12)
+ax2.add_artist(legend11)
+ax2.add_artist(legend22)
 
 plt.yscale('log')
 plt.xlim(0., 1.)
 
-# plt.show()
+plt.show()
 # ------------------------ N(r)/Ntot figure ------------------------------
 print()
 print('N/Ntot figures')

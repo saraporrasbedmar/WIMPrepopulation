@@ -47,33 +47,38 @@ path_outputs = 'outputs/' \
                'test_srds_and_Cv'
 path_outputs = 'outputs/test1repop'
 
-# rerun_sims = True
-rerun_sims = False
+rerun_sims = True
+# rerun_sims = False
 
 if rerun_sims:
 
     if not os.path.exists(path_outputs):
         os.makedirs(path_outputs)
 
-    path_input = 'input_files/input_paper2024.yml'
+    path_input = 'input_files/input_paper2024_SHVFnorm.yml'
 
     input_data = read_config_file(path_input)
+    print('dmo num subs total: ',
+          funct_repop.SHVF_Grand2012_int(input_data['SHVF']['RangeMin'],
+                                         input_data['SHVF']['RangeMax'],
+                                         input_data['SHVF']['dmo']['bb'],
+                                         input_data['SHVF']['dmo']['mm']))
     print('dmo num subs over completion: ',
           funct_repop.SHVF_Grand2012_int(input_data['SHVF']['Vmax_completion'],
                                          input_data['SHVF']['RangeMax'],
                                          input_data['SHVF']['dmo']['bb'],
                                          input_data['SHVF']['dmo']['mm']))
-    print('dmo num subs over completion: ',
+    print('dmo num subs over 0.2km/s: ',
           funct_repop.SHVF_Grand2012_int(0.2,
                                          input_data['SHVF']['RangeMax'],
                                          input_data['SHVF']['dmo']['bb'],
                                          input_data['SHVF']['dmo']['mm']))
-    print('dmo num subs over completion: ',
+    print('dmo num subs over 0.25km/s: ',
           funct_repop.SHVF_Grand2012_int(0.25,
                                          input_data['SHVF']['RangeMax'],
                                          input_data['SHVF']['dmo']['bb'],
                                          input_data['SHVF']['dmo']['mm']))
-    print('dmo num subs over completion: ',
+    print('dmo num subs over 0.4km/s: ',
           funct_repop.SHVF_Grand2012_int(0.4,
                                          input_data['SHVF']['RangeMax'],
                                          input_data['SHVF']['dmo']['bb'],
@@ -693,7 +698,7 @@ plt.yscale('log')
 
 plt.savefig(path_outputs + '/Cv.png', bbox_inches='tight')
 plt.savefig(path_outputs + '/Cv.pdf', bbox_inches='tight')
-
+plt.show()
 # Cv sigmas  -------------------------------------------------------
 plt.figure(figsize=(12, 10))
 print('\nSigmas of concentrations')
@@ -726,8 +731,13 @@ print(per16_hydro, per50_hydro, per84_hydro)
 
 # Histograms
 num = 40
-array_bins = np.geomspace(min(min(fraction_dmo), min(fraction_hydro)),
-                          max(min(fraction_dmo), max(fraction_hydro)),
+try:
+    array_bins = np.geomspace(min(min(fraction_dmo), min(fraction_hydro)),
+                          max(max(fraction_dmo), max(fraction_hydro)),
+                          num=num)
+except ValueError:
+    array_bins = np.geomspace(-20,
+                          max(max(fraction_dmo), max(fraction_hydro)),
                           num=num)
 n_dmo, bins_dmo, _ = plt.hist(fraction_dmo,
                               alpha=0.5, color='k', density=True,
