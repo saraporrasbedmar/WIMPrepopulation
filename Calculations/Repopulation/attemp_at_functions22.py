@@ -494,7 +494,7 @@ def N_subs_resilient(DistGC, args):
     # spline = UnivariateSpline(xx,
     #                           yy,
     #                           k=1, s=0, ext=0)
-    return args
+    return args * np.ones(np.shape(DistGC))
 
 
 #@njit()
@@ -594,8 +594,8 @@ def Nr_Ntot_repop(
         Number of subhalos at a certain distance of the GC.
     """
     if res_string == 'resilient':
-        return (N_subs_resilient(DistGC, srd_args_repop)
-                * (DistGC >= srd_last_sub))
+        return (N_subs_resilient(DistGC, srd_args_repop))
+                # * (DistGC >= srd_last_sub))
 
     else:
         return (N_subs_fragile(DistGC, srd_args_repop)
@@ -743,8 +743,7 @@ def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
     :return: float or array-like
         Population following the probability distribution.
     """
-    x = np.logspace(np.log10(x_min), np.log10(x_max),
-                    num=2000)
+    x = np.geomspace(x_min, x_max, num=2000)
     y = pdf(x,
             sim_type, res_string,
             cosmo_G,
@@ -924,6 +923,15 @@ def interior_loop_singularbrightest(
                                SHVF_cts_RangeMax)
             new_mmin = m_min * repop_inc_factor
 
+        aaa = np.where((m_min * m_max) ** 0.5 > np.array(Vmax_completion))
+        if len(aaa[0]) > 0:
+            try:
+                min_distGC = float(srd_last_sub[aaa[0][-1]])
+            except IndexError:
+                min_distGC = float(srd_last_sub)
+        else:
+            min_distGC = 1e-3
+
         repop_Vmax = montecarlo_algorithm(
             m_min, m_max,
             SHVF_Grand2012,
@@ -957,8 +965,8 @@ def interior_loop_singularbrightest(
             srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
 
-        repop_DistGC_lower = montecarlo_algorithm(
-            1e-3, host_R_vir,
+        repop_DistGC = montecarlo_algorithm(
+            min_distGC, host_R_vir,
             Nr_Ntot_repop,
             num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
             sim_type=sim_type,
@@ -990,41 +998,41 @@ def interior_loop_singularbrightest(
             srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
 
-        repop_DistGC_upper = montecarlo_algorithm(
-            1e-3, host_R_vir,
-            Nr_Ntot_visible,
-            num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
-            sim_type=sim_type,
-            res_string=res_string,
-
-            cosmo_G=cosmo_G,
-            cosmo_H_0=cosmo_H_0,
-            cosmo_rho_crit=cosmo_rho_crit,
-
-            host_R_vir=host_R_vir,
-            host_rho_0=host_rho_0,
-            host_r_s=host_r_s,
-
-            pathname=pathname,
-            repop_its=repop_its,
-            repop_print_freq=repop_print_freq,
-            repop_inc_factor=repop_inc_factor,
-
-            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-            SHVF_bb=SHVF_bb,
-            SHVF_mm=SHVF_mm,
-
-            Cv_bb=Cv_bb,
-            Cv_mm=Cv_mm,
-            Cv_sigma=Cv_sigma,
-
-            srd_args_repop=srd_args_repop,
-            srd_args_visible=srd_args_visible,
-            srd_last_sub=srd_last_sub)
-
-        repop_DistGC = (repop_DistGC_lower * (repop_Vmax <= Vmax_completion)
-                        + repop_DistGC_upper * (repop_Vmax > Vmax_completion))
+        # repop_DistGC_upper = montecarlo_algorithm(
+        #     1e-3, host_R_vir,
+        #     Nr_Ntot_visible,
+        #     num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
+        #     sim_type=sim_type,
+        #     res_string=res_string,
+        #
+        #     cosmo_G=cosmo_G,
+        #     cosmo_H_0=cosmo_H_0,
+        #     cosmo_rho_crit=cosmo_rho_crit,
+        #
+        #     host_R_vir=host_R_vir,
+        #     host_rho_0=host_rho_0,
+        #     host_r_s=host_r_s,
+        #
+        #     pathname=pathname,
+        #     repop_its=repop_its,
+        #     repop_print_freq=repop_print_freq,
+        #     repop_inc_factor=repop_inc_factor,
+        #
+        #     SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+        #     SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+        #     SHVF_bb=SHVF_bb,
+        #     SHVF_mm=SHVF_mm,
+        #
+        #     Cv_bb=Cv_bb,
+        #     Cv_mm=Cv_mm,
+        #     Cv_sigma=Cv_sigma,
+        #
+        #     srd_args_repop=srd_args_repop,
+        #     srd_args_visible=srd_args_visible,
+        #     srd_last_sub=srd_last_sub)
+        #
+        # repop_DistGC = (repop_DistGC_lower * (repop_Vmax <= Vmax_completion)
+        #                 + repop_DistGC_upper * (repop_Vmax > Vmax_completion))
 
         new_data = calculate_characteristics_subhalo(
             repop_Vmax, repop_DistGC,
