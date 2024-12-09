@@ -9,14 +9,14 @@ import time
 
 from scipy.optimize import newton
 from scipy.interpolate import UnivariateSpline
-
-from numba import njit, jit
-from numba.core.errors import NumbaDeprecationWarning, \
-    NumbaPendingDeprecationWarning
-import warnings
-
-warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
-warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
+#
+# from numba import njit, jit
+# from numba.core.errors import NumbaDeprecationWarning, \
+#     NumbaPendingDeprecationWarning
+# import warnings
+#
+# warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
+# warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 
 
 def tupleset(t, i, value):
@@ -923,7 +923,7 @@ def interior_loop_singularbrightest(
                                SHVF_cts_RangeMax)
             new_mmin = m_min * repop_inc_factor
 
-        print(m_min, m_max)
+        # print(m_min, m_max)
         aaa = np.where((m_min * m_max)**0.5 > np.array(Vmax_completion))
         if len(aaa[0]) > 0:
             try:

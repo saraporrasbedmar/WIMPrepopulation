@@ -3,6 +3,7 @@ import os
 import scipy.optimize
 import yaml
 import numpy as np
+from matplotlib import cm
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.lines import Line2D
@@ -48,8 +49,8 @@ path_outputs = 'outputs/' \
                'test_srds_and_Cv'
 path_outputs = 'outputs/test1repop_resilient_highNormSHVF'
 
-rerun_sims = True
-# rerun_sims = False
+# rerun_sims = True
+rerun_sims = False
 
 if rerun_sims:
 
@@ -87,7 +88,7 @@ if rerun_sims:
         yaml.dump(input_data, f)
 
     funct_repop.main(['dmo', 'resilient', path_input, path_outputs])
-    funct_repop.main(['dmo', 'fragile', path_input, path_outputs])
+    # funct_repop.main(['dmo', 'fragile', path_input, path_outputs])
 
     input_data['repopulations']['num_brightest'] = \
         funct_repop.SHVF_Grand2012_int(
@@ -99,18 +100,18 @@ if rerun_sims:
     with open(path_input, 'w') as f:
         yaml.dump(input_data, f)
 
-    funct_repop.main(['hydro', 'resilient', path_input, path_outputs])
-    funct_repop.main(['hydro', 'fragile', path_input, path_outputs])
+    # funct_repop.main(['hydro', 'resilient', path_input, path_outputs])
+    # funct_repop.main(['hydro', 'fragile', path_input, path_outputs])
 
+path_outputs = 'outputs/test1repop_resilient_highNormSHVF'
 datos_resi_dmo = np.loadtxt(path_outputs + '/Js_dmo_resilient_results.txt')
 datos_resi_hyd = np.loadtxt(path_outputs + '/Js_hydro_resilient_results.txt')
 
-path_outputs = path_outputs = 'outputs/test1repop'
 datos_frag_hyd = np.loadtxt(path_outputs + '/Js_hydro_fragile_results.txt')
 datos_frag_dmo = np.loadtxt(path_outputs + '/Js_dmo_fragile_results.txt')
 
 input_data = read_config_file(path_outputs + '/input_data.yml')
-
+num_its = input_data['repopulations']['its']
 path_outputs = 'outputs/test1repop_resilient_highNormSHVF'
 
 # SHVF -----------------------------------------------------------------
@@ -148,10 +149,10 @@ def find_PowerLaw(xx, yy, lim_inf, lim_sup):
     return fits[0], fits[1], perr[0], perr[1]
 
 
-Vmax_cumul_dmo_res = calcular_dNdV(datos_resi_dmo[:, 3])/20.
-Vmax_cumul_dmo_frag = calcular_dNdV(datos_frag_dmo[:, 3])/20.
-Vmax_cumul_hydro_res = calcular_dNdV(datos_resi_hyd[:, 3])/20.
-Vmax_cumul_hydro_frag = calcular_dNdV(datos_frag_hyd[:, 3])/20.
+Vmax_cumul_dmo_res = calcular_dNdV(datos_resi_dmo[:, 3]) / num_its
+Vmax_cumul_dmo_frag = calcular_dNdV(datos_frag_dmo[:, 3]) / num_its
+Vmax_cumul_hydro_res = calcular_dNdV(datos_resi_hyd[:, 3]) / num_its
+Vmax_cumul_hydro_frag = calcular_dNdV(datos_frag_hyd[:, 3]) / num_its
 
 x_cumul = (x_cumul[:-1] + x_cumul[1:]) / 2.
 
@@ -159,9 +160,9 @@ plt.figure(figsize=(10, 10))
 
 xx_plot = np.logspace(np.log10(2), np.log10(120), 100)
 
-plt.scatter(x_cumul, Vmax_cumul_dmo_res, c='k')
+plt.scatter(x_cumul, Vmax_cumul_dmo_res, c='k', marker='+', s=12**2)
 plt.scatter(x_cumul, Vmax_cumul_dmo_frag, c='k')
-plt.scatter(x_cumul, Vmax_cumul_hydro_res, c='g')
+plt.scatter(x_cumul, Vmax_cumul_hydro_res, c='g', marker='+', s=12**2)
 plt.scatter(x_cumul, Vmax_cumul_hydro_frag, c='g')
 
 fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(
@@ -205,11 +206,20 @@ plt.savefig(path_outputs + '/SHVF.pdf', bbox_inches='tight')
 
 # SRD ------------------------------------------------------------------
 
-def encontrar_SRD_sinVol(data, Rvir=220):
+R_vir = input_data['host']['R_vir']
+
+num_bins = 15
+bins_kpc = np.linspace(0., R_vir + 1., num=num_bins)
+x_med_kpc = (bins_kpc[:-1] + bins_kpc[1:]) / 2.
+bins_repop = bins_kpc / R_vir
+
+print('Density figure')
+
+def encontrar_SRD_sinVol(data, Rvir=220, bins=bins_repop):
     n_final = []
-    for delta in range(len(bins) - 1):
-        interval = (data / Rvir >= bins[delta]) \
-                   * (data / Rvir <= bins[delta + 1])
+    for delta in range(len(bins_repop) - 1):
+        interval = (data / Rvir >= bins_repop[delta]) \
+                   * (data / Rvir <= bins_repop[delta + 1])
         # interval = ((data[:, 2] / data[:, 5] >= bins[delta])
         #                 * (data[:, 2] / data[:, 5] <= bins[delta + 1]))
         n_final.append(sum(interval))
@@ -218,22 +228,13 @@ def encontrar_SRD_sinVol(data, Rvir=220):
 
 def encontrar_SRD(data):
     n_final = []
-    for delta in range(len(bins) - 1):
-        interval = (data >= bins[delta]) * (data <= bins[delta + 1])
+    for delta in range(len(bins_repop) - 1):
+        interval = (data >= bins_repop[delta]) * (data <= bins_repop[delta + 1])
         vol = 4 / 3 * np.pi * (
-                bins[delta + 1] ** 3 - bins[delta] ** 3) / R_vir ** 3.
+                bins_repop[delta + 1] ** 3 - bins_repop[delta] ** 3) / R_vir ** 3.
         n_final.append(sum(interval) / vol)
     return np.array(n_final)
 
-
-R_vir = input_data['host']['R_vir']
-
-num_bins = 15
-bins_kpc = np.linspace(1e-2, R_vir + 1., num=num_bins)
-x_med_kpc = (bins_kpc[:-1] + bins_kpc[1:]) / 2.
-bins = bins_kpc / R_vir
-
-print('Density figure')
 '''
 fig = plt.figure(figsize=(12, 10))
 ax1 = fig.gca()
@@ -343,10 +344,144 @@ plt.yscale('log')
 plt.savefig(path_outputs + '/srd_density.png', bbox_inches='tight')
 plt.savefig(path_outputs + '/srd_density.pdf', bbox_inches='tight')
 '''
+fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(15, 10),
+                       sharey=True,
+                       sharex=True
+                       )
+plt.subplots_adjust(wspace=0.27)
+plt.subplot(121)
+plt.title('dmo')
+
+# v_cut = [2., 10., 20., 30., 40., 50.]
+v_cut = input_data['SHVF']['Vmax_completion']
+
+
+num_bins = 15
+bins_repop = np.linspace(0, 1., num=num_bins)
+bins_mean = (bins_repop[:-1] + bins_repop[1:]) / 2.
+volume = 4 / 3 * np.pi * (bins_repop[1:] ** 3 - bins_repop[:-1] ** 3)
+print('bins: ', bins_repop * 220)
+
+unique_halos = np.unique(Grand_dmo[:, 6])
+print(unique_halos)
+
+xxx = np.linspace(0., 1., num=200)
+def encontrar_SRD_sinVol_grand(data, bins):
+    n_final = []
+    std_fin = []
+
+    for delta in range(len(bins) - 1):
+        aaa = []
+        for halo in unique_halos:
+            data_ind = data[data[:, 6] == halo, :]
+            interval = ((data_ind[:, 2] / data_ind[:, 5] >= bins[delta])
+                        * (data_ind[:, 2] / data_ind[:, 5] <= bins[delta + 1]))
+            aaa.append(sum(interval))
+
+        # if delta == 0 or delta == 1 or delta == 2:
+        #     print(aaa, np.nanmean(aaa), np.std(aaa))
+        n_final.append(np.nanmean(aaa))
+        std_fin.append(np.std(aaa))
+    return np.array(n_final), np.array(std_fin)
+
+
+for ni, ii in enumerate(v_cut):
+    print('v_cut: ', ii, ni)
+    release_dmo_over = Grand_dmo[Grand_dmo[:, 1] >= ii, :]
+    release_hydro_over = Grand_hydro[Grand_hydro[:, 1] >= ii, :]
+    print(np.min(release_dmo_over[:, 2]),
+          np.min(release_hydro_over[:, 2]))
+    srd_dmo_over_release, std_dmo_num = (
+        np.array(encontrar_SRD_sinVol_grand(release_dmo_over, bins_repop))
+        # / len(release_dmo_over)
+    )
+    srd_dmo_over_release[srd_dmo_over_release==0] = 0.01
+    srd_hydro_over_release, std_hydro_num = (
+        np.array(encontrar_SRD_sinVol_grand(release_hydro_over, bins_repop))
+        # / len(release_hydro_over)
+    )
+    srd_hydro_over_release[srd_hydro_over_release==0] = 0.01
+
+    print('under stuff')
+
+    srdnum_dmo_under, _ = np.array(encontrar_SRD_sinVol_grand(
+        Grand_dmo[Grand_dmo[:, 1] < ii, :], bins_repop))
+    srdnum_hydro_under, _ = np.array(encontrar_SRD_sinVol_grand(
+        Grand_hydro[Grand_hydro[:, 1] < ii, :], bins_repop))
+
+    ax0.plot(bins_mean, srd_dmo_over_release,
+             c=cm.CMRmap(ni / float(len(v_cut))))
+
+    ax1.plot(bins_mean, srd_hydro_over_release,
+             c=cm.CMRmap(ni / float(len(v_cut))), label='%.1f' % ii)
+
+    # --- Resilient over Vcompletion ---
+    data_used_dmo = datos_resi_dmo[datos_resi_dmo[:, 3] > ii, 1]
+    data_used_hyd = datos_resi_hyd[datos_resi_hyd[:, 3] > ii, 1]
+    srd_dmo_resi_sinVol = (encontrar_SRD_sinVol(
+        data_used_dmo, bins=bins_repop)
+                           # / len(data_used_dmo)
+                           )
+    srd_dmo_resi_sinVol[srd_dmo_resi_sinVol == 0] = 0.01
+    srd_hydro_resi_sinVol = (encontrar_SRD_sinVol(
+        data_used_hyd, bins=bins_repop)
+                             # / len(data_used_hyd)
+                             )
+    srd_hydro_resi_sinVol[srd_hydro_resi_sinVol == 0] = 0.01
+
+    ax0.plot(x_med_kpc / R_vir, srd_dmo_resi_sinVol,
+             color=cm.CMRmap(ni / float(len(v_cut))),  linestyle=':')
+    ax1.plot(x_med_kpc / R_vir, srd_hydro_resi_sinVol,
+             color=cm.CMRmap(ni / float(len(v_cut))),  linestyle=':')
+
+
+plt.subplot(122)
+for ni, i in enumerate(input_data['SRD']['hydro']['resilient']['last_subhalo']):
+    plt.axvline(float(i)/220, c=cm.CMRmap((ni) / float(len(v_cut))),
+                alpha=0.5, zorder=0)
+
+plt.subplot(121)
+for ni, i in enumerate(input_data['SRD']['dmo']['resilient']['last_subhalo']):
+    plt.axvline(float(i)/220, c=cm.CMRmap((ni)  / float(len(v_cut))),
+                alpha=0.5, zorder=0)
+
+
+plt.ylabel(r'Over - $N(D_\mathrm{GC})$')
+
+plt.xscale('linear')
+plt.yscale('log')
+
+plt.xlim(0, 1.)
+plt.ylim(0.009, 630)
+
+plt.subplot(122)
+plt.ylim(0.009, 630)
+plt.title('hydro')
+
+legend11 = plt.legend(loc=2, framealpha=1,
+                      bbox_to_anchor=(1.04, 1), fontsize=12)
+handles = (Line2D([0], [0], color='k', ls='-', label='Over'),
+           Line2D([0], [0], color='k', ls='--', label='Below')
+           )
+legend22 = plt.legend(
+    handles=handles,
+    loc=3, framealpha=1,
+    bbox_to_anchor=(1.04, 0), fontsize=12)
+ax1.add_artist(legend11)
+ax1.add_artist(legend22)
+
+plt.xlim(0., 1.)
+
+plt.subplot(121)
+plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
+plt.subplot(122)
+plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
+
 # ------------ N(r)/Ntot figure -------------------------------
 print()
 print('N/Ntot figures')
 
+vmax_completion = 8.
 
 def encontrar_SRD_sinVol_auriga(data, bins):
     n_final = []
@@ -376,19 +511,21 @@ plt.subplot(121)
 plt.title('fragile')
 
 # --- Fragile all of it ---
-plt.plot(x_med_kpc / R_vir, encontrar_SRD_sinVol(datos_frag_dmo[:, 1])/20.,
+plt.plot(x_med_kpc / R_vir,
+         encontrar_SRD_sinVol(datos_frag_dmo[:, 1])/ num_its,
          color='navy', marker='.', ls='', ms=15, label='DMO')
-plt.plot(x_med_kpc / R_vir, encontrar_SRD_sinVol(datos_frag_hyd[:, 1])/20.,
+plt.plot(x_med_kpc / R_vir,
+         encontrar_SRD_sinVol(datos_frag_hyd[:, 1])/ num_its,
          color='peru', marker='.', linestyle='', ms=15, label='Hydro')
 
-all = encontrar_SRD_sinVol(datos_frag_dmo[:, 1])/20.
+all = encontrar_SRD_sinVol(datos_frag_dmo[:, 1])/ num_its
 arr_take = np.where(all != 0.)
 aaa = curve_fit(f=N_subs_fragile,
                 xdata=x_med_kpc[arr_take] / R_vir,
                 ydata=all[arr_take],
                 p0=[-0.15, 1000])
 
-all = encontrar_SRD_sinVol(datos_frag_hyd[:, 1])/20.
+all = encontrar_SRD_sinVol(datos_frag_hyd[:, 1])/ num_its
 arr_take = np.where(all != 0.)
 bbb = curve_fit(f=N_subs_fragile,
                 xdata=x_med_kpc[arr_take] / R_vir,
@@ -407,9 +544,7 @@ plt.plot(xx_plot, N_subs_fragile(xx_plot, bbb[0][0], bbb[0][1]),
 
 # --- Fragile over Vcompletion -------------------------------
 all = encontrar_SRD_sinVol(
-    datos_frag_dmo[datos_frag_dmo[:, 3]
-                   > input_data['SHVF']['Vmax_completion'],
-                   1])/20.
+    datos_frag_dmo[datos_frag_dmo[:, 3] > vmax_completion, 1]) / num_its
 plt.plot(x_med_kpc / R_vir, all,
          color='k', marker='P', linestyle='', ms=12, label='DMO')
 
@@ -420,9 +555,7 @@ aaa = curve_fit(f=N_subs_fragile,
                 p0=[-0.15, 1000])
 
 all = encontrar_SRD_sinVol(
-    datos_frag_hyd[datos_frag_hyd[:, 3]
-                   > input_data['SHVF']['Vmax_completion'],
-                   1])/20.
+    datos_frag_hyd[datos_frag_hyd[:, 3] > vmax_completion, 1]) / num_its
 plt.plot(x_med_kpc / R_vir, all,
          color='g', marker='P', linestyle='', ms=12, label='Hydro')
 arr_take = np.where(all != 0.)
@@ -450,32 +583,30 @@ plt.plot(xx_plot, N_subs_fragile(xx_plot, bbb[0][0], bbb[0][1]),
 #                       'last_subhalo'])/R_vir,
 #             c='g', lw=3)
 
-release_dmo_over = np.array(Grand_dmo[Grand_dmo[:, 1]
-                                      >= input_data['SHVF']['Vmax_completion'],
-                            :])
-release_hydro_over = np.array(Grand_hydro[Grand_hydro[:, 1]
-                                          >= input_data['SHVF'][
-                                              'Vmax_completion'], :])
+release_dmo_over = np.array(Grand_dmo[
+                            Grand_dmo[:, 1] >= vmax_completion, :])
+release_hydro_over = np.array(Grand_hydro[
+                              Grand_hydro[:, 1] >= vmax_completion, :])
 
 minnDgc = np.argmin(Grand_dmo[:, 2])
 
-bins = np.linspace(
+bins_repop = np.linspace(
     Grand_dmo[minnDgc, 2] / Grand_dmo[minnDgc, 5], 1., num=15)
-bins_mean_dmo = (bins[:-1] + bins[1:]) / 2.
+bins_mean_dmo = (bins_repop[:-1] + bins_repop[1:]) / 2.
 
 srd_dmo_over_release, std_dmo_aur = (np.array(encontrar_SRD_sinVol_auriga(
-    release_dmo_over, bins=bins))
+    release_dmo_over, bins=bins_repop))
     # / float(len(release_dmo_over))
 )
 
 minnDgc = np.argmin(Grand_hydro[:, 2])
-bins = np.linspace(
+bins_repop = np.linspace(
     Grand_hydro[minnDgc, 2] / R_vir,
     1., num=15)
-bins_mean_hydro = (bins[:-1] + bins[1:]) / 2.
+bins_mean_hydro = (bins_repop[:-1] + bins_repop[1:]) / 2.
 # volume_hydro = 4 / 3 * np.pi * (bins_hydro[1:] ** 3 - bins_hydro[:-1] ** 3)
 srd_hydro_over_release, std_hyd_aur = (np.array(encontrar_SRD_sinVol_auriga(
-    release_hydro_over, bins=bins))
+    release_hydro_over, bins=bins_repop))
     # / float(len(release_hydro_over))
 )
 
@@ -591,21 +722,21 @@ print('Resilient inputs: dmo %.2f and hydro %.2f'
 
 # --- Resilient all of it ---
 num_bins = 15
-bins_kpc = np.linspace(1e-2, R_vir + 1., num=num_bins)
+bins_kpc = np.linspace(0., R_vir + 1., num=num_bins)
 x_med_kpc = (bins_kpc[:-1] + bins_kpc[1:]) / 2.
-bins = bins_kpc / R_vir
+bins_repop = bins_kpc / R_vir
 
-plt.plot(x_med_kpc / R_vir, encontrar_SRD_sinVol(datos_resi_dmo[:, 1])/20.,
+plt.plot(x_med_kpc / R_vir, 
+         encontrar_SRD_sinVol(datos_resi_dmo[:, 1])/ num_its,
          color='navy', marker='.', ls='', ms=15, label='DMO')
-plt.plot(x_med_kpc / R_vir, encontrar_SRD_sinVol(datos_resi_hyd[:, 1])/20.,
+plt.plot(x_med_kpc / R_vir, 
+         encontrar_SRD_sinVol(datos_resi_hyd[:, 1])/ num_its,
          color='peru', marker='.', linestyle='', ms=15, label='Hydro')
 
 
 # --- Resilient over Vcompletion -------------------------------
 all = encontrar_SRD_sinVol(
-    datos_resi_dmo[datos_resi_dmo[:, 3]
-                   > input_data['SHVF']['Vmax_completion'],
-                   1])/20.
+    datos_resi_dmo[datos_resi_dmo[:, 3] > vmax_completion, 1])/ num_its
 plt.plot(x_med_kpc / R_vir, all,
          color='k', marker='P', linestyle='', ms=12, label='DMO')
 
@@ -614,9 +745,7 @@ plt.plot(xx_plot, np.ones(len(xx_plot))*const_dmo,
          c='dimgray', ls=':', lw=3, alpha=0.7)
 
 all = encontrar_SRD_sinVol(
-    datos_resi_hyd[datos_resi_hyd[:, 3]
-                   > input_data['SHVF']['Vmax_completion'],
-                   1])/20.
+    datos_resi_hyd[datos_resi_hyd[:, 3] > vmax_completion, 1])/ num_its
 plt.plot(x_med_kpc / R_vir, all,
          color='g', marker='P', linestyle='', ms=12, label='Hydro')
 

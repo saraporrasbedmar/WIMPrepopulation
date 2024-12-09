@@ -47,7 +47,7 @@ def read_config_file(ConfigFile):
 
 path_outputs = 'outputs/' \
                'test_srds_and_Cv'
-path_outputs = 'outputs/test1repop'
+path_outputs = 'outputs/test1repop_resilient_highNormSHVF'
 
 # rerun_sims = True
 rerun_sims = False
@@ -221,7 +221,7 @@ def encontrar_SRD_sinVol(data, bins, Rvir=220):
         # interval = ((data[:, 2] / data[:, 5] >= bins[delta])
         #                 * (data[:, 2] / data[:, 5] <= bins[delta + 1]))
         n_final.append(sum(interval))
-    return np.array(n_final, dtype=np.float)
+    return np.array(n_final, dtype=float)
 
 
 def encontrar_SRD(data):
@@ -231,7 +231,7 @@ def encontrar_SRD(data):
         vol = 4 / 3 * np.pi * (
                 bins[delta + 1] ** 3 - bins[delta] ** 3) / R_vir ** 3.
         n_final.append(sum(interval) / vol)
-    return np.array(n_final, dtype=np.float)
+    return np.array(n_final, dtype=float)
 
 
 R_vir = input_data['host']['R_vir']
@@ -462,12 +462,14 @@ for ni, ii in enumerate(v_cut):
 
 
 plt.subplot(222)
-for i in input_data['SRD']['hydro']['resilient']['last_subhalo']:
-    plt.axvline(float(i)/220, c='grey', alpha=0.5, zorder=0)
+for ni, i in enumerate(input_data['SRD']['hydro']['resilient']['last_subhalo']):
+    plt.axvline(float(i)/220, c=cm.CMRmap((ni-1) / float(len(v_cut))),
+                alpha=0.5, zorder=0)
 
 plt.subplot(221)
-for i in input_data['SRD']['dmo']['resilient']['last_subhalo']:
-    plt.axvline(float(i)/220, c='grey', alpha=0.5, zorder=0)
+for ni, i in enumerate(input_data['SRD']['dmo']['resilient']['last_subhalo']):
+    plt.axvline(float(i)/220, c=cm.CMRmap((ni-1)  / float(len(v_cut))),
+                alpha=0.5, zorder=0)
 
 
 plt.ylabel(r'Over - $N(D_\mathrm{GC})$')
@@ -503,7 +505,7 @@ plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
 plt.subplot(224)
 plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
 
-# plt.show()
+plt.show()
 
 # -----------------------------------------------------------------------------
 # ------------ N(r)/Ntot figure -------------------------------
