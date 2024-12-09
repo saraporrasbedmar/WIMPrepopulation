@@ -11,8 +11,8 @@ Cv:
     - 0.374942
 SHVF:
   RangeMax: 120.0
-  RangeMin: 3.0
-  Vmax_completion: 8.0
+  RangeMin: 5.0
+  Vmax_completion: [10., 30., 50.]
   dmo:
     bb: 5.78
     mm: -3.92
@@ -26,10 +26,10 @@ SRD:
       - -0.151
       - 39.27964
       - 220.0
-      last_subhalo: 5.57
+      last_subhalo: 5.
     resilient:
       args: 1.0
-      last_subhalo: 0.0
+      last_subhalo: [7.260, 14.4630, 28.218673]
   formula:
     fragile: ''
     resilient: ''
@@ -42,7 +42,7 @@ SRD:
       last_subhalo: 15.71
     resilient:
       args: 1.0
-      last_subhalo: 0.0
+      last_subhalo: [15.713, 20.819, 90.80634]
 cosmo_constants:
   G: 4.297e-06
   H_0: 67.7
@@ -53,7 +53,7 @@ host:
   rho_0: 9.04e6
 repopulations:
   inc_factor: 1.5
-  its: 20
+  its: 10
   num_brightest: 3404
   num_subs_max: 5e5
   print_freq: 5

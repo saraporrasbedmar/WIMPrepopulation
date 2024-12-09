@@ -46,12 +46,14 @@ data_release_hydro = data_release_hydro[
 
 data_release_dmo = data_release_dmo[np.argsort(data_release_dmo[:, 2])]
 data_release_hydro = data_release_hydro[np.argsort(data_release_hydro[:, 2])]
-print(data_release_dmo[0, 2], data_release_hydro[0, 2])
+print(data_release_dmo[0, 2] * 220/data_release_dmo[0, 5],
+      data_release_hydro[0, 2] * 220/data_release_dmo[0, 5])
 print(data_release_dmo[-1, 2], data_release_hydro[-1, 2])
 
 R_vir = 211.834
 R_last = 251.400
 
+unique_halos = np.unique(data_release_hydro[:, 6])
 
 # %% SRD
 
@@ -61,13 +63,13 @@ def encontrar_SRD_sinVol(data, bins):
 
     for delta in range(len(bins) - 1):
         aaa = []
-        for halo in np.unique(data[:, 6]):
+        for halo in unique_halos:
             data_ind = data[data[:, 6] == halo, :]
             interval = ((data_ind[:, 2] / data_ind[:, 5] >= bins[delta])
                         * (data_ind[:, 2] / data_ind[:, 5] <= bins[delta + 1]))
             aaa.append(sum(interval))
 
-        if delta == 0:
+        if delta == 0 or delta == 1 or delta == 2:
             print(aaa, np.nanmean(aaa), np.std(aaa))
         n_final.append(np.nanmean(aaa))
         std_fin.append(np.std(aaa))
@@ -82,7 +84,7 @@ def encontrar_SRD(data, bins):
 
         aaa = []
         vol = []
-        for halo in np.unique(data[:, 6]):
+        for halo in unique_halos:
             data_ind = data[data[:, 6] == halo, :]
             interval = ((data_ind[:, 2] / data_ind[:, 5] >= bins[delta])
                         * (data_ind[:, 2] / data_ind[:, 5] <= bins[delta + 1]))
@@ -114,7 +116,8 @@ plt.subplots_adjust(wspace=0.27)
 plt.subplot(121)
 plt.title('dmo')
 
-v_cut = [2., 10., 20., 30., 40., 50.]
+# v_cut = [2., 10., 20., 30., 40., 50.]
+v_cut = [10., 30., 50.]
 
 from matplotlib import cm
 
@@ -130,7 +133,8 @@ for ni, ii in enumerate(v_cut):
     print('v_cut: ', ii, ni)
     release_dmo_over = data_release_dmo[data_release_dmo[:, 1] >= ii, :]
     release_hydro_over = data_release_hydro[data_release_hydro[:, 1] >= ii, :]
-
+    print(release_dmo_over[0, 2] * 220/data_release_dmo[0, 5],
+          release_hydro_over[0, 2] * 220/data_release_dmo[0, 5])
     srd_dmo_over_release, std_dmo_num = (
         np.array(encontrar_SRD_sinVol(release_dmo_over, bins))
         # / len(release_dmo_over)
