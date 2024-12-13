@@ -31,32 +31,94 @@ plt.rc('ytick.major', size=7, width=1.5, right=True, pad=7)
 plt.rc('xtick.minor', size=4, width=1)
 plt.rc('ytick.minor', size=4, width=1)
 
-path_name = '/home/porrassa/Desktop/WIMPS_project/' \
-            'Physnet_outputs_repops/2024/compiled_results_allRoche' \
-            '/final_2024_120max'
+# path_name = '/home/porrassa/Desktop/WIMPS_project/' \
+#             'Physnet_outputs_repops/2024/compiled_results_allRoche_andmore' \
+#             '/final_2024_120max'
 # path_name = '/home/saraporras/Desktop/WIMPSproject/compiled_results'\
 #             '/final_2024_8max'
+
+path_name = '/home/porrassa/Desktop/WIMPS_project/Calculations/' \
+            'Repopulation/outputs/test1repop_resilient__changeSRD_a/'
 
 print(os.getcwd())
 print(os.listdir(path_name))
 final_size = (500, 1, 6)
 
-datos_Js_frag_hyd = np.loadtxt(path_name + '/Js_hydro_fragile_results.txt')
-datos_Js_frag_dmo = np.loadtxt(path_name + '/Js_dmo_fragile_results.txt')
+
+datos_Js_resi_hyd = np.loadtxt(path_name + '/Js_hydro_resilient_results.txt').reshape(25, 310, 6)
+datos_Js_resi_dmo = np.loadtxt(path_name + '/Js_dmo_resilient_results.txt').reshape(25, 1034, 6)
+# datos_Js_resi_hyd = datos_Js_resi_hyd.reshape(final_size)[:, 0, :]
+# datos_Js_resi_dmo = datos_Js_resi_dmo.reshape(final_size)[:, 0, :]
+
+datos_Js_resi_hyd = datos_Js_resi_hyd[:, 0, :]
+where0 = datos_Js_resi_hyd[:, 0] < 1e-43
+print('datos_Js_resi_hyd', sum(where0))
+datos_Js_resi_hyd = datos_Js_resi_hyd[~where0, :]
+
+datos_Js_resi_dmo = datos_Js_resi_dmo[:, 0, :]
+where0 = datos_Js_resi_dmo[:, 0] < 1e-43
+print('datos_Js_resi_dmo', sum(where0))
+datos_Js_resi_dmo = datos_Js_resi_dmo[~where0, :]
+
+datos_J03_resi_hyd = np.loadtxt(path_name + '/J03_hydro_resilient_results.txt').reshape(25, 310, 6)
+datos_J03_resi_dmo = np.loadtxt(path_name + '/J03_dmo_resilient_results.txt').reshape(25, 1034, 6)
+# datos_J03_resi_hyd = datos_J03_resi_hyd.reshape(final_size)[:, 0, :]
+# datos_J03_resi_dmo = datos_J03_resi_dmo.reshape(final_size)[:, 0, :]
+
+datos_J03_resi_hyd = datos_J03_resi_hyd[:, 0, :]
+where0 = datos_J03_resi_hyd[:, 0] < 1e-43
+print('datos_J03_resi_hyd', sum(where0))
+datos_J03_resi_hyd = datos_J03_resi_hyd[~where0, :]
+
+datos_J03_resi_dmo = datos_J03_resi_dmo[:, 0, :]
+where0 = datos_J03_resi_dmo[:, 0] < 1e-43
+print('datos_J03_resi_dmo', sum(where0))
+datos_J03_resi_dmo = datos_J03_resi_dmo[~where0, :]
+
+datos_Js_frag_hyd = np.loadtxt(path_name + '/Js_hydro_resilient_results.txt').reshape(25, 310, 6)
+datos_Js_frag_dmo = np.loadtxt(path_name + '/Js_dmo_resilient_results.txt').reshape(25, 1034, 6)
+# datos_Js_resi_hyd = datos_Js_resi_hyd.reshape(final_size)[:, 0, :]
+# datos_Js_resi_dmo = datos_Js_resi_dmo.reshape(final_size)[:, 0, :]
+
+datos_Js_frag_hyd = datos_Js_frag_hyd[:, 0, :]
+where0 = datos_Js_frag_hyd[:, 0] < 1e-43
+print('datos_Js_frag_hyd', sum(where0))
+datos_Js_frag_hyd = datos_Js_frag_hyd[~where0, :]
+
+datos_Js_frag_dmo = datos_Js_frag_dmo[:, 0, :]
+where0 = datos_Js_frag_dmo[:, 0] < 1e-43
+print('datos_Js_frag_dmo', sum(where0))
+datos_Js_frag_dmo = datos_Js_frag_dmo[~where0, :]
+
+datos_J03_frag_hyd = np.loadtxt(path_name + '/J03_hydro_resilient_results.txt').reshape(25, 310, 6)
+datos_J03_frag_dmo = np.loadtxt(path_name + '/J03_dmo_resilient_results.txt').reshape(25, 1034, 6)
+
+datos_J03_frag_hyd = datos_J03_frag_hyd[:, 0, :]
+where0 = datos_J03_frag_hyd[:, 0] < 1e-43
+print('datos_J03_frag_hyd', sum(where0))
+datos_J03_frag_hyd = datos_J03_frag_hyd[~where0, :]
+
+datos_J03_frag_dmo = datos_J03_frag_dmo[:, 0, :]
+where0 = datos_J03_frag_dmo[:, 0] < 1e-43
+print('datos_J03_frag_dmo', sum(where0))
+datos_J03_frag_dmo = datos_J03_frag_dmo[~where0, :]
+
+# datos_Js_frag_hyd = np.loadtxt(path_name + '/Js_hydro_fragile_results.txt')
+# datos_Js_frag_dmo = np.loadtxt(path_name + '/Js_dmo_fragile_results.txt')
 # datos_Js_frag_hyd = datos_Js_frag_hyd.reshape(
 #     (int(datos_Js_frag_hyd.size/6), 1, 6))[:, 0, :]
 # datos_Js_frag_dmo = datos_Js_frag_dmo.reshape(
 #     (int(datos_Js_frag_dmo.size/6), 1, 6))[:, 0, :]
 
-datos_J03_frag_hyd = np.loadtxt(path_name + '/J03_hydro_fragile_results.txt')
-datos_J03_frag_dmo = np.loadtxt(path_name + '/J03_dmo_fragile_results.txt')
+# datos_J03_frag_hyd = np.loadtxt(path_name + '/J03_hydro_fragile_results.txt')
+# datos_J03_frag_dmo = np.loadtxt(path_name + '/J03_dmo_fragile_results.txt')
 # datos_J03_frag_hyd = datos_J03_frag_hyd.reshape(
 #     (int(datos_J03_frag_hyd.size/6), 1, 6))[:, 0, :]
 # datos_J03_frag_dmo = datos_J03_frag_dmo.reshape(
 #     (int(datos_J03_frag_dmo.size/6), 1, 6))[:, 0, :]
 
-
-path_name_res = path_name + '/2024_resilient_const_SHVFnorm_to120_roche_many2'
+'''
+path_name_res = path_name + '/2024_resilient_const_SHVFnorm_to120_roche_many3'
 final_size = (500, 100, 6)
 
 datos_Js_resi_hyd = np.zeros((1, 6))
@@ -64,6 +126,12 @@ datos_Js_resi_dmo = np.zeros((1, 6))
 
 datos_J03_resi_hyd = np.zeros((1, 6))
 datos_J03_resi_dmo = np.zeros((1, 6))
+
+datos_Js_frag_hyd = np.zeros((1, 6))
+datos_Js_frag_dmo = np.zeros((1, 6))
+
+datos_J03_frag_hyd = np.zeros((1, 6))
+datos_J03_frag_dmo = np.zeros((1, 6))
 
 for i in range(1, 6, 1):
     print(i)
@@ -80,19 +148,30 @@ for i in range(1, 6, 1):
         np.loadtxt(path_name_res + '/' + str(i) +
                                  '/J03_hydro_resilient_results.txt')))
 
+    datos_Js_frag_dmo = np.concatenate((datos_Js_frag_dmo,
+        np.loadtxt(path_name_res + '/' + str(i) +
+                                 '/Js_dmo_fragile_results.txt')))
+    datos_Js_frag_hyd = np.concatenate((datos_Js_frag_hyd,
+        np.loadtxt(path_name_res + '/' + str(i) +
+                                 '/Js_hydro_fragile_results.txt')))
+    datos_J03_frag_dmo = np.concatenate((datos_J03_frag_dmo,
+        np.loadtxt(path_name_res + '/' + str(i) +
+                                 '/J03_dmo_fragile_results.txt')))
+    datos_J03_frag_hyd = np.concatenate((datos_J03_frag_hyd,
+        np.loadtxt(path_name_res + '/' + str(i) +
+                                 '/J03_hydro_fragile_results.txt')))
+
 datos_Js_resi_hyd = datos_Js_resi_hyd[1:, :]
 datos_Js_resi_dmo = datos_Js_resi_dmo[1:, :]
 datos_J03_resi_hyd = datos_J03_resi_hyd[1:, :]
 datos_J03_resi_dmo = datos_J03_resi_dmo[1:, :]
-# datos_Js_resi_hyd = np.loadtxt(path_name + '/Js_hydro_resilient_results.txt')
-# datos_Js_resi_dmo = np.loadtxt(path_name + '/Js_dmo_resilient_results.txt')
-# datos_Js_resi_hyd = datos_Js_resi_hyd.reshape(final_size)[:, 0, :]
-# datos_Js_resi_dmo = datos_Js_resi_dmo.reshape(final_size)[:, 0, :]
 
-# datos_J03_resi_hyd = np.loadtxt(path_name + '/J03_hydro_resilient_results.txt')
-# datos_J03_resi_dmo = np.loadtxt(path_name + '/J03_dmo_resilient_results.txt')
-# datos_J03_resi_hyd = datos_J03_resi_hyd.reshape(final_size)[:, 0, :]
-# datos_J03_resi_dmo = datos_J03_resi_dmo.reshape(final_size)[:, 0, :]
+datos_Js_frag_hyd = datos_Js_frag_hyd[1:, :]
+datos_Js_frag_dmo = datos_Js_frag_dmo[1:, :]
+datos_J03_frag_hyd = datos_J03_frag_hyd[1:, :]
+datos_J03_frag_dmo = datos_J03_frag_dmo[1:, :]
+'''
+
 
 constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
 constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')
@@ -199,7 +278,8 @@ plt.scatter(datos_Js_frag_hyd[:, 2], np.log10(datos_Js_frag_hyd[:, 0]),
             lw=0, marker='P', s=75,
             cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
-# plt.yticks((18, 19, 20, 21, 22), labels=('', '', '', '', ''))
+ytickss = plt.yticks()
+plt.yticks(ytickss[0], ['' for i in range(len(ytickss[0]))])
 plt.ylim(minn - 0.1, maxx + 0.1)
 
 plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
@@ -220,7 +300,7 @@ plt.scatter(datos_J03_frag_dmo[:, 2], np.log10(datos_J03_frag_dmo[:, 0]),
 
 minn, maxx = minnmaxx03(0)
 plt.ylim(minn - 0.1, maxx + 0.1)
-# plt.yticks((19, 20))
+
 print('minn - 0.1, maxx + 0.1', minn - 0.1, maxx + 0.1)
 plt.xscale('log')
 
@@ -247,9 +327,10 @@ plt.xlabel(r'log$_{10}$ (D$_\mathrm{Earth}$ [kpc])', fontsize=18)
 plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
            loc=2, title=r'J$_\mathrm{03}$')
 
+ytickss = plt.yticks()
+plt.yticks(ytickss[0], ['' for i in range(len(ytickss[0]))])
 plt.ylim(minn - 0.1, maxx + 0.1)
 print('minn - 0.1, maxx + 0.1', minn - 0.1, maxx + 0.1)
-# plt.yticks((19, 20), labels=('', ''))
 
 plt.xscale('log')
 
@@ -295,7 +376,7 @@ plt.scatter(datos_Js_resi_dmo[:, 1], np.log10(datos_Js_resi_dmo[:, 3]),
             label='Resilient')
 
 plt.scatter(datos_Js_frag_dmo[:, 1], np.log10(datos_Js_frag_dmo[:, 3]),
-            c=np.log10(datos_Js_frag_hyd[:, 0]),
+            c=np.log10(datos_Js_frag_dmo[:, 0]),
             lw=0, marker='P', s=75,
             cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
@@ -440,7 +521,8 @@ plt.scatter(datos_Js_frag_hyd[:, 1], np.log10(datos_Js_frag_hyd[:, 0]),
 
 plt.xscale('log')
 
-# plt.yticks((18, 19, 20, 21, 22), labels=('', '', '', '', ''))
+ytickss = plt.yticks()
+plt.yticks(ytickss[0], ['' for i in range(len(ytickss[0]))])
 plt.ylim(minn - 0.1, maxx + 0.1)
 
 plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
@@ -485,13 +567,15 @@ plt.scatter(datos_J03_frag_hyd[:, 1], np.log10(datos_J03_frag_hyd[:, 0]),
                  lw=0, marker='P', s=75,
                  cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
-# plt.yticks((19, 20), labels=('', ''))
+ytickss = plt.yticks()
+plt.yticks(ytickss[0], ['' for i in range(len(ytickss[0]))])
+plt.ylim(minn - 0.1, maxx + 0.1)
+
 plt.xlabel(r'log$_{10}$ (D$_\mathrm{GC}$ [kpc])', fontsize=18)
 
 plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
            loc=2, title=r'J$_\mathrm{03}$')
 
-plt.ylim(minn - 0.1, maxx + 0.1)
 
 cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
@@ -553,9 +637,6 @@ plt.subplot(222)
 plt.title('Hydro', size=18)
 plt.xscale('log')
 
-plt.ylim(minn - 0.1, maxx + 0.1)
-# plt.yticks((18, 19, 20, 21, 22), labels=('', '', '', '', ''))
-
 plt.scatter(datos_Js_resi_hyd[:, 3], np.log10(datos_Js_resi_hyd[:, 2]),
             c='none', lw=2, marker='o',
             edgecolors=cmap(norm(np.log10(datos_Js_resi_hyd[:, 4]))),
@@ -568,6 +649,10 @@ plt.scatter(datos_Js_frag_hyd[:, 3], np.log10(datos_Js_frag_hyd[:, 2]),
 
 plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
            loc=2, title=r'J$_\mathrm{S}$')
+
+ytickss = plt.yticks()
+plt.yticks(ytickss[0], ['' for i in range(len(ytickss[0]))])
+plt.ylim(minn - 0.1, maxx + 0.1)
 
 plt.subplot(223)
 minn, maxx = minnmaxx03(2)
@@ -607,9 +692,9 @@ plt.scatter(datos_J03_frag_hyd[:, 3], np.log10(datos_J03_frag_hyd[:, 2]),
             lw=0, marker='P', s=75,
             cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
+ytickss = plt.yticks()
+plt.yticks(ytickss[0], ['' for i in range(len(ytickss[0]))])
 plt.ylim(minn - 0.1, maxx + 0.1)
-# plt.yticks((19, 20), labels=('', ''))
-
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=22)
 
 plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
@@ -871,9 +956,9 @@ plt.scatter(datos_Js_resi_dmo[:, 3], np.log10(datos_Js_resi_dmo[:, 0]),
             edgecolors=cmap(norm(np.log10(datos_Js_resi_dmo[:, 2]))),
             label='Resilient')
 
-plt.scatter(datos_Js_frag_dmo[:, 3], np.log10(datos_Js_frag_dmo[:, 0]),
-            c=np.log10(datos_Js_frag_dmo[:, 2]), lw=0, marker='P', s=75,
-            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
+# plt.scatter(datos_Js_frag_dmo[:, 3], np.log10(datos_Js_frag_dmo[:, 0]),
+#             c=np.log10(datos_Js_frag_dmo[:, 2]), lw=0, marker='P', s=75,
+#             cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
 plt.ylabel(r'log$_{10}$ (J$_\mathrm{S}$ [GeV$^2$ cm$^{-5}$])', fontsize=18)
 
@@ -891,9 +976,9 @@ plt.scatter(datos_Js_resi_hyd[:, 3], np.log10(datos_Js_resi_hyd[:, 0]),
             edgecolors=cmap(norm(np.log10(datos_Js_resi_hyd[:, 2]))),
             label='Resilient')
 
-plt.scatter(datos_Js_frag_hyd[:, 3], np.log10(datos_Js_frag_hyd[:, 0]),
-            c=np.log10(datos_Js_frag_hyd[:, 2]), lw=0, marker='P', s=75,
-            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
+# plt.scatter(datos_Js_frag_hyd[:, 3], np.log10(datos_Js_frag_hyd[:, 0]),
+#             c=np.log10(datos_Js_frag_hyd[:, 2]), lw=0, marker='P', s=75,
+#             cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
 plt.ylim(minn - 0.1, maxx + 0.1)
 plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
@@ -911,9 +996,9 @@ plt.scatter(datos_J03_resi_dmo[:, 3], np.log10(datos_J03_resi_dmo[:, 0]),
             edgecolors=cmap(norm(np.log10(datos_J03_resi_dmo[:, 2]))),
             label='Resilient')
 
-plt.scatter(datos_J03_frag_dmo[:, 3], np.log10(datos_J03_frag_dmo[:, 0]),
-            c=np.log10(datos_J03_frag_dmo[:, 2]), lw=0, marker='P', s=75,
-            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
+# plt.scatter(datos_J03_frag_dmo[:, 3], np.log10(datos_J03_frag_dmo[:, 0]),
+#             c=np.log10(datos_J03_frag_dmo[:, 2]), lw=0, marker='P', s=75,
+#             cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
 plt.ylabel(r'log$_{10}$ (J$_{03}$ [GeV$^2$ cm$^{-5}$])', fontsize=18)
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=22)
@@ -930,9 +1015,9 @@ plt.scatter(datos_J03_resi_hyd[:, 3], np.log10(datos_J03_resi_hyd[:, 0]),
             edgecolors=cmap(norm(np.log10(datos_J03_resi_hyd[:, 2]))),
             label='Resilient')
 
-plt.scatter(datos_J03_frag_hyd[:, 3], np.log10(datos_J03_frag_hyd[:, 0]),
-                 c=np.log10(datos_J03_frag_hyd[:, 2]), lw=0, marker='P', s=75,
-                 cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
+# plt.scatter(datos_J03_frag_hyd[:, 3], np.log10(datos_J03_frag_hyd[:, 0]),
+#                  c=np.log10(datos_J03_frag_hyd[:, 2]), lw=0, marker='P', s=75,
+#                  cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
 plt.ylim(minn - 0.1, maxx + 0.1)
 plt.yticks((19, 20), labels=('', ''))
@@ -951,6 +1036,7 @@ c2.set_label(r'D$_\mathrm{Earth}$ [kpc]', fontsize=20)
 yticks = c2.get_ticks()
 c2.set_ticklabels([str(10**i)[:4] for i in yticks])
 
+# plt.show()
 plt.savefig(path_name + '/VmaxJs.png', bbox_inches='tight')
 plt.savefig(path_name + '/VmaxJs.pdf', bbox_inches='tight')
 
@@ -963,7 +1049,7 @@ plt.subplots_adjust(wspace=0, hspace=0)
 ax1 = plt.subplot(121)
 
 plt.plot(constraints_bb_2204[:, 0], constraints_bb_2204[:, 1], '-.',
-         label='CB+22', alpha=1., color='grey', lw=2)
+         label='CB+22', alpha=1., color='b', lw=2)
 
 plt.plot(constraints_bb_2204[:, 0],
          constraints_bb_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_dmo),
@@ -981,7 +1067,7 @@ plt.plot(constraints_bb_2204[:, 0],
 
 plt.plot(sigmav_bb_2204[:, 0], sigmav_bb_2204[:, 1], ':k', lw=2)
 
-plt.annotate(r'$b\bar{b}$', (2000, 2.6e-21), color='k')
+plt.annotate(r'$b\bar{b}$', (2000, 5e-22), color='k')
 plt.annotate(r'<$\sigma\nu$>$_\mathrm{th}$', (1000, 3e-26))
 
 plt.xscale('log')
@@ -1006,23 +1092,23 @@ ax2 = plt.subplot(122, sharex=ax1, sharey=ax1)
 
 plt.plot(constraints_tau_2204[:, 0],
          constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_dmo),
-         '-k', label='DMO', alpha=0.8)
+         '-k', label='DMO', lw=2)
 plt.plot(constraints_tau_2204[:, 0],
          constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_hyd),
-         '-', label='Hydro', color='limegreen')
+         '-', label='Hydro', color='limegreen', lw=2)
 
 plt.plot(constraints_tau_2204[:, 0],
          constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_resi_dmo),
-         '--k', alpha=0.8)
+         '--k', lw=2)
 plt.plot(constraints_tau_2204[:, 0],
          constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_resi_hyd),
-         '--', color='limegreen')
+         '--', color='limegreen', lw=2)
 
 plt.plot(sigmav_tau_2204[1:, 0], sigmav_tau_2204[1:, 1], ':k')
 plt.plot(constraints_tau_2204[:, 0], constraints_tau_2204[:, 1], '-.',
-         label='CB+22', alpha=1., color='grey')
+         label='CB+22', alpha=1., color='b', lw=2)
 
-plt.annotate(r'$\tau^+\tau^-$', (1100, 1e-20), color='k')
+plt.annotate(r'$\tau^+\tau^-$', (1100, 5e-22), color='k')
 plt.annotate(r'<$\sigma\nu$>$_\mathrm{th}$', (1000, 3e-26))
 
 plt.xscale('log')

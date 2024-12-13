@@ -50,6 +50,9 @@ print(data_release_dmo[0, 2] * 220/data_release_dmo[0, 5],
       data_release_hydro[0, 2] * 220/data_release_dmo[0, 5])
 print(data_release_dmo[-1, 2], data_release_hydro[-1, 2])
 
+print()
+print(sum(data_release_dmo[:, 1] > 20), sum(data_release_hydro[:, 1] > 20))
+
 R_vir = 211.834
 R_last = 251.400
 
@@ -69,8 +72,8 @@ def encontrar_SRD_sinVol(data, bins):
                         * (data_ind[:, 2] / data_ind[:, 5] <= bins[delta + 1]))
             aaa.append(sum(interval))
 
-        if delta == 0 or delta == 1 or delta == 2:
-            print(aaa, np.nanmean(aaa), np.std(aaa))
+        # if delta == 0 or delta == 1 or delta == 2:
+        #     print(aaa, np.nanmean(aaa), np.std(aaa))
         n_final.append(np.nanmean(aaa))
         std_fin.append(np.std(aaa))
     return np.array(n_final), np.array(std_fin)
@@ -116,8 +119,8 @@ plt.subplots_adjust(wspace=0.27)
 plt.subplot(121)
 plt.title('dmo')
 
-# v_cut = [2., 10., 20., 30., 40., 50.]
-v_cut = [10., 30., 50.]
+v_cut = [0.0, 9., 13., 18., 25., 36., 50., 70., 90.]
+# v_cut = [10., 20]
 
 from matplotlib import cm
 
@@ -133,8 +136,9 @@ for ni, ii in enumerate(v_cut):
     print('v_cut: ', ii, ni)
     release_dmo_over = data_release_dmo[data_release_dmo[:, 1] >= ii, :]
     release_hydro_over = data_release_hydro[data_release_hydro[:, 1] >= ii, :]
-    print(release_dmo_over[0, 2] * 220/data_release_dmo[0, 5],
+    print(
           release_hydro_over[0, 2] * 220/data_release_dmo[0, 5])
+    print(release_dmo_over[0, 2] * 220/data_release_dmo[0, 5],)
     srd_dmo_over_release, std_dmo_num = (
         np.array(encontrar_SRD_sinVol(release_dmo_over, bins))
         # / len(release_dmo_over)
@@ -146,7 +150,7 @@ for ni, ii in enumerate(v_cut):
     )
     srd_hydro_over_release[srd_hydro_over_release==0] = 0.01
 
-    print('under stuff')
+    # print('under stuff')
 
     srdnum_dmo_under, _ = np.array(encontrar_SRD_sinVol(
         data_release_dmo[data_release_dmo[:, 1] < ii, :], bins))
@@ -169,7 +173,7 @@ plt.ylabel(r'$N(D_\mathrm{GC})$')
 plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
 
 plt.xscale('linear')
-plt.yscale('log')
+# plt.yscale('log')
 
 plt.xlim(0, 1.)
 plt.ylim(0.009, 630)
@@ -191,10 +195,10 @@ legend22 = plt.legend(
 ax2.add_artist(legend11)
 ax2.add_artist(legend22)
 
-plt.yscale('log')
+# plt.yscale('log')
 plt.xlim(0., 1.)
 
-plt.show()
+# plt.show()
 # ------------------------ N(r)/Ntot figure ------------------------------
 print()
 print('N/Ntot figures')
