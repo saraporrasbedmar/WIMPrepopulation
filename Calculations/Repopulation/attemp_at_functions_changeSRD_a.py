@@ -947,6 +947,9 @@ def interior_loop_singularbrightest(
             print('a')
         min_distGC = 1e-3
         print(srd_args_repop_copy)
+        print()
+
+        '''
         repop_Vmax = montecarlo_algorithm(
             m_min, m_max,
             SHVF_Grand2012,
@@ -1231,11 +1234,11 @@ def interior_loop_singularbrightest(
                     # bright_J03 = np.argmax(new_data[:, 1])
                     # progress.write('J03 ' + bright_J03 + '\n')
                     # progress.close()
-
+        
         # We take the brightest subhalos only
         brightest_Js = brightest_Js[np.argsort(brightest_Js[:, 0])[::-1], :]
         brightest_J03 = brightest_J03[np.argsort(brightest_J03[:, 0])[::-1], :]
-
+        '''
         m_min = new_mmin
 
     return (brightest_Js[:repop_num_brightest, :],

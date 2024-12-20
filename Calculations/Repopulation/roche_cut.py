@@ -55,6 +55,24 @@ def find_roche(dist, vmax, c0=1.75e5):
             - funct_repop.R_s(vmax, c_mean, cosmo_H_0))
 
 
+def r_t_other(mass, rr, r_s=host_r_s, rho_0=host_rho_0):
+    aaa = 4. * np.pi * rho_0 * r_s ** 3.
+    print(aaa)
+    aaa *= (2 * r_s + 3. * rr) / (r_s + rr) ** 2.
+    print(aaa)
+    aaa /= np.log(4. * np.pi * rho_0 * r_s ** 3.
+                  * (np.log((r_s + rr) / r_s) - rr / (r_s + rr)))
+    print(aaa)
+
+    aaa = 2. - aaa
+    print(aaa)
+
+    aaa = rr * (mass / aaa
+                / funct_repop.Mhost_encapsulated(rr, rho_0, r_s)) ** (1 / 3.)
+    print(aaa)
+    return aaa
+
+
 plt.figure(figsize=(10, 8))
 
 # vmax_array = np.geomspace(0.1, 120., num=10)
@@ -65,7 +83,8 @@ c0_arr = [1e4, 1.75e5, 1e6]
 
 markers = ['.', 'x', '*']
 lines = ['-', '--', ':']
-
+print('rtt')
+print(r_t_other(1e7, dist_gc))
 for nj, j in enumerate(c0_arr):
     for ni, i in enumerate(vmax_array):
         c0 = j
@@ -76,6 +95,8 @@ for nj, j in enumerate(c0_arr):
             cosmo_H_0, cosmo_G,
             host_rho_0, host_r_s,
             singular_case=True)
+
+        plt.plot(dist_gc, r_t_other(1e7, dist_gc))
 
         if nj == 0:
             cut = np.argmin(abs(r_t-r_s))

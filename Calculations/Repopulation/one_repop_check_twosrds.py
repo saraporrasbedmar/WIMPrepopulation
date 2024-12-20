@@ -9,7 +9,7 @@ import matplotlib.patches as mpatches
 from matplotlib.lines import Line2D
 from scipy.optimize import curve_fit
 
-import attemp_at_functions22 as funct_repop
+import attemp_at_functions_changeSRD_a as funct_repop
 
 plt.rcParams['mathtext.fontset'] = 'stix'
 plt.rcParams['font.family'] = 'STIXGeneral'
@@ -57,7 +57,7 @@ if rerun_sims:
     if not os.path.exists(path_outputs):
         os.makedirs(path_outputs)
 
-    path_input = 'input_files/input_paper2024_SHVFnorm.yml'
+    path_input = 'input_files/input_paper2024_SHVFnorm_changeSRD_a.yml'
 
     input_data = read_config_file(path_input)
     print('dmo num subs over completion: ',
@@ -87,8 +87,8 @@ if rerun_sims:
     with open(path_input, 'w') as f:
         yaml.dump(input_data, f)
 
-    funct_repop.main(['dmo', 'resilient', path_input, path_outputs])
-    funct_repop.main(['dmo', 'fragile', path_input, path_outputs])
+    # funct_repop.main(['dmo', 'resilient', path_input, path_outputs])
+    # funct_repop.main(['dmo', 'fragile', path_input, path_outputs])
 
     input_data['repopulations']['num_brightest'] = \
         funct_repop.SHVF_Grand2012_int(
@@ -101,7 +101,7 @@ if rerun_sims:
         yaml.dump(input_data, f)
 
     funct_repop.main(['hydro', 'resilient', path_input, path_outputs])
-    funct_repop.main(['hydro', 'fragile', path_input, path_outputs])
+    # funct_repop.main(['hydro', 'fragile', path_input, path_outputs])
 
 # path_outputs = 'outputs/test1repop_resilient_highNormSHVF'
 datos_resi_dmo = np.loadtxt(path_outputs + '/Js_dmo_resilient_results.txt')

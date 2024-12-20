@@ -37,6 +37,9 @@ plt.loglog(data_hydro[:, 3], data_hydro[:, 1], marker='.', ls='',
            color='green', alpha=0.7)
 plt.ylabel(r'$V_\mathrm{max}$ [km s$^{-1}$]')
 
+plt.axvline(7)
+plt.axvline(np.log10(3e6))
+
 plt.subplot(212)
 plt.loglog(data_dmo[:, 3], data_dmo[:, 0], marker='.', ls='',
            color='k', alpha=0.7)

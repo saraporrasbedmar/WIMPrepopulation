@@ -930,7 +930,7 @@ def interior_loop_singularbrightest(
         # print(SHVF_Grand2012_int(m_min, m_max,
         #                       SHVF_bb, SHVF_mm))
 
-        aaa = np.where((m_min * m_max) ** 0.5 > np.array(Vmax_completion))
+        aaa = np.where(m_min > np.array(Vmax_completion))
         if len(aaa[0]) > 0:
             try:
                 min_distGC = float(srd_last_sub[aaa[0][-1]])
