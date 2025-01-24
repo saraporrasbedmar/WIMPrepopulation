@@ -39,22 +39,27 @@ plt.rc('ytick.minor', size=4, width=1)
 # path_name = '/home/saraporras/Desktop/WIMPSproject/compiled_results'\
 #             '/final_2024_8max'
 
-path_name = '/home/porrassa/Desktop/WIMPS_project/' \
-            'Physnet_outputs_repops/2024/compiled_results_allRoche/' \
-            'final_2024_8max'
-
-#             'Repopulation/outputs/test1repop_resilient__changeSRD_a/'
-
+path_name = '/home/porrassa/Desktop/WIMPS_project/Calculations/'\
+             'Repopulation/outputs/test1repop_resilient_newVcuts/'
+            # 'Physnet_outputs_repops/2024/compiled_results_allRoche/' \
+            # 'final_2024_8max'
+#
 print(os.getcwd())
 print(os.listdir(path_name))
 final_size = (500, 1, 6)
 
 datos_Js_frag_hyd = np.loadtxt(path_name +
-                               '/Js_hydro_fragile_results.txt')  # .reshape(25,
+                               '/Js_hydro_fragile_results.txt').reshape(10,
+                                                                        2198, 6)  # .reshape(25,
 # 310, 6)
 datos_Js_frag_dmo = np.loadtxt(path_name +
-                               '/Js_dmo_fragile_results.txt')  # .reshape(25, 1034, 6)
-# datos_Js_resi_hyd = datos_Js_resi_hyd.reshape(final_size)[:, 0, :]
+                               '/Js_dmo_fragile_results.txt').reshape(10,
+                                                                      6629,
+                                                                      6)  # .reshape(25, 1034, 6)
+datos_Js_frag_hyd = datos_Js_frag_hyd[:, 0, :]
+datos_Js_frag_dmo = datos_Js_frag_dmo[:, 0, :]
+# datos_Js_frag_hyd = datos_Js_frag_hyd[datos_Js_frag_hyd[:, 0] != 0, :]
+# datos_Js_frag_dmo = datos_Js_frag_dmo[datos_Js_frag_dmo[:, 0] != 0, :]# datos_Js_resi_hyd = datos_Js_resi_hyd.reshape(final_size)[:, 0, :]
 # datos_Js_resi_dmo = datos_Js_resi_dmo.reshape(final_size)[:, 0, :]
 
 # datos_Js_frag_hyd = datos_Js_frag_hyd[:, 0, :]
@@ -68,10 +73,15 @@ datos_Js_frag_dmo = np.loadtxt(path_name +
 # datos_Js_frag_dmo = datos_Js_frag_dmo[~where0, :]
 
 datos_J03_frag_hyd = np.loadtxt(path_name +
-                                '/J03_hydro_fragile_results.txt')  # .reshape(25, 310, 6)
+                                '/J03_hydro_fragile_results.txt').reshape(
+    10, 2198, 6)  # .reshape(25, 310, 6)
 datos_J03_frag_dmo = np.loadtxt(path_name +
-                                '/J03_dmo_fragile_results.txt')  # .reshape(25, 1034, 6)
-
+                                '/J03_dmo_fragile_results.txt').reshape(10,
+                                                                        6629, 6)  # .reshape(25, 1034, 6)
+datos_J03_frag_hyd = datos_J03_frag_hyd[:, 0, :]
+datos_J03_frag_dmo = datos_J03_frag_dmo[:, 0, :]
+# datos_J03_frag_hyd = datos_J03_frag_hyd[datos_J03_frag_hyd[:, 0] != 0, :]
+# datos_J03_frag_dmo = datos_J03_frag_dmo[datos_J03_frag_dmo[:, 0] != 0, :]
 # datos_J03_frag_hyd = datos_J03_frag_hyd[:, 0, :]
 # where0 = datos_J03_frag_hyd[:, 0] < 1e-43
 # print('datos_J03_frag_hyd', sum(where0))
@@ -99,9 +109,15 @@ datos_J03_frag_dmo = np.loadtxt(path_name +
 
 
 datos_Js_resi_hyd = np.loadtxt(path_name +
-                               '/Js_hydro_resilient_results.txt')#.reshape(25, 310, 6)
+                               '/Js_hydro_resilient_results.txt').reshape(
+    10, 2198, 6)#.reshape(25, 310, 6)
 datos_Js_resi_dmo = np.loadtxt(path_name +
-                               '/Js_dmo_resilient_results.txt')#.reshape(25, 1034, 6)
+                               '/Js_dmo_resilient_results.txt').reshape(10,
+                                                                        6629, 6)#.reshape(25, 1034, 6)
+datos_Js_resi_hyd = datos_Js_resi_hyd[:, 0, :]
+datos_Js_resi_dmo = datos_Js_resi_dmo[:, 0, :]
+# datos_Js_resi_hyd = datos_Js_resi_hyd[datos_Js_resi_hyd[:, 0] != 0, :]
+# datos_Js_resi_dmo = datos_Js_resi_dmo[datos_Js_resi_dmo[:, 0] != 0, :]
 # datos_Js_resi_hyd = datos_Js_resi_hyd.reshape(final_size)[:, 0, :]
 # datos_Js_resi_dmo = datos_Js_resi_dmo.reshape(final_size)[:, 0, :]
 
@@ -116,9 +132,15 @@ datos_Js_resi_dmo = np.loadtxt(path_name +
 # datos_Js_resi_dmo = datos_Js_resi_dmo[~where0, :]
 
 datos_J03_resi_hyd = np.loadtxt(path_name +
-                                '/J03_hydro_resilient_results.txt')#.reshape(25, 310, 6)
+                                '/J03_hydro_resilient_results.txt').reshape(
+    10, 2198, 6)#.reshape(25, 310, 6)
 datos_J03_resi_dmo = np.loadtxt(path_name +
-                                '/J03_dmo_resilient_results.txt')#.reshape(25, 1034, 6)
+                                '/J03_dmo_resilient_results.txt').reshape(
+    10, 6629, 6)#.reshape(25, 1034, 6)
+datos_J03_resi_hyd = datos_J03_resi_hyd[:, 0, :]
+datos_J03_resi_dmo = datos_J03_resi_dmo[:, 0, :]
+# datos_J03_resi_hyd = datos_J03_resi_hyd[datos_J03_resi_hyd[:, 0] != 0, :]
+# datos_J03_resi_dmo = datos_J03_resi_dmo[datos_J03_resi_dmo[:, 0] != 0, :]
 # datos_J03_resi_hyd = datos_J03_resi_hyd.reshape(final_size)[:, 0, :]
 # datos_J03_resi_dmo = datos_J03_resi_dmo.reshape(final_size)[:, 0, :]
 
@@ -217,15 +239,15 @@ def minnmaxxS(i):
     minn = np.min((
         np.min(np.log10(datos_Js_frag_dmo[:, i])),
         np.min(np.log10(datos_Js_frag_hyd[:, i])),
-        # np.min(np.log10(datos_Js_resi_dmo[:, i])),
-        # np.min(np.log10(datos_Js_resi_hyd[:, i]))
+        np.min(np.log10(datos_Js_resi_dmo[:, i])),
+        np.min(np.log10(datos_Js_resi_hyd[:, i]))
         ))
 
     maxx = np.max((
         np.max(np.log10(datos_Js_frag_dmo[:, i])),
         np.max(np.log10(datos_Js_frag_hyd[:, i])),
-        # np.max(np.log10(datos_Js_resi_dmo[:, i])),
-        # np.max(np.log10(datos_Js_resi_hyd[:, i])),
+        np.max(np.log10(datos_Js_resi_dmo[:, i])),
+        np.max(np.log10(datos_Js_resi_hyd[:, i])),
     ))
 
     return minn, maxx

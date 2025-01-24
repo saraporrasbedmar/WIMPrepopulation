@@ -55,18 +55,6 @@ x_cumul = np.geomspace(1., 120., num=25)
 path_input = '../Repopulation/input_files/input_paper2024_SHVFnorm.yml'
 
 input_data = read_config_file(path_input)
-# print('dmo num subs over completion: ',
-#           funct_repop.SHVF_Grand2012_int(input_data['SHVF'][
-#                                              'Vmax_completion'][1],
-#                                          input_data['SHVF']['RangeMax'],
-#                                          input_data['SHVF']['dmo']['bb'],
-#                                          input_data['SHVF']['dmo']['mm']))
-# print('hydro num subs over completion: ',
-#           funct_repop.SHVF_Grand2012_int(input_data['SHVF'][
-#                                              'Vmax_completion'][1],
-#                                          input_data['SHVF']['RangeMax'],
-#                                          input_data['SHVF']['hydro']['bb'],
-#                                          input_data['SHVF']['hydro']['mm']))
 
 print(sum(data_release_dmo[:, 1] > 50) / 6.)
 print(sum(data_release_hydro[:, 1] > 20) / 6.)
@@ -75,7 +63,7 @@ print(sum(data_release_hydro[:, 1] > 20) / 6.)
 def SHVF_Grand2012_int(V1, V2,
                        SHVF_bb,
                        SHVF_mm):
-    return ((10 ** SHVF_bb
+    return (np.ceil(10 ** SHVF_bb
                        / (SHVF_mm + 1) *
                        (V2 ** (SHVF_mm + 1)
                         - V1 ** (SHVF_mm + 1))))
@@ -93,27 +81,28 @@ plt.figure()
 
 colors = [input_data['repopulations']['inc_factor'], 2, 2.5,
          3, 4, 5]
-bb = input_data['SHVF']['dmo']['bb'] + np.log10(6.)
+bb = input_data['SHVF']['hydro']['bb']# + np.log10(6.)
 
 for nn, repop_factor in enumerate(colors):
     mmin_array = []
     total_subs = []
+    iii = 0
 
     m_min = float(input_data['SHVF']['RangeMin'])
 
     while m_min < input_data['SHVF']['RangeMax']:
 
         if (SHVF_Grand2012_int(
-                m_min, input_data['SHVF']['RangeMax'],
+                m_min, m_min * repop_factor,
                 bb,
-                input_data['SHVF']['dmo']['mm'])
+                input_data['SHVF']['hydro']['mm'])
                 > num_max):
 
             m_max = newton(
                 xx, m_min,
                 args=[m_min,
                       bb,
-                      input_data['SHVF']['dmo']['mm'],
+                      input_data['SHVF']['hydro']['mm'],
                       num_max])
             new_mmin = m_max
 
@@ -121,14 +110,38 @@ for nn, repop_factor in enumerate(colors):
             m_max = np.minimum(
                 m_min * repop_factor,
                 input_data['SHVF']['RangeMax'])
+
             new_mmin = m_min * repop_factor
+            print(m_min, m_max, SHVF_Grand2012_int(
+                m_min, m_max,
+                bb,
+                input_data['SHVF']['hydro']['mm']))
+
+            if (SHVF_Grand2012_int(
+                m_max, np.minimum(
+                        m_max * repop_factor,
+                        input_data['SHVF']['RangeMax']),
+                bb,
+                input_data['SHVF']['hydro']['mm']) < 1.) and (
+                    m_max <input_data['SHVF']['RangeMax']
+            ):
+                    m_max = input_data['SHVF']['RangeMax']
+                    new_mmin = m_max
+                    print('help')
+                    print(m_min, m_max, SHVF_Grand2012_int(m_min,
+                               m_max,
+                               bb,
+                               input_data['SHVF']['hydro']['mm']))
             mmin_array.append(m_min)
             total_subs.append(SHVF_Grand2012_int(m_min,
                                m_max,
                                bb,
-                               input_data['SHVF']['dmo']['mm']))
+                               input_data['SHVF']['hydro']['mm']))
 
         m_min = new_mmin
+        iii += 1
+        # print(m_min)
+    print(repop_factor, iii)
 
     sum_subs = [sum(total_subs[i:]) for i in range(0, len(total_subs), 1)]
     print(total_subs)
@@ -137,16 +150,18 @@ for nn, repop_factor in enumerate(colors):
 
     subs_grand = []
     for i in range(len(mmin_array)):
-        subs_grand.append(sum(data_release_dmo[:, 1] > mmin_array[i]))
-    plt.scatter(mmin_array, subs_grand, marker='x',
+        subs_grand.append(sum(data_release_hydro[:, 1] > mmin_array[i]))
+    plt.scatter(mmin_array, np.array(subs_grand)/6., marker='x',
                 color=plt.cm.CMRmap(nn / float(len(colors))))
 
-
+print(iii)
 plt.legend()
 plt.xscale('log')
-plt.yscale('log')
+# plt.yscale('log')
 
 plt.ylim(0, 50)
 plt.xlim(10, 120)
+
+plt.grid(which='both', axis='y')
 
 plt.show()

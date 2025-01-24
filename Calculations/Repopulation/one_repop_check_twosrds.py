@@ -9,7 +9,7 @@ import matplotlib.patches as mpatches
 from matplotlib.lines import Line2D
 from scipy.optimize import curve_fit
 
-import attemp_at_functions_changeSRD_a as funct_repop
+import attemp_at_functions2 as funct_repop
 
 plt.rcParams['mathtext.fontset'] = 'stix'
 plt.rcParams['font.family'] = 'STIXGeneral'
@@ -47,28 +47,28 @@ def read_config_file(ConfigFile):
 
 path_outputs = 'outputs/' \
                'test_srds_and_Cv'
-path_outputs = 'outputs/test1repop_resilient_manycuts'
+path_outputs = 'outputs/test1repop_resilient_newVcuts_8min'
 
-rerun_sims = True
-# rerun_sims = False
+# rerun_sims = True
+rerun_sims = False
 
 if rerun_sims:
 
     if not os.path.exists(path_outputs):
         os.makedirs(path_outputs)
 
-    path_input = 'input_files/input_paper2024_SHVFnorm_changeSRD_a.yml'
+    path_input = 'input_files/input_paper2024.yml'
 
     input_data = read_config_file(path_input)
     print('dmo num subs over completion: ',
           funct_repop.SHVF_Grand2012_int(input_data['SHVF'][
-                                             'Vmax_completion'][1],
+                                             'Vmax_completion'],
                                          input_data['SHVF']['RangeMax'],
                                          input_data['SHVF']['dmo']['bb'],
                                          input_data['SHVF']['dmo']['mm']))
     print('hydro num subs over completion: ',
           funct_repop.SHVF_Grand2012_int(input_data['SHVF'][
-                                             'Vmax_completion'][1],
+                                             'Vmax_completion'],
                                          input_data['SHVF']['RangeMax'],
                                          input_data['SHVF']['hydro']['bb'],
                                          input_data['SHVF']['hydro']['mm']))
@@ -87,8 +87,8 @@ if rerun_sims:
     with open(path_input, 'w') as f:
         yaml.dump(input_data, f)
 
-    # funct_repop.main(['dmo', 'resilient', path_input, path_outputs])
-    # funct_repop.main(['dmo', 'fragile', path_input, path_outputs])
+    funct_repop.main(['dmo', 'resilient', path_input, path_outputs])
+    funct_repop.main(['dmo', 'fragile', path_input, path_outputs])
 
     input_data['repopulations']['num_brightest'] = \
         funct_repop.SHVF_Grand2012_int(
@@ -101,7 +101,7 @@ if rerun_sims:
         yaml.dump(input_data, f)
 
     funct_repop.main(['hydro', 'resilient', path_input, path_outputs])
-    # funct_repop.main(['hydro', 'fragile', path_input, path_outputs])
+    funct_repop.main(['hydro', 'fragile', path_input, path_outputs])
 
 # path_outputs = 'outputs/test1repop_resilient_highNormSHVF'
 datos_resi_dmo = np.loadtxt(path_outputs + '/Js_dmo_resilient_results.txt')
@@ -164,7 +164,7 @@ plt.scatter(x_cumul, Vmax_cumul_dmo_res, c='k', marker='+', s=12**2)
 plt.scatter(x_cumul, Vmax_cumul_dmo_frag, c='k')
 plt.scatter(x_cumul, Vmax_cumul_hydro_res, c='g', marker='+', s=12**2)
 plt.scatter(x_cumul, Vmax_cumul_hydro_frag, c='g')
-
+'''
 fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(
     x_cumul, Vmax_cumul_dmo_res, lim_inf=1.5, lim_sup=10.)
 print(fitsM_DMO, fitsB_DMO)
@@ -189,7 +189,7 @@ fitsM_hydro, fitsB_hydro, _, _ = find_PowerLaw(
 print(fitsM_hydro, fitsB_hydro)
 plt.plot(xx_plot, 10 ** fitsB_hydro * xx_plot ** fitsM_hydro,
          color='g', alpha=0.7, linestyle='--', lw=2, label='Hydro fragile')
-
+'''
 plt.xscale('log')
 plt.yscale('log')
 
@@ -353,7 +353,7 @@ plt.subplot(121)
 plt.title('dmo')
 
 # v_cut = [2., 10., 20., 30., 40., 50.]
-v_cut = input_data['SHVF']['Vmax_completion']
+v_cut = [input_data['SHVF']['Vmax_completion']]
 
 
 num_bins = 15
@@ -436,12 +436,14 @@ for ni, ii in enumerate(v_cut):
 
 
 plt.subplot(122)
-for ni, i in enumerate(input_data['SRD']['hydro']['resilient']['last_subhalo']):
+for ni, i in enumerate([input_data['SRD']['hydro']['resilient'][
+                            'last_subhalo']]):
     plt.axvline(float(i)/220, c=cm.CMRmap((ni) / float(len(v_cut))),
                 alpha=0.5, zorder=0)
 
 plt.subplot(121)
-for ni, i in enumerate(input_data['SRD']['dmo']['resilient']['last_subhalo']):
+for ni, i in enumerate([input_data['SRD']['dmo']['resilient'][
+                            'last_subhalo']]):
     plt.axvline(float(i)/220, c=cm.CMRmap((ni)  / float(len(v_cut))),
                 alpha=0.5, zorder=0)
 
@@ -481,7 +483,7 @@ plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
 print()
 print('N/Ntot figures')
 
-vmax_completion = 20.
+vmax_completion = 8.
 
 def encontrar_SRD_sinVol_auriga(data, bins):
     n_final = []
@@ -708,11 +710,11 @@ plt.errorbar(bins_mean_hydro, srd_hydro_over_release,
              ms=15, marker='*',
              alpha=1, zorder=15)
 
-plt.plot(xx_plot, np.ones(len(xx_plot))
+plt.plot(xx_plot, np.ones_like(xx_plot)
          * N_subs_fragile(1., cts_dmo[0][0], cts_dmo[0][1]),
          'dimgray', linestyle='-', lw=3, alpha=0.7,
          label='Resilient fit', zorder=5)
-plt.plot(xx_plot, np.ones(len(xx_plot))
+plt.plot(xx_plot, np.ones_like(xx_plot)
          * N_subs_fragile(1., cts_hydro[0][0], cts_hydro[0][1]),
          'limegreen', linestyle='-', lw=3, zorder=5)
 
@@ -824,7 +826,7 @@ v_cut = np.append(v_cut, 120.)
 print(input_data['SHVF']['Vmax_completion'], v_cut)
 from matplotlib import cm
 
-for ni, ii in enumerate(input_data['SHVF']['Vmax_completion']):
+for ni, ii in enumerate([input_data['SHVF']['Vmax_completion']]):
     print('v_cut: ', ii, ni)
     aaa = ((datos_resi_dmo[:, 3] >= ii)
            * (datos_resi_dmo[:, 3] < v_cut[ni+1]))

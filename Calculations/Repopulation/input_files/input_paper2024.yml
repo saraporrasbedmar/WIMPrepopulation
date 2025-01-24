@@ -52,8 +52,8 @@ host:
   r_s: 20.0
   rho_0: 9.04e6
 repopulations:
-  inc_factor: 1.5
-  its: 1
-  num_brightest: 136338072
+  inc_factor: 2.0
+  its: 100
+  num_brightest: 1
   num_subs_max: 5e5
-  print_freq: 20
+  print_freq: 10
