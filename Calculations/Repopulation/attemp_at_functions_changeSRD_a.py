@@ -494,7 +494,7 @@ def N_subs_resilient(DistGC, args):
     # spline = UnivariateSpline(xx,
     #                           yy,
     #                           k=1, s=0, ext=0)
-    return args * np.ones(np.shape(DistGC))
+    return args[1] * np.exp(args[0] / DistGC * args[2])
 
 
 #@njit()
@@ -926,19 +926,30 @@ def interior_loop_singularbrightest(
             if m_max > 100:
                 m_max = SHVF_cts_RangeMax
 
-        # print(m_min, m_max, (m_min * m_max) ** 0.5)
-        # print(SHVF_Grand2012_int(m_min, m_max,
-        #                       SHVF_bb, SHVF_mm))
+        print(m_min, m_max, (m_min * m_max) ** 0.5)
+        print(SHVF_Grand2012_int(m_min, m_max,
+                              SHVF_bb, SHVF_mm))
 
-        aaa = np.where(m_min > np.array(Vmax_completion))
+
+        srd_args_repop_copy = srd_args_repop[1:]
+        aaa = np.where((m_min * m_max) ** 0.5 > np.array(Vmax_completion))
+
         if len(aaa[0]) > 0:
+            # print(aaa[0][-1])
             try:
-                min_distGC = float(srd_last_sub[aaa[0][-1]])
+                min_distGC = srd_args_repop[0][aaa[0][-1]]
+                # print('oh no', min_distGC, aaa[0])
+                srd_args_repop_copy = np.insert(srd_args_repop_copy,0,
+                                                min_distGC)
             except IndexError:
                 min_distGC = float(srd_last_sub)
         else:
-            min_distGC = 1e-3
+            print('a')
+        min_distGC = 1e-3
+        print(srd_args_repop_copy)
+        print()
 
+        '''
         repop_Vmax = montecarlo_algorithm(
             m_min, m_max,
             SHVF_Grand2012,
@@ -968,7 +979,7 @@ def interior_loop_singularbrightest(
             Cv_mm=Cv_mm,
             Cv_sigma=Cv_sigma,
 
-            srd_args_repop=srd_args_repop,
+            srd_args_repop=srd_args_repop_copy,
             srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
 
@@ -1001,7 +1012,7 @@ def interior_loop_singularbrightest(
             Cv_mm=Cv_mm,
             Cv_sigma=Cv_sigma,
 
-            srd_args_repop=srd_args_repop,
+            srd_args_repop=srd_args_repop_copy,
             srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
 
@@ -1223,11 +1234,11 @@ def interior_loop_singularbrightest(
                     # bright_J03 = np.argmax(new_data[:, 1])
                     # progress.write('J03 ' + bright_J03 + '\n')
                     # progress.close()
-
+        
         # We take the brightest subhalos only
         brightest_Js = brightest_Js[np.argsort(brightest_Js[:, 0])[::-1], :]
         brightest_J03 = brightest_J03[np.argsort(brightest_J03[:, 0])[::-1], :]
-
+        '''
         m_min = new_mmin
 
     return (brightest_Js[:repop_num_brightest, :],
