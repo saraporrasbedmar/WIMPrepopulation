@@ -244,7 +244,7 @@ def SHVF_Grand2012_int(V1, V2,
     :return: float or array-like
         Integrated SHVF.
     """
-    return int(np.ceil(10 ** SHVF_bb
+    return int(np.rint(10 ** SHVF_bb
                        / (SHVF_mm + 1) *
                        (V2 ** (SHVF_mm + 1)
                         - V1 ** (SHVF_mm + 1))))
@@ -494,7 +494,7 @@ def N_subs_resilient(DistGC, args):
     # spline = UnivariateSpline(xx,
     #                           yy,
     #                           k=1, s=0, ext=0)
-    return args * np.ones(np.shape(DistGC))
+    return args * np.ones_like(DistGC)
 
 
 #@njit()
@@ -911,7 +911,7 @@ def interior_loop_singularbrightest(
 
     while m_min < SHVF_cts_RangeMax:
 
-        if SHVF_Grand2012_int(m_min, SHVF_cts_RangeMax,
+        if SHVF_Grand2012_int(m_min, m_min * repop_inc_factor,
                               SHVF_bb, SHVF_mm) > num_subs_max:
 
             m_max = newton(xx, m_min,
@@ -923,15 +923,17 @@ def interior_loop_singularbrightest(
                                SHVF_cts_RangeMax)
             new_mmin = m_min * repop_inc_factor
 
-        # print(m_min, m_max)
-        aaa = np.where((m_min * m_max)**0.5 > np.array(Vmax_completion))
-        if len(aaa[0]) > 0:
-            try:
-                min_distGC = float(srd_last_sub[aaa[0][-1]])
-            except IndexError:
-                min_distGC = float(srd_last_sub)
-        else:
-            min_distGC = 1e-3
+            if (SHVF_Grand2012_int(
+                m_max, np.minimum(
+                        m_max * repop_inc_factor,
+                        SHVF_cts_RangeMax),
+                SHVF_bb, SHVF_mm) < 1.) and (
+                    m_max < SHVF_cts_RangeMax
+            ):
+                m_max = SHVF_cts_RangeMax
+                new_mmin = SHVF_cts_RangeMax
+
+        min_distGC = 1e-3
 
 
         repop_Vmax = montecarlo_algorithm(
@@ -998,7 +1000,7 @@ def interior_loop_singularbrightest(
 
             srd_args_repop=srd_args_repop,
             srd_args_visible=srd_args_visible,
-            srd_last_sub=srd_last_sub[0])
+            srd_last_sub=srd_last_sub)
 
         # repop_DistGC_upper = montecarlo_algorithm(
         #     min_distGC, host_R_vir,
