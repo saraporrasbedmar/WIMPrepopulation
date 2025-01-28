@@ -52,7 +52,7 @@ def read_config_file(ConfigFile):
 
 x_cumul = np.geomspace(1., 120., num=25)
 
-path_input = '../Repopulation/input_files/input_paper2024_SHVFnorm.yml'
+path_input = '../Repopulation/input_files/input_paper2024.yml'
 
 input_data = read_config_file(path_input)
 
@@ -63,7 +63,7 @@ print(sum(data_release_hydro[:, 1] > 20) / 6.)
 def SHVF_Grand2012_int(V1, V2,
                        SHVF_bb,
                        SHVF_mm):
-    return (np.ceil(10 ** SHVF_bb
+    return (np.rint(10 ** SHVF_bb
                        / (SHVF_mm + 1) *
                        (V2 ** (SHVF_mm + 1)
                         - V1 ** (SHVF_mm + 1))))
@@ -79,9 +79,8 @@ print(repop_factor)
 
 plt.figure()
 
-colors = [input_data['repopulations']['inc_factor'], 2, 2.5,
-         3, 4, 5]
-bb = input_data['SHVF']['hydro']['bb']# + np.log10(6.)
+colors = [input_data['repopulations']['inc_factor'], 2, 2.5]
+bb = input_data['SHVF']['dmo']['bb']# + np.log10(6.)
 
 for nn, repop_factor in enumerate(colors):
     mmin_array = []
@@ -95,14 +94,14 @@ for nn, repop_factor in enumerate(colors):
         if (SHVF_Grand2012_int(
                 m_min, m_min * repop_factor,
                 bb,
-                input_data['SHVF']['hydro']['mm'])
+                input_data['SHVF']['dmo']['mm'])
                 > num_max):
 
             m_max = newton(
                 xx, m_min,
                 args=[m_min,
                       bb,
-                      input_data['SHVF']['hydro']['mm'],
+                      input_data['SHVF']['dmo']['mm'],
                       num_max])
             new_mmin = m_max
 
@@ -115,14 +114,14 @@ for nn, repop_factor in enumerate(colors):
             print(m_min, m_max, SHVF_Grand2012_int(
                 m_min, m_max,
                 bb,
-                input_data['SHVF']['hydro']['mm']))
+                input_data['SHVF']['dmo']['mm']))
 
             if (SHVF_Grand2012_int(
                 m_max, np.minimum(
                         m_max * repop_factor,
                         input_data['SHVF']['RangeMax']),
                 bb,
-                input_data['SHVF']['hydro']['mm']) < 1.) and (
+                input_data['SHVF']['dmo']['mm']) < 1.) and (
                     m_max <input_data['SHVF']['RangeMax']
             ):
                     m_max = input_data['SHVF']['RangeMax']
@@ -131,12 +130,12 @@ for nn, repop_factor in enumerate(colors):
                     print(m_min, m_max, SHVF_Grand2012_int(m_min,
                                m_max,
                                bb,
-                               input_data['SHVF']['hydro']['mm']))
+                               input_data['SHVF']['dmo']['mm']))
             mmin_array.append(m_min)
             total_subs.append(SHVF_Grand2012_int(m_min,
                                m_max,
                                bb,
-                               input_data['SHVF']['hydro']['mm']))
+                               input_data['SHVF']['dmo']['mm']))
 
         m_min = new_mmin
         iii += 1
@@ -150,9 +149,19 @@ for nn, repop_factor in enumerate(colors):
 
     subs_grand = []
     for i in range(len(mmin_array)):
-        subs_grand.append(sum(data_release_hydro[:, 1] > mmin_array[i]))
+        subs_grand.append(sum(data_release_dmo[:, 1] > mmin_array[i]))
     plt.scatter(mmin_array, np.array(subs_grand)/6., marker='x',
                 color=plt.cm.CMRmap(nn / float(len(colors))))
+
+    subs_grand = []
+    for i in range(len(mmin_array)):
+        subs_grand.append(SHVF_Grand2012_int(mmin_array[i],
+                               input_data['SHVF']['RangeMax'],
+                               bb,
+                               input_data['SHVF']['dmo']['mm']))
+    plt.scatter(mmin_array, np.array(subs_grand), marker='+',
+                color=plt.cm.CMRmap(nn / float(len(colors))),
+                s=400)
 
 print(iii)
 plt.legend()
