@@ -13,7 +13,8 @@ from matplotlib.lines import Line2D
 import matplotlib.cm as cm
 import matplotlib.colors as mcb
 import matplotlib.ticker as ticker
-from matplotlib.ticker import MaxNLocator
+import matplotlib.patches as mpatches
+from matplotlib.ticker import MaxNLocator, LogLocator
 
 import Calculations.Repopulation.attemp_at_functions2 as funct_repop
 
@@ -48,7 +49,7 @@ print(os.getcwd())
 print(os.listdir(path_name))
 final_size = (500, 1, 6)
 plot_res = True
-plot_frag = False
+plot_frag = True
 '''
 datos_Js_frag_hyd = np.loadtxt(path_name +
                                '/Js_hydro_fragile_results.txt').reshape(10,
@@ -358,7 +359,8 @@ plt.text(x=0.04, y=22.5, s='Hydro', size=18)
 plt.xscale('log')
 # plt.yscale('log')
 
-# plt.yticks((18, 19, 20, 21, 22), labels=('', '', '', '', ''))
+
+plt.tick_params('y', labelleft=False)
 
 plt.scatter(datos_Js_frag_hyd[:, 2], np.log10(datos_Js_frag_hyd[:, 0]),
             c=np.log10(datos_Js_frag_hyd[:, 3]), lw=0, marker='P', s=75,
@@ -368,7 +370,6 @@ plt.scatter(datos_Js_frag_hyd[:, 2], np.log10(datos_Js_frag_hyd[:, 0]),
 # plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
 #            loc=4, title=r'J$_\mathrm{S}$')
 
-# plt.yticks((19, 20), labels=('', ''))
 
 plt.xlabel(r'D$_\mathrm{Earth}$ [kpc]', size=22)
 # plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=22)
@@ -480,7 +481,7 @@ plt.title('Hydro', size=18)
 plt.xscale('log')
 plt.yscale('log')
 
-plt.yticks((18, 19, 20, 21, 22), labels=('', '', '', '', ''))
+plt.tick_params('y', labelleft=False)
 
 if plot_res:
     plt.scatter(datos_Js_resi_hyd[:, 1], (datos_Js_resi_hyd[:, 3]),
@@ -557,7 +558,7 @@ if plot_frag:
 #     plt.axvline(i, alpha=0.5, color='grey')
 plt.ylim(10 ** (minn - 0.1), 10 ** (maxx + 0.1))
 
-plt.yticks((19, 20), labels=('', ''))
+plt.tick_params('y', labelleft=False)
 plt.xlabel(r'log$_{10}$ (D$_\mathrm{GC}$ [kpc])', fontsize=18)
 
 plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
@@ -637,8 +638,7 @@ if plot_frag:
             lw=0, marker='P', s=75,
             cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
 
-ytickss = plt.yticks()
-plt.yticks(ytickss[0], ['' for i in range(len(ytickss[0]))])
+plt.tick_params('y', labelleft=False)
 plt.ylim(minn - 0.1, maxx + 0.1)
 
 plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
@@ -688,8 +688,7 @@ plt.xlabel(r'log$_{10}$ (D$_\mathrm{Earth}$ [kpc])', fontsize=18)
 plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
            loc=2, title=r'J$_\mathrm{03}$')
 
-ytickss = plt.yticks()
-plt.yticks(ytickss[0], ['' for i in range(len(ytickss[0]))])
+plt.tick_params('y', labelleft=False)
 plt.ylim(minn - 0.1, maxx + 0.1)
 print('minn - 0.1, maxx + 0.1', minn - 0.1, maxx + 0.1)
 
@@ -1364,7 +1363,7 @@ plt.ylim(minn - 0.1, maxx + 0.1)
 
 minnx = perc_total(3, 0)
 maxxx = perc_total(3, 100)
-plt.xlim(minnx * 0.8, maxxx * 1.2)
+plt.xlim(0.1, maxxx * 1.3)
 
 plt.title('DMO', size=18)
 plt.xscale('log')
@@ -1391,7 +1390,7 @@ plt.subplot(222)
 plt.title('Hydro', size=18)
 plt.xscale('log')
 
-plt.yticks((18, 19, 20, 21, 22), labels=('', '', '', '', ''))
+plt.tick_params('y', labelleft=False)
 
 if plot_res:
     plt.scatter(datos_Js_resi_hyd[:, 3], np.log10(datos_Js_resi_hyd[:, 0]),
@@ -1413,7 +1412,7 @@ plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
 plt.subplot(223)
 minn, maxx = minnmaxx03(0)
 plt.ylim(minn - 0.1, maxx + 0.1)
-plt.yticks((19, 20))
+plt.yticks((19, 20, 21))
 
 plt.xscale('log')
 
@@ -1454,7 +1453,11 @@ if plot_frag:
 # for i in lineas_verticales_hydro:
 #     plt.axvline(i, alpha=0.5, color='grey')
 plt.ylim(minn - 0.1, maxx + 0.1)
-plt.yticks((19, 20), labels=('', ''))
+plt.tick_params('y', labelleft=False)
+
+# plt.xlim(0.09, 130)
+
+# plt.gca().xaxis.set_major_locator(LogLocator(numticks=4))
 
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=22)
 
@@ -1480,24 +1483,25 @@ plt.subplots_adjust(wspace=0, hspace=0)
 
 ax1 = plt.subplot(111)
 
-plt.plot(constraints_bb_2204[:, 0], constraints_bb_2204[:, 1], '-.',
+plt.plot(constraints_bb_2204[:, 0], constraints_bb_2204[:, 1], '-',
          label='CB+22', alpha=1., color='b', lw=2)
 
 plt.plot(constraints_bb_2204[:, 0],
          constraints_bb_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_dmo),
-         '-k', label='DMO', alpha=1, lw=2)
+         '--', c='k', label='DMO', alpha=1, lw=2.5)
 plt.plot(constraints_bb_2204[:, 0],
          constraints_bb_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_hyd),
-         '-', label='Hydro', color='limegreen', lw=2)
+         '--', label='Hydro', color='limegreen', lw=2.5)
 
 plt.plot(constraints_bb_2204[:, 0],
          constraints_bb_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_resi_dmo),
-         '--k', alpha=1, lw=2)
+         ':', c='k', alpha=1, lw=2.5)
 plt.plot(constraints_bb_2204[:, 0],
          constraints_bb_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_resi_hyd),
-         '--', color='limegreen', alpha=1, lw=2)
+         ':', color='limegreen', alpha=1, lw=2.5)
 
-plt.plot(sigmav_bb_2204[:, 0], sigmav_bb_2204[:, 1], ':k', lw=2)
+plt.plot(sigmav_bb_2204[:, 0], sigmav_bb_2204[:, 1], '-',
+         c='grey', lw=2, zorder=0)
 
 plt.xlim(sigmav_bb_2204[0, 0], sigmav_bb_2204[-1, 0])
 
@@ -1510,11 +1514,19 @@ plt.yscale('log')
 plt.xlabel('m$_{\chi}$ [GeV]', size=20)
 plt.ylabel(r'<$\sigma\nu$> [cm$^3$ s$^{-1}$]', size=20)
 
-legend_elements = [Line2D([0], [0], color='k', label='Frag', linestyle='-'),
-                   Line2D([0], [0], color='k', label='Res', linestyle='--')]
+legend_elements = [Line2D([0], [0], color='k', label='Frag',
+                          linestyle='--', lw=2.5),
+                   Line2D([0], [0], color='k', label='Res',
+                          linestyle=':', lw=2.5)]
 
-legend1 = plt.legend(legend_elements, ['Frag', 'Res'], loc=9)
-leg = plt.legend(loc=2)
+legend1 = plt.legend(legend_elements, ['Frag', 'Res'], loc=6)
+
+
+legend_elements = [Line2D([0], [0], color='b',
+                          linestyle='-', lw=2),
+                   mpatches.Patch(color='k', alpha=0.8),
+                   mpatches.Patch(color='limegreen', alpha=0.8)]
+leg = plt.legend(legend_elements, ['CB+22', 'DMO', 'Hydro'], loc=2)
 plt.gca().add_artist(legend1)
 
 t1, t2, t3 = leg.get_texts()
