@@ -6,6 +6,9 @@ import matplotlib.patches as mpatches
 from scipy.integrate import simpson
 from scipy.optimize import curve_fit
 
+from iminuit import Minuit
+from iminuit.cost import LeastSquares
+
 all_size = 24
 plt.rcParams['mathtext.fontset'] = 'stix'
 plt.rcParams['font.family'] = 'STIXGeneral'
@@ -71,6 +74,13 @@ vmax_dmo = x_cumul[np.argwhere(num_dmo >= 10.)[-1][0] + 1]
 Vmax_cumul_hydro_original, num_hydro = calcular_dNdV(data_release_hydro)
 vmax_hydro = x_cumul[np.argwhere(num_hydro >= 10.)[-1][0] + 1]
 
+
+def powerlaw(vv_array, V0, alpha):
+    return 10**V0 * vv_array ** alpha
+
+def linear_funct(vv_array, V0, alpha):
+    return V0 + vv_array * alpha
+
 repop = True
 # repop = False
 
@@ -105,13 +115,43 @@ if repop:
         true_values = (true_values * (Vmax_cumul_dmo_release > 0.))
         true_values = (true_values * num_dmo >= 10)
         # try:
-        fits, cov_matrix = np.polyfit(
-                np.log10(x_mean[true_values]),
-                np.log10(Vmax_cumul_dmo_release[true_values]),
-                deg=1, cov=True, full=False)
-            # print(fits, cov_matrix)
-        mm_dmo.append(fits[0])
-        bb_dmo.append(fits[1])
+        fits = curve_fit(powerlaw,
+                xdata=(x_mean[true_values]),
+                ydata=(Vmax_cumul_dmo_release[true_values]),
+                p0=[5., -4.])
+
+        print(fits[0], np.sqrt(np.diag(fits[1])))
+
+
+        combined_likelihood = LeastSquares(
+            x_mean[true_values], Vmax_cumul_dmo_release[true_values],
+            Vmax_cumul_dmo_release[true_values]*0.001,
+            powerlaw)
+
+        m_best_fit = Minuit(combined_likelihood, V0=5., alpha=-4.)
+        m_best_fit.migrad()
+        m_best_fit.hesse()
+
+        # print(m_best_fit.params)
+        print(m_best_fit.values)
+
+        fits = curve_fit(linear_funct,
+                xdata=np.log10(x_mean[true_values]),
+                ydata=np.log10(Vmax_cumul_dmo_release[true_values]),
+                p0=[m_best_fit.values[0], m_best_fit.values[1]])
+
+        print(fits[0], np.sqrt(np.diag(fits[1])))
+
+        fits = np.polyfit(
+                x=np.log10(x_mean[true_values]),
+                y=np.log10(Vmax_cumul_dmo_release[true_values]),
+                deg=1)
+
+        print(fits[1], fits[0])
+        print()
+
+        mm_dmo.append(m_best_fit.values[1])
+        bb_dmo.append(m_best_fit.values[0])
         # except np.linalg.LinAlgError:
         #     plt.figure()
         #     plt.plot(x_mean, Vmax_cumul_hydro_release,
@@ -129,12 +169,27 @@ if repop:
         true_values = (true_values * (Vmax_cumul_hydro_release > 0.))
         true_values = (true_values * (num_hydro >= 10))
 
-        fits, cov_matrix = np.polyfit(
-                np.log10(x_mean[true_values]),
-                np.log10(Vmax_cumul_hydro_release[true_values]),
-                deg=1, cov=True, full=False)
-        mm_hyd.append(fits[0])
-        bb_hyd.append(fits[1])
+        # fits, cov_matrix = np.polyfit(
+        #         np.log10(x_mean[true_values]),
+        #         np.log10(Vmax_cumul_hydro_release[true_values]),
+        #         deg=1, cov=True, full=False)
+        # mm_hyd.append(fits[0])
+        # bb_hyd.append(fits[1])
+
+        combined_likelihood = LeastSquares(
+            x_mean[true_values], Vmax_cumul_hydro_release[true_values],
+            Vmax_cumul_hydro_release[true_values] * 0.001,
+            powerlaw)
+
+        m_best_fit = Minuit(combined_likelihood, V0=5., alpha=-4.)
+        m_best_fit.migrad()
+        m_best_fit.hesse()
+
+        # print(m_best_fit.params)
+        # print(m_best_fit.values)
+
+        mm_hyd.append(m_best_fit.values[1])
+        bb_hyd.append(m_best_fit.values[0])
 
         if mm_dmo[-1] < -4.6 or mm_hyd[-1] < -4.6\
                 or mm_dmo[-1] > -3.5 or mm_hyd[-1] > -3.5:
@@ -143,16 +198,20 @@ if repop:
             xx_plot = np.geomspace(0.5, 120)
 
             if mm_dmo[-1] < -4.6 or mm_dmo[-1] > -3.5:
-                plt.plot(x_mean, Vmax_cumul_dmo_release,
+                plt.errorbar(x_mean, Vmax_cumul_dmo_release,
+                             yerr=0.001*Vmax_cumul_dmo_release,
                          marker='.', c='k')
-                plt.plot(xx_plot, 10**bb_dmo[-1] * xx_plot**mm_dmo[-1],
+                plt.plot(xx_plot,
+                         powerlaw(xx_plot, bb_dmo[-1], mm_dmo[-1]),
                          c='k')
                 plt.plot(x_mean, Vmax_cumul_dmo_original,
                          marker='x',  c='k')
                 plt.axvline(limit_inf_dmo, c='k')
                 plt.axvline(limit_sup_dmo, c='k')
+
             if mm_hyd[-1] < -4.6 or mm_hyd[-1] > -3.5:
-                plt.plot(x_mean, Vmax_cumul_hydro_release,
+                plt.errorbar(x_mean, Vmax_cumul_hydro_release,
+                             yerr=Vmax_cumul_hydro_release*0.001,
                          marker='.', c='g')
                 plt.plot(x_mean, Vmax_cumul_hydro_original,
                          marker='x',  c='g')
@@ -295,12 +354,12 @@ plt.xlabel(r'$V_{\mathrm{max}}$ [km s$^{-1}$]', size=24)
 plt.ylabel(r'$\frac{dN(V_{\mathrm{max}})}{dV_{\mathrm{max}}}$', size=27)
 
 
-plt.axvline(54, linestyle='-.', color='r', alpha=0.5,
-            linewidth=2)
-plt.annotate(r'$V_\mathrm{'
-             r'cut}$', (60, 55), color='r',
-             rotation=0., alpha=0.8,
-             fontsize=20, zorder=10)
+# plt.axvline(54, linestyle='-.', color='r', alpha=0.5,
+#             linewidth=2)
+# plt.annotate(r'$V_\mathrm{'
+#              r'cut}$', (60, 55), color='r',
+#              rotation=0., alpha=0.8,
+#              fontsize=20, zorder=10)
 
 handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
            mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)

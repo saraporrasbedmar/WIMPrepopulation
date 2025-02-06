@@ -50,6 +50,15 @@ print(os.listdir(path_name))
 final_size = (500, 1, 6)
 plot_res = True
 plot_frag = True
+
+if plot_res:
+    end_str = '_res'
+
+if plot_frag:
+    end_str = '_frag'
+
+if plot_res and plot_frag:
+    end_str = '_both'
 '''
 datos_Js_frag_hyd = np.loadtxt(path_name +
                                '/Js_hydro_fragile_results.txt').reshape(10,
@@ -235,6 +244,7 @@ sigmav_tau_2204 = sigmav_tau_2204[sigmav_tau_2204[:, 0].argsort()[::], :]
 J03_min95_2204 = 18.9208  # From digitalizing
 Js_min95_2204 = 19.4642  # From digitalizing
 
+path_name_res = path_name_res + '/figures'
 
 # path_name = '/home/porrassa/Desktop/WIMPS_project/' \
 #             'Physnet_outputs_repops' \
@@ -573,8 +583,10 @@ c2.set_label(r'$log_{10}(J-factor)$', fontsize=20)
 # c2.set_ticklabels([str(10**i)[:4] for i in yticks])
 
 # plt.show()
-plt.savefig(path_name_res + '/DgcVmax.png', bbox_inches='tight')
-plt.savefig(path_name_res + '/DgcVmax.pdf', bbox_inches='tight')
+plt.savefig(path_name_res + '/DgcVmax' + end_str + '.png',
+            bbox_inches='tight')
+plt.savefig(path_name_res + '/DgcVmax' + end_str + '.pdf',
+            bbox_inches='tight')
 # plt.show()
 # ------------------------ DEarthJs -------------------------------------------
 fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
@@ -702,8 +714,10 @@ c2.set_label(r'V$_\mathrm{max}$ [km/s])', fontsize=20)
 yticks = c2.get_ticks()
 c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
 
-plt.savefig(path_name_res + '/DEarthJs.png', bbox_inches='tight')
-plt.savefig(path_name_res + '/DEarthJs.pdf', bbox_inches='tight')
+plt.savefig(path_name_res + '/DEarthJs' + end_str + '.png',
+            bbox_inches='tight')
+plt.savefig(path_name_res + '/DEarthJs' + end_str + '.pdf',
+            bbox_inches='tight')
 # plt.show()
 # ---------------- Dgc_Dearth -------------------------------------------------
 fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
@@ -831,8 +845,10 @@ c2.set_label(r'V$_\mathrm{max}$ [km/s]', fontsize=20)
 yticks = c2.get_ticks()
 c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
 
-plt.savefig(path_name_res + '/Dgc_Dearth.png', bbox_inches='tight')
-plt.savefig(path_name_res + '/Dgc_Dearth.pdf', bbox_inches='tight')
+plt.savefig(path_name_res + '/Dgc_Dearth' + end_str + '.png',
+            bbox_inches='tight')
+plt.savefig(path_name_res + '/Dgc_Dearth' + end_str + '.pdf',
+            bbox_inches='tight')
 
 # ------------------------ DgcJs ----------------------------------------------
 fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
@@ -962,8 +978,10 @@ c2.set_label(r'V$_\mathrm{max}$ [km/s]', fontsize=20)
 yticks = c2.get_ticks()
 c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
 
-plt.savefig(path_name_res + '/DgcJs.png', bbox_inches='tight')
-plt.savefig(path_name_res + '/DgcJs.pdf', bbox_inches='tight')
+plt.savefig(path_name_res + '/DgcJs' + end_str + '.png',
+            bbox_inches='tight')
+plt.savefig(path_name_res + '/DgcJs' + end_str + '.pdf',
+            bbox_inches='tight')
 
 # ---------------------- VmaxDEarth -------------------------------------------
 fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
@@ -1093,8 +1111,10 @@ c2.set_label(r'Angular size', fontsize=20)
 yticks = c2.get_ticks()
 c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
 
-plt.savefig(path_name_res + '/VmaxDEarth.png', bbox_inches='tight')
-plt.savefig(path_name_res + '/VmaxDEarth.pdf', bbox_inches='tight')
+plt.savefig(path_name_res + '/VmaxDEarth' + end_str + '.png',
+            bbox_inches='tight')
+plt.savefig(path_name_res + '/VmaxDEarth' + end_str + '.pdf',
+            bbox_inches='tight')
 
 # -------------------- J_hist -------------------------------------------------
 fig, _ = plt.subplots(2, 2, figsize=(12, 9))
@@ -1113,13 +1133,11 @@ ax1 = plt.subplot(221)
 
 plt.title('DMO', size=18)
 print(np.shape(datos_Js_frag_dmo))
-if plot_frag:
-    plt.hist(np.log10(datos_Js_frag_dmo[:, 0]), log=False,
+plt.hist(np.log10(datos_Js_frag_dmo[:, 0]), log=False,
          label=r'Frag', color='teal', alpha=0.6,
          bins=bines)
 
-if plot_res:
-    plt.hist(np.log10(datos_Js_resi_dmo[:, 0]), log=False,
+plt.hist(np.log10(datos_Js_resi_dmo[:, 0]), log=False,
          label=r'Res', color='k', alpha=0.5,
          bins=bines)
 
@@ -1146,12 +1164,10 @@ plt.legend(title=r'J$_\mathrm{S}$')
 ax2 = plt.subplot(222, sharex=ax1, sharey=ax1)
 plt.title('Hydro', size=18)
 plt.yscale('log')
-if plot_frag:
-    plt.hist(np.log10(datos_Js_frag_hyd[:, 0]), log=False,
+plt.hist(np.log10(datos_Js_frag_hyd[:, 0]), log=False,
          label=r'Frag', color='yellowgreen', alpha=0.6,
          bins=bines)
-if plot_res:
-    plt.hist(np.log10(datos_Js_resi_hyd[:, 0]), log=False,
+plt.hist(np.log10(datos_Js_resi_hyd[:, 0]), log=False,
          label=r'Res', color=darkgreen, alpha=0.6,
          bins=bines)
 
@@ -1172,12 +1188,10 @@ ax2.tick_params(labelleft=False)
 plt.legend(title=r'J$_\mathrm{S}$')
 
 plt.subplot(223, sharex=ax1, sharey=ax1)
-if plot_frag:
-    plt.hist(np.log10(datos_J03_frag_dmo[:, 0]), log=False,
+plt.hist(np.log10(datos_J03_frag_dmo[:, 0]), log=False,
          label=r'Frag', color='teal', alpha=0.6,
          bins=bines)
-if plot_res:
-    plt.hist(np.log10(datos_J03_resi_dmo[:, 0]), log=False,
+plt.hist(np.log10(datos_J03_resi_dmo[:, 0]), log=False,
          label=r'Res', color='k', alpha=0.5,
          bins=bines)
 
@@ -1199,12 +1213,10 @@ plt.xlabel(r'log$_{10}$ (J$_\mathrm{factor}$ [GeV$^2$ cm$^{-5}$])',
 plt.legend(title=r'J$_{03}$')
 
 ax4 = plt.subplot(224, sharex=ax1, sharey=ax1)
-if plot_frag:
-    plt.hist(np.log10(datos_J03_frag_hyd[:, 0]), log=False,
+plt.hist(np.log10(datos_J03_frag_hyd[:, 0]), log=False,
          label=r'Frag', color='yellowgreen', alpha=0.6,
          bins=bines)
-if plot_res:
-    plt.hist(np.log10(datos_J03_resi_hyd[:, 0]), log=False,
+plt.hist(np.log10(datos_J03_resi_hyd[:, 0]), log=False,
          label=r'Res', color=darkgreen, alpha=0.6,
          bins=bines)
 
@@ -1249,12 +1261,10 @@ bines = np.linspace(minn, maxx, 30)
 ax1 = plt.subplot(221)
 
 plt.title('DMO', size=18)
-if plot_frag:
-    plt.hist(datos_Js_frag_dmo[:, 3], log=False,
+plt.hist(datos_Js_frag_dmo[:, 3], log=False,
          label=r'Frag', color='teal', alpha=0.6,
          bins=bines)
-if plot_res:
-    plt.hist(datos_Js_resi_dmo[:, 3], log=False,
+plt.hist(datos_Js_resi_dmo[:, 3], log=False,
          label=r'Res', color='k', alpha=0.5,
          bins=bines)
 
@@ -1269,12 +1279,10 @@ plt.legend(title=r'J$_\mathrm{S}$')
 ax2 = plt.subplot(222, sharex=ax1, sharey=ax1)
 plt.title('Hydro', size=18)
 plt.yscale('log')
-if plot_frag:
-    plt.hist(datos_Js_frag_hyd[:, 3], log=False,
+plt.hist(datos_Js_frag_hyd[:, 3], log=False,
          label=r'Frag', color='yellowgreen', alpha=0.6,
          bins=bines)
-if plot_res:
-    plt.hist(datos_Js_resi_hyd[:, 3], log=False,
+plt.hist(datos_Js_resi_hyd[:, 3], log=False,
          label=r'Res', color=darkgreen, alpha=0.6,
          bins=bines)
 
@@ -1283,12 +1291,10 @@ ax2.tick_params(labelleft=False)
 plt.legend(title=r'J$_\mathrm{S}$')
 
 plt.subplot(223, sharex=ax1, sharey=ax1)
-if plot_frag:
-    plt.hist(datos_J03_frag_dmo[:, 3], log=False,
+plt.hist(datos_J03_frag_dmo[:, 3], log=False,
          label=r'Frag', color='teal', alpha=0.6,
          bins=bines)
-if plot_res:
-    plt.hist(datos_J03_resi_dmo[:, 3], log=False,
+plt.hist(datos_J03_resi_dmo[:, 3], log=False,
          label=r'Res', color='k', alpha=0.5,
          bins=bines)
 
@@ -1296,12 +1302,10 @@ plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=20)
 plt.legend(title=r'J$_{03}$')
 
 ax4 = plt.subplot(224, sharex=ax1, sharey=ax1)
-if plot_frag:
-    plt.hist(datos_J03_frag_hyd[:, 3], log=False,
+plt.hist(datos_J03_frag_hyd[:, 3], log=False,
          label=r'Frag', color='yellowgreen', alpha=0.6,
          bins=bines)
-if plot_res:
-    plt.hist(datos_J03_resi_hyd[:, 3], log=False,
+plt.hist(datos_J03_resi_hyd[:, 3], log=False,
          label=r'Res', color=darkgreen, alpha=0.6,
          bins=bines)
 
@@ -1473,8 +1477,10 @@ yticks = c2.get_ticks()
 c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
 
 # plt.show()
-plt.savefig(path_name_res + '/VmaxJs.png', bbox_inches='tight')
-plt.savefig(path_name_res + '/VmaxJs.pdf', bbox_inches='tight')
+plt.savefig(path_name_res + '/VmaxJs' + end_str + '.png',
+            bbox_inches='tight')
+plt.savefig(path_name_res + '/VmaxJs' + end_str + '.pdf',
+            bbox_inches='tight')
 
 # ------------------- Cross sections ------------------------------------------
 plt.subplots(1, 1, figsize=(6, 6))

@@ -581,8 +581,12 @@ ax1.add_artist(leg1)
 plt.xlabel(r'log$_{10}(\mathrm{c}_V)$')
 # plt.text(x=3.08, y=130, s=r'$V_\mathrm{max} > 10\,$km s$^{-1}$',
 #          fontsize=22)
-plt.text(x=3.23, y=130, s=r'$V_\mathrm{max} > V_\mathrm{Cut}$',
+# plt.text(x=3.23, y=130, s=r'$V_\mathrm{max} > V_\mathrm{Cut}$',
+#          fontsize=22)
+plt.text(x=3.17, y=130, s=r'$V_\mathrm{max} > $',
          fontsize=22)
+plt.text(x=3.85, y=126., s='resolution\nlimit', c='k', fontsize=20,
+         ha='center')
 
 '''
 plt.subplot(122)
@@ -658,9 +662,9 @@ ax0.add_artist(leg1)
 
 ax0.set_xlim(0.5, 121)
 
-
 plt.savefig('outputs/cv_hist.pdf', bbox_inches='tight')
 plt.savefig('outputs/cv_hist.png', bbox_inches='tight')
+plt.show()
 
 plt.subplots(1, 3)
 plt.subplot(131)
