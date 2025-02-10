@@ -327,7 +327,158 @@ high_pop_frag_hydro = datos_Js_frag_hyd[datos_Js_frag_hyd[:, 1] < 15, :]
 high_pop_frag_hydro = high_pop_frag_hydro[high_pop_frag_hydro[:, 3] > 60, :]
 # datos_Js_frag_hyd = high_pop_frag_hydro
 
+# ----------------------- Vmax - Jss (z==DistEarth) 2x2 -----------------
 
+fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True, sharey=True,
+                         figsize=(12, 9))
+
+plt.subplots_adjust(wspace=0, hspace=0)
+
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
+                          markerfacecolor='w', ls='',
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
+
+x_col = 3
+y_col = 0
+z_col = 2
+
+x_label = r'$V_\mathrm{max}$ $\left[\mathrm{km}\,\,\mathrm{s}^{-1}\right]$'
+y1_label = r'fragile'
+y2_label = r'resilient'
+
+plt.text(-0.3, 0., r'log$_{10}$ ($J_\mathrm{s}$ [GeV$^2$ cm$^{-5}$])',
+         horizontalalignment='center',
+ verticalalignment='center', transform=axes[0, 0].transAxes,
+         rotation=90)
+
+# vminn = 1e-3
+# vmaxx = np.log10(150)  # 10 ** 1.5
+vminn = np.log10(perc_total(z_col, 5))
+vmaxx = np.log10(perc_total(z_col, 95))
+print(vminn, vmaxx)
+norm = mcb.Normalize(vminn, vmaxx)
+
+minns, maxxs = minnmaxxS(y_col)
+minns = minns - 0.2
+maxxs = maxxs + 0.2
+
+
+minnx = 0.1  #perc_total(x_col, 0) * 0.7
+maxxx = perc_total(x_col, 100) * 1.3
+
+plt.subplot(221)
+
+plt.title('DMO', fontsize=20)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+# plt.yscale('log')
+
+# plt.text(1., 1.01, 'DMO', horizontalalignment='center',
+#  verticalalignment='bottom', transform=axes[0, 0].transAxes)
+
+plt.scatter(datos_Js_frag_dmo[:, x_col],
+            np.log10(datos_Js_frag_dmo[:, y_col]),
+            c=np.log10(datos_Js_frag_dmo[:, z_col]),
+            lw=0, marker='P', s=75,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+plt.ylabel(y1_label, fontsize=20, labelpad=10)
+
+plt.legend(handles=legend_elements, handletextpad=0.2,
+           handlelength=1, loc=2)
+
+plt.subplot(223)
+
+# plt.tick_params('y', labelleft=False)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.ylabel(y2_label, size=20, labelpad=10)
+plt.xlabel(x_label, size=20)
+
+# plt.yscale('log')
+# plt.axvspan(0.935 * maxxx, maxxx, color='k')
+
+plt.scatter(datos_Js_resi_dmo[:, x_col],
+            np.log10(datos_Js_resi_dmo[:, y_col]),
+            c='none', lw=2, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_Js_resi_dmo[:, z_col]))))
+
+
+plt.subplot(222)
+
+plt.title('Hydro', fontsize=20)
+# plt.text(1., 1.01, 'Hydro', horizontalalignment='center',
+#  verticalalignment='bottom', transform=axes[0, 2].transAxes)
+
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+# plt.yscale('log')
+plt.tick_params('y', labelleft=False)
+# plt.axvspan(minnx, minnx * 1.04, color='k')
+
+plt.scatter(datos_Js_frag_hyd[:, x_col],
+            np.log10(datos_Js_frag_hyd[:, y_col]),
+            c=np.log10(datos_Js_frag_hyd[:, z_col]),
+            lw=0, marker='P', s=75,
+            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
+
+plt.subplot(224)
+
+plt.tick_params('y', labelleft=False)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+# plt.yscale('log')
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_Js_resi_hyd[:, x_col],
+            np.log10(datos_Js_resi_hyd[:, y_col]),
+            c='none', lw=2, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_Js_resi_hyd[:, z_col]))),
+            label='Resilient')
+
+
+# plt.subplot(2, 4, 5)
+# axes[1, 0].set_xticks([0.1, 1, 10], labels=('aaaaaa', '1', '10'))
+    # a.set_xticklabels(['0.01', '0.1', '1', '10'])
+# axes[1, 0].set_xticks([1,4,5])
+# axes[1, 0].set_xticklabels([1,4,5], fontsize=12)
+
+# for ii in range(1, 5):
+#     plt.subplot(2, 4, ii)
+plt.yticks((19, 20, 21, 22, 23))
+
+plt.subplot(2, 2, 3)
+plt.xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', ''))
+
+plt.subplot(2, 2, 4)
+plt.xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', '100'))
+
+
+cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+c2 = plt.colorbar(sm, cax=cax, extend='both', spacing='proportional')
+# c2.set_label(r'log$_{10}$(D$_\mathrm{Earth}$ [kpc])', fontsize=20)
+c2.set_label(r'D$_\mathrm{Earth}$ [kpc]', fontsize=20)
+c2.ax.tick_params(axis='y', direction='out')
+# c2.set_tickparams(direction='out')
+yticks = c2.get_ticks()
+print(yticks)
+c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
+# c2.set_ticks(np.log10([2., 5,  10., 20., 50., 100.]),
+#              labels=['2', '5', '10', '20', '50', '100'])
+
+plt.savefig(path_name_res + '/VmaxJs_Js' + end_str + '.png',
+            bbox_inches='tight')
+plt.savefig(path_name_res + '/VmaxJs_Js' + end_str + '.pdf',
+            bbox_inches='tight')
+plt.show()
 # ----------------------- Vmax - J (z==DistEarth) 2x4 -----------------
 
 fig, axes = plt.subplots(nrows=2, ncols=4, sharex=True,  # sharey=True,
@@ -335,11 +486,12 @@ fig, axes = plt.subplots(nrows=2, ncols=4, sharex=True,  # sharey=True,
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
-legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
-                          markerfacecolor='k', markersize=12),
-                   Line2D([0], [0], marker='o', color='k', label='Res',
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
                           markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5)]
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
 vminn = 1e-3
 vmaxx = np.log10(150)  # 10 ** 1.5
 vminn = np.log10(perc_total(2, 5))
@@ -511,11 +663,12 @@ fig, axes = plt.subplots(nrows=2, ncols=4, sharex=True,  # sharey=True,
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
-legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
-                          markerfacecolor='k', markersize=12),
-                   Line2D([0], [0], marker='o', color='k', label='Res',
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
                           markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5)]
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
 
 x_col = 3
 y_col = 4
@@ -717,11 +870,12 @@ fig, axes = plt.subplots(nrows=2, ncols=4, sharex=True,  # sharey=True,
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
-legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
-                          markerfacecolor='k', markersize=12),
-                   Line2D([0], [0], marker='o', color='k', label='Res',
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
                           markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5)]
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
 
 x_col = 4
 y_col = 0
@@ -987,11 +1141,12 @@ fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
-legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
-                          markerfacecolor='k', markersize=12),
-                   Line2D([0], [0], marker='o', color='k', label='Res',
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
                           markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5)]
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
 cmap = cm.viridis
 colormapp = 'viridis'
 vminn = 1e-3
@@ -1176,11 +1331,12 @@ fig, axes = plt.subplots(nrows=2, ncols=4, sharex=True,  # sharey=True,
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
-legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
-                          markerfacecolor='k', markersize=12),
-                   Line2D([0], [0], marker='o', color='k', label='Res',
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
                           markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5)]
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
 
 x_col = 2
 y_col = 0
@@ -1373,11 +1529,12 @@ fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
-legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
-                          markerfacecolor='k', markersize=12),
-                   Line2D([0], [0], marker='o', color='k', label='Res',
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
                           markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5)]
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
 
 cmap = cm.viridis
 colormapp = 'viridis'
@@ -1502,13 +1659,12 @@ plt.savefig(path_name_res + '/DEarthJs' + end_str + '.pdf',
 fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
                          figsize=(12, 9))
 
-plt.subplots_adjust(wspace=0, hspace=0)
-
-legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
-                          markerfacecolor='k', markersize=12),
-                   Line2D([0], [0], marker='o', color='k', label='Res',
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
                           markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5)]
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
 vminn = 19
 vmaxx = 23
 vminn = np.log10(perc_total(0, 5))
@@ -1635,11 +1791,12 @@ fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
-legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
-                          markerfacecolor='k', markersize=12),
-                   Line2D([0], [0], marker='o', color='k', label='Res',
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
                           markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5)]
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
 vminn = 1.
 vmaxx = np.log10(100)  # 10 ** 1.5
 vminn = np.log10(perc_total(3, 5))
@@ -1768,11 +1925,12 @@ fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
-legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
-                          markerfacecolor='k', markersize=12),
-                   Line2D([0], [0], marker='o', color='k', label='Res',
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
                           markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5)]
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
 vminn = 0.1
 vmaxx = 50
 vminn = np.log10(perc_total(4, 5))
@@ -2112,11 +2270,12 @@ fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
-legend_elements = [Line2D([0], [0], marker='P', color='w', label='Frag',
-                          markerfacecolor='k', markersize=12),
-                   Line2D([0], [0], marker='o', color='k', label='Res',
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
                           markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5)]
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
 vminn = 1e-3
 vmaxx = np.log10(150)  # 10 ** 1.5
 vminn = np.log10(perc_total(2, 5))
