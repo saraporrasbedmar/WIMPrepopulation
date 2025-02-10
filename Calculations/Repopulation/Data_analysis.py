@@ -330,7 +330,7 @@ high_pop_frag_hydro = high_pop_frag_hydro[high_pop_frag_hydro[:, 3] > 60, :]
 # ----------------------- Vmax - Jss (z==DistEarth) 2x2 -----------------
 
 fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True, sharey=True,
-                         figsize=(12, 9))
+                         figsize=(7, 9))
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
@@ -349,25 +349,45 @@ x_label = r'$V_\mathrm{max}$ $\left[\mathrm{km}\,\,\mathrm{s}^{-1}\right]$'
 y1_label = r'fragile'
 y2_label = r'resilient'
 
-plt.text(-0.3, 0., r'log$_{10}$ ($J_\mathrm{s}$ [GeV$^2$ cm$^{-5}$])',
+plt.text(-0.25, 0., r'log$_{10}$ ($J_\mathrm{s}$ [GeV$^2$ cm$^{-5}$])',
          horizontalalignment='center',
  verticalalignment='center', transform=axes[0, 0].transAxes,
          rotation=90)
+plt.text(0.1, 0.9, r'Fragile',
+         horizontalalignment='left',
+ verticalalignment='top', transform=axes[0, 0].transAxes)
+plt.text(0.1, 0.9, r'Fragile',
+         horizontalalignment='left',
+ verticalalignment='top', transform=axes[0, 1].transAxes)
+plt.text(0.1, 0.9, r'Resilient',
+         horizontalalignment='left',
+ verticalalignment='top', transform=axes[1, 0].transAxes)
+plt.text(0.1, 0.9, r'Resilient',
+         horizontalalignment='left',
+ verticalalignment='top', transform=axes[1, 1].transAxes)
+
+# plt.text(-0.45, 0.5, r'Resilient',
+#          horizontalalignment='center',
+#  verticalalignment='center', transform=axes[1, 0].transAxes,
+#          rotation=90)
+
 
 # vminn = 1e-3
 # vmaxx = np.log10(150)  # 10 ** 1.5
-vminn = np.log10(perc_total(z_col, 5))
-vmaxx = np.log10(perc_total(z_col, 95))
-print(vminn, vmaxx)
+vminn = np.log10(perc_total(z_col, 0))
+vmaxx = np.log10(perc_total(z_col, 100))
+print(vminn, vmaxx, 10**vminn, 10**vmaxx)
+vminn = np.log10(0.1)
+vmaxx = np.log10(200)
 norm = mcb.Normalize(vminn, vmaxx)
 
 minns, maxxs = minnmaxxS(y_col)
-minns = minns - 0.2
-maxxs = maxxs + 0.2
+minns = minns - 0.3
+maxxs = maxxs + 0.3
 
 
 minnx = 0.1  #perc_total(x_col, 0) * 0.7
-maxxx = perc_total(x_col, 100) * 1.3
+maxxx = perc_total(x_col, 100) * 1.4
 
 plt.subplot(221)
 
@@ -386,10 +406,7 @@ plt.scatter(datos_Js_frag_dmo[:, x_col],
             lw=0, marker='P', s=75,
             cmap=colormapp, vmin=vminn, vmax=vmaxx)
 
-plt.ylabel(y1_label, fontsize=20, labelpad=10)
-
-plt.legend(handles=legend_elements, handletextpad=0.2,
-           handlelength=1, loc=2)
+# plt.ylabel(y1_label, fontsize=20, labelpad=10)
 
 plt.subplot(223)
 
@@ -397,7 +414,7 @@ plt.subplot(223)
 plt.ylim(minns, maxxs)
 plt.xlim(minnx, maxxx)
 plt.xscale('log')
-plt.ylabel(y2_label, size=20, labelpad=10)
+# plt.ylabel(y2_label, size=20, labelpad=10)
 plt.xlabel(x_label, size=20)
 
 # plt.yscale('log')
@@ -452,7 +469,7 @@ plt.scatter(datos_Js_resi_hyd[:, x_col],
 
 # for ii in range(1, 5):
 #     plt.subplot(2, 4, ii)
-plt.yticks((19, 20, 21, 22, 23))
+plt.yticks((19, 20, 21, 22, 23), labels=('19', '', '21', '', '23'))
 
 plt.subplot(2, 2, 3)
 plt.xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', ''))
@@ -461,24 +478,26 @@ plt.subplot(2, 2, 4)
 plt.xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', '100'))
 
 
-cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
+# cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-c2 = plt.colorbar(sm, cax=cax, extend='both', spacing='proportional')
+c2 = plt.colorbar(sm, ax=axes,
+                  extend='both', spacing='proportional',
+                  location='bottom')
 # c2.set_label(r'log$_{10}$(D$_\mathrm{Earth}$ [kpc])', fontsize=20)
 c2.set_label(r'D$_\mathrm{Earth}$ [kpc]', fontsize=20)
-c2.ax.tick_params(axis='y', direction='out')
+c2.ax.tick_params(axis='x', direction='out')
 # c2.set_tickparams(direction='out')
 yticks = c2.get_ticks()
 print(yticks)
 c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
-# c2.set_ticks(np.log10([2., 5,  10., 20., 50., 100.]),
-#              labels=['2', '5', '10', '20', '50', '100'])
+# c2.set_ticks(np.log10([0.1, 1., 2., 5,  10., 20., 50., 100.]),
+#              labels=['0.1', '1', '2', '5', '10', '20', '50', '100'])
 
 plt.savefig(path_name_res + '/VmaxJs_Js' + end_str + '.png',
             bbox_inches='tight')
 plt.savefig(path_name_res + '/VmaxJs_Js' + end_str + '.pdf',
             bbox_inches='tight')
-plt.show()
+# plt.show()
 # ----------------------- Vmax - J (z==DistEarth) 2x4 -----------------
 
 fig, axes = plt.subplots(nrows=2, ncols=4, sharex=True,  # sharey=True,
@@ -1522,7 +1541,7 @@ plt.savefig(path_name_res + '/DEarthJs_full' + end_str + '.png',
             bbox_inches='tight')
 plt.savefig(path_name_res + '/DEarthJs_full' + end_str + '.pdf',
             bbox_inches='tight')
-plt.show()
+# plt.show()
 # ------------------------ DEarthJs -------------------------------------------
 fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
                          figsize=(12, 9))
@@ -2054,7 +2073,7 @@ plt.savefig(path_name_res + '/VmaxDEarth' + end_str + '.pdf',
             bbox_inches='tight')
 
 # -------------------- J_hist -------------------------------------------------
-fig, _ = plt.subplots(2, 2, figsize=(12, 9))
+fig, _ = plt.subplots(2, 2, figsize=(10, 8))
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
@@ -2096,7 +2115,7 @@ ax1.tick_params(labelbottom=False)
 # plt.annotate(r'J$_S$ 95%', (Js95_frag_dmo, 20), rotation=90, color='k')
 # plt.annotate(r'J$_{03}$ 95%', (J0395_frag_dmo, 20),
 # rotation=90, color='g', horizontalalignment='right')
-plt.legend(title=r'J$_\mathrm{S}$')
+plt.legend(title=r'J$_\mathrm{S}$', handlelength=0.9)
 
 ax2 = plt.subplot(222, sharex=ax1, sharey=ax1)
 plt.title('Hydro', size=18)
@@ -2122,7 +2141,7 @@ plt.axvline(Js95_resi_hyd, color=darkgreen)  # , alpha=0.6)
 
 ax2.tick_params(labelleft=False)
 
-plt.legend(title=r'J$_\mathrm{S}$')
+plt.legend(title=r'J$_\mathrm{S}$', handlelength=0.9)
 
 plt.subplot(223, sharex=ax1, sharey=ax1)
 
@@ -2148,7 +2167,7 @@ plt.axvline(J0395_resi_dmo, color='k')  # , alpha=0.5)
 
 plt.xlabel(r'log$_{10}$ (J$_\mathrm{factor}$ [GeV$^2$ cm$^{-5}$])',
            fontsize=20)
-plt.legend(title=r'J$_{03}$')
+plt.legend(title=r'J$_{03}$', handlelength=0.9)
 
 ax4 = plt.subplot(224, sharex=ax1, sharey=ax1)
 
@@ -2174,12 +2193,14 @@ plt.axvline(J0395_resi_hyd, color=darkgreen)  # , alpha=0.6)
 plt.yscale('log')
 plt.xlabel(r'log$_{10}$ (J$_\mathrm{factor}$ [GeV$^2$ cm$^{-5}$])',
            fontsize=20)
-plt.legend(title=r'J$_{03}$')
+plt.legend(title=r'J$_{03}$', handlelength=0.9)
 
-fig.text(0.06, 0.5, 'Number of repops', ha='center',
+fig.text(0.06, 0.5, 'Number of repopulations', ha='center',
          va='center', rotation='vertical')
 
 ax4.tick_params(labelleft=False)
+
+plt.xticks((19, 20, 21, 22, 23))
 
 plt.savefig(path_name_res + '/J_hist.png', bbox_inches='tight')
 plt.savefig(path_name_res + '/J_hist.pdf', bbox_inches='tight')
@@ -2423,11 +2444,11 @@ plt.savefig(path_name_res + '/VmaxJs' + end_str + '.pdf',
             bbox_inches='tight')
 
 # ------------------- Cross sections ------------------------------------------
-plt.subplots(1, 1, figsize=(6, 6))
+plt.subplots(1, 2, figsize=(12, 6))
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
-ax1 = plt.subplot(111)
+ax1 = plt.subplot(121)
 
 plt.plot(constraints_bb_2204[:, 0], constraints_bb_2204[:, 1], '-',
          label='CB+22', alpha=1., color='b', lw=2)
@@ -2480,42 +2501,42 @@ t1, t2, t3 = leg.get_texts()
 t1._fontproperties = t2._fontproperties.copy()
 t3.set_size(16)
 
-# ax2 = plt.subplot(122, sharex=ax1, sharey=ax1)
-#
-# plt.plot(constraints_tau_2204[:, 0],
-#          constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_dmo),
-#          '-k', label='DMO', lw=2)
-# plt.plot(constraints_tau_2204[:, 0],
-#          constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_hyd),
-#          '-', label='Hydro', color='limegreen', lw=2)
-#
-# plt.plot(constraints_tau_2204[:, 0],
-#          constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_resi_dmo),
-#          '--k', lw=2)
-# plt.plot(constraints_tau_2204[:, 0],
-#          constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_resi_hyd),
-#          '--', color='limegreen', lw=2)
-#
-# plt.plot(sigmav_tau_2204[1:, 0], sigmav_tau_2204[1:, 1], ':k')
-# plt.plot(constraints_tau_2204[:, 0], constraints_tau_2204[:, 1], '-.',
-#          label='CB+22', alpha=1., color='b', lw=2)
-#
-# plt.annotate(r'$\tau^+\tau^-$', (1100, 5e-22), color='k')
-# plt.annotate(r'<$\sigma\nu$>$_\mathrm{th}$', (1000, 3e-26))
-#
-# plt.xscale('log')
-# plt.yscale('log')
-# plt.xlim(sigmav_tau_2204[0, 0], sigmav_tau_2204[-1, 0])
-#
-# plt.xlabel('m$_{\chi}$ [GeV]', size=20)
-# ax2.tick_params(labelleft=False)
-# # legend1 = plt.legend(legend_elements, ['Frag', 'Res'], loc=9)
-# # leg = plt.legend(loc=2)
-# # plt.gca().add_artist(legend1)
-# # t1, t2, t3 = leg.get_texts()
-# # # here we create the distinct instance
-# # t1._fontproperties = t2._fontproperties.copy()
-# # t3.set_size(16)
+ax2 = plt.subplot(122, sharex=ax1, sharey=ax1)
+
+plt.plot(constraints_tau_2204[:, 0],
+         constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_dmo),
+         '-k', label='DMO', lw=2)
+plt.plot(constraints_tau_2204[:, 0],
+         constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_hyd),
+         '-', label='Hydro', color='limegreen', lw=2)
+
+plt.plot(constraints_tau_2204[:, 0],
+         constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_resi_dmo),
+         '--k', lw=2)
+plt.plot(constraints_tau_2204[:, 0],
+         constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_resi_hyd),
+         '--', color='limegreen', lw=2)
+
+plt.plot(sigmav_tau_2204[1:, 0], sigmav_tau_2204[1:, 1], ':k')
+plt.plot(constraints_tau_2204[:, 0], constraints_tau_2204[:, 1], '-.',
+         label='CB+22', alpha=1., color='b', lw=2)
+
+plt.annotate(r'$\tau^+\tau^-$', (1100, 5e-22), color='k')
+plt.annotate(r'<$\sigma\nu$>$_\mathrm{th}$', (1000, 3e-26))
+
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(sigmav_tau_2204[0, 0], sigmav_tau_2204[-1, 0])
+
+plt.xlabel('m$_{\chi}$ [GeV]', size=20)
+ax2.tick_params(labelleft=False)
+# legend1 = plt.legend(legend_elements, ['Frag', 'Res'], loc=9)
+# leg = plt.legend(loc=2)
+# plt.gca().add_artist(legend1)
+# t1, t2, t3 = leg.get_texts()
+# # here we create the distinct instance
+# t1._fontproperties = t2._fontproperties.copy()
+# t3.set_size(16)
 #
 # print()
 # print('J03')
@@ -2533,7 +2554,7 @@ plt.savefig(path_name_res + '/Cross.png', bbox_inches='tight')
 plt.savefig(path_name_res + '/Cross.pdf', bbox_inches='tight')
 
 # ---------------- Dgc_hist ---------------------------------------------------
-fig, _ = plt.subplots(2, 2, figsize=(12, 9))
+fig, _ = plt.subplots(2, 2, figsize=(10, 8))
 
 plt.subplots_adjust(wspace=0, hspace=0)
 column = 1
@@ -2561,7 +2582,7 @@ if plot_res:
          bins=bines)
 
 plt.axvline(8.5, color='Sandybrown', alpha=1, linestyle='--')
-plt.legend(title=r'J$_\mathrm{S}$', loc=locc)
+aaaa = plt.legend(title=r'J$_\mathrm{S}$', loc=locc, handlelength=0.9)
 
 plt.xscale('log')
 plt.yscale('log')
@@ -2581,7 +2602,7 @@ if plot_res:
          bins=bines)
 
 plt.axvline(8.5, color='orange', alpha=1, linestyle='--')
-plt.legend(title=r'J$_\mathrm{S}$', loc=locc)
+plt.legend(title=r'J$_\mathrm{S}$', loc=locc, handlelength=0.9)
 ax2.tick_params(labelleft=False)
 
 plt.subplot(223, sharex=ax1, sharey=ax1)
@@ -2598,7 +2619,7 @@ plt.axvline(8.5, color='Sandybrown', alpha=1, linestyle='--')
 
 plt.yscale('log')
 plt.xlabel(xxlabel, fontsize=20)
-plt.legend(title=r'J$_{03}$', loc=locc)
+plt.legend(title=r'J$_{03}$', loc=locc, handlelength=0.9)
 
 ax4 = plt.subplot(224, sharex=ax1, sharey=ax1)
 if plot_frag:
@@ -2614,9 +2635,9 @@ plt.axvline(8.5, color='orange', alpha=1, linestyle='--')
 
 plt.yscale('log')
 plt.xlabel(xxlabel, fontsize=20)
-plt.legend(title=r'J$_{03}$', loc=locc)
+plt.legend(title=r'J$_{03}$', loc=locc, handlelength=0.9)
 
-fig.text(0.06, 0.5, 'Number of repops', ha='center',
+fig.text(0.06, 0.5, 'Number of repopulations', ha='center',
          va='center', rotation='vertical')
 ax4.tick_params(labelleft=False)
 
