@@ -36,20 +36,27 @@ plt.rc('ytick.major', size=7, width=1.5, right=True, pad=7)
 plt.rc('xtick.minor', size=4, width=1)
 plt.rc('ytick.minor', size=4, width=1)
 
-# path_name = '/home/porrassa/Downloads' \
-#             '/2024_resilient_const_SHVFnorm_to120_roche_changeSRD'
-# '/final_2024_120max'
-# path_name = '/home/saraporras/Desktop/WIMPSproject/compiled_results'\
-#             '/final_2024_8max'
 
-path_name = ('/home/porrassa/Desktop/WIMPS_project/'#Calculations/'
-             # 'Repopulation/outputs/2024_resilient_const_to120_rint/'
-            'Physnet_outputs_repops/2024'
-             '/compiled_results_allRoche/'
-             # '/2024_resilient_const_to120_rint'
-            'final_2024_8max'
-             )
-#
+path_name = ('/home/saraporras/Desktop/WIMPSproject/compiled_results'
+            '/2024_resilient_const_to120_rint')
+
+path_name_res = ('/home/saraporras/Desktop/WIMPSproject/'
+                 'compiled_results/'
+                 '2024_resilient_const_to120_rint_SHVFnorm')
+
+# path_name = ('/home/porrassa/Desktop/WIMPS_project/'
+#             'Physnet_outputs_repops/2024'
+#              '/compiled_results_allRoche/'
+#              # '/2024_resilient_const_to120_rint'
+#             'final_2024_8max'
+#              )
+
+# path_name_res = ('/home/porrassa/Desktop/WIMPS_project/'#Calculations/'
+#              # 'Repopulation/outputs/2024_resilient_const_to120_rint/'
+#             'Physnet_outputs_repops/2024/'
+#                  # 'compiled_results/'
+#                  '2024_resilient_const_to120_rint_SHVFnorm')
+
 print(os.getcwd())
 print(os.listdir(path_name))
 final_size = (500, 1, 6)
@@ -65,116 +72,32 @@ if plot_frag:
 if plot_res and plot_frag:
     end_str = '_both'
 
+'''
 datos_Js_frag_hyd = np.loadtxt(path_name +
                                '/Js_hydro_fragile_results.txt'
-                               )#.reshape(10, 2198, 6)
+                               )
 datos_Js_frag_dmo = np.loadtxt(path_name +
                                '/Js_dmo_fragile_results.txt')
-# datos_Js_frag_hyd = datos_Js_frag_hyd[:, 0, :]
-# datos_Js_frag_dmo = datos_Js_frag_dmo[:, 0, :]
-# datos_Js_frag_hyd = datos_Js_frag_hyd[datos_Js_frag_hyd[:, 0] != 0, :]
-# datos_Js_frag_dmo = datos_Js_frag_dmo[datos_Js_frag_dmo[:, 0] != 0, :]
-# datos_Js_resi_hyd = datos_Js_resi_hyd.reshape(final_size)[:, 0, :]
-# datos_Js_resi_dmo = datos_Js_resi_dmo.reshape(final_size)[:, 0, :]
-
-# datos_Js_frag_hyd = datos_Js_frag_hyd[:, 0, :]
-# where0 = datos_Js_frag_hyd[:, 0] < 1e-43
-# print('datos_Js_frag_hyd', sum(where0))
-# datos_Js_frag_hyd = datos_Js_frag_hyd[~where0, :]
-
-# datos_Js_frag_dmo = datos_Js_frag_dmo[:, 0, :]
-# where0 = datos_Js_frag_dmo[:, 0] < 1e-43
-# print('datos_Js_frag_dmo', sum(where0))
-# datos_Js_frag_dmo = datos_Js_frag_dmo[~where0, :]
 
 datos_J03_frag_hyd = np.loadtxt(path_name +
-                                '/J03_hydro_fragile_results.txt')#.reshape(
-    # 10, 2198, 6)  # .reshape(25, 310, 6)
+                                '/J03_hydro_fragile_results.txt')
 datos_J03_frag_dmo = np.loadtxt(path_name +
                                 '/J03_dmo_fragile_results.txt'
-                                )#.reshape(10, 6629, 6)  # .reshape(25,
-# 1034, 6)
-# datos_J03_frag_hyd = datos_J03_frag_hyd[:, 0, :]
-# datos_J03_frag_dmo = datos_J03_frag_dmo[:, 0, :]
-# datos_J03_frag_hyd = datos_J03_frag_hyd[datos_J03_frag_hyd[:, 0] != 0, :]
-# datos_J03_frag_dmo = datos_J03_frag_dmo[datos_J03_frag_dmo[:, 0] != 0, :]
-# datos_J03_frag_hyd = datos_J03_frag_hyd[:, 0, :]
-# where0 = datos_J03_frag_hyd[:, 0] < 1e-43
-# print('datos_J03_frag_hyd', sum(where0))
-# datos_J03_frag_hyd = datos_J03_frag_hyd[~where0, :]
-#
-# datos_J03_frag_dmo = datos_J03_frag_dmo[:, 0, :]
-# where0 = datos_J03_frag_dmo[:, 0] < 1e-43
-# print('datos_J03_frag_dmo', sum(where0))
-# datos_J03_frag_dmo = datos_J03_frag_dmo[~where0, :]
-
-# datos_Js_frag_hyd = np.loadtxt(path_name + '/Js_hydro_fragile_results.txt')
-# datos_Js_frag_dmo = np.loadtxt(path_name + '/Js_dmo_fragile_results.txt')
-# datos_Js_frag_hyd = datos_Js_frag_hyd.reshape(
-#     (int(datos_Js_frag_hyd.size/6), 1, 6))[:, 0, :]
-# datos_Js_frag_dmo = datos_Js_frag_dmo.reshape(
-#     (int(datos_Js_frag_dmo.size/6), 1, 6))[:, 0, :]
-
-# datos_J03_frag_hyd = np.loadtxt(path_name + '/J03_hydro_fragile_results.txt')
-# datos_J03_frag_dmo = np.loadtxt(path_name + '/J03_dmo_fragile_results.txt')
-# datos_J03_frag_hyd = datos_J03_frag_hyd.reshape(
-#     (int(datos_J03_frag_hyd.size/6), 1, 6))[:, 0, :]
-# datos_J03_frag_dmo = datos_J03_frag_dmo.reshape(
-#     (int(datos_J03_frag_dmo.size/6), 1, 6))[:, 0, :]
-
+                                )
 
 datos_Js_resi_hyd = np.loadtxt(path_name +
-                               '/Js_hydro_resilient_results.txt')#.reshape(
-    # 10, 2198, 6)#.reshape(25, 310, 6)
+                               '/Js_hydro_resilient_results.txt')
 datos_Js_resi_dmo = np.loadtxt(path_name +
                                '/Js_dmo_resilient_results.txt'
-                               )#.reshape(10, 6629, 6)#.reshape(25, 1034, 6)
-# datos_Js_resi_hyd = datos_Js_resi_hyd[:, 0, :]
-# datos_Js_resi_dmo = datos_Js_resi_dmo[:, 0, :]
-# datos_Js_resi_hyd = datos_Js_resi_hyd[datos_Js_resi_hyd[:, 0] != 0, :]
-# datos_Js_resi_dmo = datos_Js_resi_dmo[datos_Js_resi_dmo[:, 0] != 0, :]
-# datos_Js_resi_hyd = datos_Js_resi_hyd.reshape(final_size)[:, 0, :]
-# datos_Js_resi_dmo = datos_Js_resi_dmo.reshape(final_size)[:, 0, :]
+                               )
 
-# datos_Js_resi_hyd = datos_Js_resi_hyd[:, 0, :]
-# where0 = datos_Js_resi_hyd[:, 0] < 1e-43
-# print('datos_Js_resi_hyd', sum(where0))
-# datos_Js_resi_hyd = datos_Js_resi_hyd[~where0, :]
-#
-# datos_Js_resi_dmo = datos_Js_resi_dmo[:, 0, :]
-# where0 = datos_Js_resi_dmo[:, 0] < 1e-43
-# print('datos_Js_resi_dmo', sum(where0))
-# datos_Js_resi_dmo = datos_Js_resi_dmo[~where0, :]
 
 datos_J03_resi_hyd = np.loadtxt(path_name +
-                                '/J03_hydro_resilient_results.txt')#.reshape(
-    # 10, 2198, 6)#.reshape(25, 310, 6)
+                                '/J03_hydro_resilient_results.txt')
 datos_J03_resi_dmo = np.loadtxt(path_name +
-                                '/J03_dmo_resilient_results.txt')#.reshape(
-    # 10, 6629, 6)#.reshape(25, 1034, 6)
-# datos_J03_resi_hyd = datos_J03_resi_hyd[:, 0, :]
-# datos_J03_resi_dmo = datos_J03_resi_dmo[:, 0, :]
-# datos_J03_resi_hyd = datos_J03_resi_hyd[datos_J03_resi_hyd[:, 0] != 0, :]
-# datos_J03_resi_dmo = datos_J03_resi_dmo[datos_J03_resi_dmo[:, 0] != 0, :]
-# datos_J03_resi_hyd = datos_J03_resi_hyd.reshape(final_size)[:, 0, :]
-# datos_J03_resi_dmo = datos_J03_resi_dmo.reshape(final_size)[:, 0, :]
-
-# datos_J03_resi_hyd = datos_J03_resi_hyd[:, 0, :]
-# where0 = datos_J03_resi_hyd[:, 0] < 1e-43
-# print('datos_J03_resi_hyd', sum(where0))
-# datos_J03_resi_hyd = datos_J03_resi_hyd[~where0, :]
-
-# datos_J03_resi_dmo = datos_J03_resi_dmo[:, 0, :]
-# where0 = datos_J03_resi_dmo[:, 0] < 1e-43
-# print('datos_J03_resi_dmo', sum(where0))
-# datos_J03_resi_dmo = datos_J03_resi_dmo[~where0, :]
+                                '/J03_dmo_resilient_results.txt')
 '''
 
-path_name_res = ('/home/porrassa/Desktop/WIMPS_project/'#Calculations/'
-             # 'Repopulation/outputs/2024_resilient_const_to120_rint/'
-            'Physnet_outputs_repops/2024/'
-                 # 'compiled_results/'
-                 '2024_resilient_const_to120_rint_SHVFnorm')
 
 final_size = (500, 100, 6)
 
@@ -184,11 +107,11 @@ datos_Js_resi_dmo = np.ones((1, 6))
 datos_J03_resi_hyd = np.ones((1, 6))
 datos_J03_resi_dmo = np.ones((1, 6))
 
-# datos_Js_frag_hyd = np.ones((1, 6))
-# datos_Js_frag_dmo = np.ones((1, 6))
-#
-# datos_J03_frag_hyd = np.ones((1, 6))
-# datos_J03_frag_dmo = np.ones((1, 6))
+datos_Js_frag_hyd = np.ones((1, 6))
+datos_Js_frag_dmo = np.ones((1, 6))
+
+datos_J03_frag_hyd = np.ones((1, 6))
+datos_J03_frag_dmo = np.ones((1, 6))
 
 for i in range(1, 6, 1):
     print(i, np.shape(datos_Js_resi_dmo),
@@ -211,31 +134,30 @@ for i in range(1, 6, 1):
         np.loadtxt(path_name_res + '/' + str(i) +
                    '/J03_hydro_resilient_results.txt')))
 
-    # datos_Js_frag_dmo = np.concatenate((datos_Js_frag_dmo,
-    #     np.loadtxt(path_name + '/' + str(i) +
-    #                              '/Js_dmo_fragile_results.txt')))
-    # datos_Js_frag_hyd = np.concatenate((datos_Js_frag_hyd,
-    #     np.loadtxt(path_name + '/' + str(i) +
-    #                              '/Js_hydro_fragile_results.txt')))
-    # datos_J03_frag_dmo = np.concatenate((datos_J03_frag_dmo,
-    #     np.loadtxt(path_name + '/' + str(i) +
-    #                              '/J03_dmo_fragile_results.txt')))
-    # datos_J03_frag_hyd = np.concatenate((datos_J03_frag_hyd,
-    #     np.loadtxt(path_name + '/' + str(i) +
-    #                              '/J03_hydro_fragile_results.txt')))
+    datos_Js_frag_dmo = np.concatenate((datos_Js_frag_dmo,
+        np.loadtxt(path_name + '/' + str(i) +
+                                 '/Js_dmo_fragile_results.txt')))
+    datos_Js_frag_hyd = np.concatenate((datos_Js_frag_hyd,
+        np.loadtxt(path_name + '/' + str(i) +
+                                 '/Js_hydro_fragile_results.txt')))
+    datos_J03_frag_dmo = np.concatenate((datos_J03_frag_dmo,
+        np.loadtxt(path_name + '/' + str(i) +
+                                 '/J03_dmo_fragile_results.txt')))
+    datos_J03_frag_hyd = np.concatenate((datos_J03_frag_hyd,
+        np.loadtxt(path_name + '/' + str(i) +
+                                 '/J03_hydro_fragile_results.txt')))
 
 datos_Js_resi_hyd = datos_Js_resi_hyd[1:, :]
 datos_Js_resi_dmo = datos_Js_resi_dmo[1:, :]
 datos_J03_resi_hyd = datos_J03_resi_hyd[1:, :]
 datos_J03_resi_dmo = datos_J03_resi_dmo[1:, :]
 
-# datos_Js_frag_hyd = datos_Js_frag_hyd[1:, :]
-# datos_Js_frag_dmo = datos_Js_frag_dmo[1:, :]
-# datos_J03_frag_hyd = datos_J03_frag_hyd[1:, :]
-# datos_J03_frag_dmo = datos_J03_frag_dmo[1:, :]
-#
+datos_Js_frag_hyd = datos_Js_frag_hyd[1:, :]
+datos_Js_frag_dmo = datos_Js_frag_dmo[1:, :]
+datos_J03_frag_hyd = datos_J03_frag_hyd[1:, :]
+datos_J03_frag_dmo = datos_J03_frag_dmo[1:, :]
 
-'''
+
 
 constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
 constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')
@@ -248,7 +170,7 @@ sigmav_tau_2204 = sigmav_tau_2204[sigmav_tau_2204[:, 0].argsort()[::], :]
 J03_min95_2204 = 18.9208  # From digitalizing
 Js_min95_2204 = 19.4642  # From digitalizing
 
-path_name_res = path_name + '/figures'
+path_name_res = path_name_res + '/figures'
 
 # path_name = '/home/porrassa/Desktop/WIMPS_project/' \
 #             'Physnet_outputs_repops' \
@@ -591,7 +513,7 @@ ax2.tick_params(labelleft=False)
 
 plt.savefig(path_name_res + '/Cross.png', bbox_inches='tight')
 plt.savefig(path_name_res + '/Cross.pdf', bbox_inches='tight')
-plt.show()
+# plt.show()
 
 # ----------------------- Vmax - Jss (z==DistEarth) 2x2 -----------------
 
@@ -617,29 +539,18 @@ y2_label = r'resilient'
 
 plt.text(-0.25, 0., r'log$_{10}$ ($J_\mathrm{s}$ [GeV$^2$ cm$^{-5}$])',
          horizontalalignment='center',
- verticalalignment='center', transform=axes[0, 0].transAxes,
+         verticalalignment='center', transform=axes[0, 0].transAxes,
          rotation=90)
-plt.text(0.1, 0.9, r'Fragile',
-         horizontalalignment='left',
- verticalalignment='top', transform=axes[0, 0].transAxes)
-plt.text(0.1, 0.9, r'Fragile',
-         horizontalalignment='left',
- verticalalignment='top', transform=axes[0, 1].transAxes)
-plt.text(0.1, 0.9, r'Resilient',
-         horizontalalignment='left',
- verticalalignment='top', transform=axes[1, 0].transAxes)
-plt.text(0.1, 0.9, r'Resilient',
-         horizontalalignment='left',
- verticalalignment='top', transform=axes[1, 1].transAxes)
-
-# plt.text(-0.45, 0.5, r'Resilient',
-#          horizontalalignment='center',
-#  verticalalignment='center', transform=axes[1, 0].transAxes,
-#          rotation=90)
+plt.text(1., 0.92, r'Fragile',
+         horizontalalignment='center',
+         verticalalignment='top', transform=axes[0, 0].transAxes,
+         backgroundcolor='w')
+plt.text(1., 0.18, r'Resilient',
+         horizontalalignment='center',
+         verticalalignment='top', transform=axes[1, 0].transAxes,
+         backgroundcolor='w')
 
 
-# vminn = 1e-3
-# vmaxx = np.log10(150)  # 10 ** 1.5
 vminn = np.log10(perc_total(z_col, 0))
 vmaxx = np.log10(perc_total(z_col, 100))
 print(vminn, vmaxx, 10**vminn, 10**vmaxx)
