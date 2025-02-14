@@ -46,17 +46,17 @@ plt.text(x=30, y=0.20, s='softening length', color='k', alpha=0.8,
 
 
 # Arrows and text
-plt.axvline(7.5, linestyle='dotted', color='k', alpha=0.8,
+plt.axvline(8., linestyle='dotted', color='k', alpha=0.8,
             linewidth=2)
 
-plt.arrow(x=6.5, y=11, dx=-2.5, dy=0, width=0.7, head_length=0.3,
+plt.arrow(x=7.2, y=11, dx=-2.5, dy=0, width=0.7, head_length=0.3,
           facecolor='w')
-plt.text(x=6.5, y=14, s='Dark satellites\n(DM)', fontsize=18,
+plt.text(x=7.2, y=14, s='Dark satellites\n(DM)', fontsize=18,
          horizontalalignment='right')
 
-plt.arrow(x=8.7, y=11, dx=5, dy=0, width=0.7, head_length=1,
+plt.arrow(x=8.9, y=11, dx=5, dy=0, width=0.7, head_length=1,
           facecolor='w')
-plt.text(x=8.7, y=14, s='Dwarfs\n(DM + baryons)', fontsize=18,
+plt.text(x=8.9, y=14, s='Dwarfs\n(DM + baryons)', fontsize=18,
          horizontalalignment='left')
 
 
@@ -67,7 +67,7 @@ handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
            mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)
            )
 
-legend11 = plt.legend(handles=handles, loc=2)
+legend11 = plt.legend(handles=handles, loc=2, handlelength=0.9)
 ax.add_artist(legend11)
 
 plt.ylabel(r'$R_\mathrm{max}$ [kpc]')

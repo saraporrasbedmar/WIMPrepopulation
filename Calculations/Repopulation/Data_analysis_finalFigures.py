@@ -263,26 +263,439 @@ high_pop_frag_hydro = high_pop_frag_hydro[high_pop_frag_hydro[:, 3] > 60, :]
 # datos_Js_frag_hyd = high_pop_frag_hydro
 
 
+# ----------------------- Vmax - Jss (z==DistEarth) 2x2 -----------------
+
+fig, axes = plt.subplots(nrows=2, ncols=2, sharey=True,  #, sharex=True,
+                         figsize=(7, 9))
+
+plt.subplots_adjust(wspace=0, hspace=0)
+
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
+                          markerfacecolor='w', ls='',
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
+
+x_col = 3
+y_col = 0
+z_col = 2
+
+x_label = r'$V_\mathrm{max}$ $\left[\mathrm{km}\,\,\mathrm{s}^{-1}\right]$'
+y1_label = r'fragile'
+y2_label = r'resilient'
+
+plt.text(-0.25, 0., r'log$_{10}$ ($J_\mathrm{s}$ [GeV$^2$ cm$^{-5}$])',
+         horizontalalignment='center',
+         verticalalignment='center', transform=axes[0, 0].transAxes,
+         rotation=90)
+plt.text(1., 0.92, r'Fragile',
+         horizontalalignment='center',
+         verticalalignment='top', transform=axes[0, 0].transAxes,
+         backgroundcolor='w')
+plt.text(1., 0.18, r'Resilient',
+         horizontalalignment='center',
+         verticalalignment='top', transform=axes[1, 0].transAxes,
+         backgroundcolor='w')
+
+
+vminn = np.log10(perc_total(z_col, 0))
+vmaxx = np.log10(perc_total(z_col, 100))
+print(vminn, vmaxx, 10**vminn, 10**vmaxx)
+vminn = np.log10(0.1)
+if to8:
+    vmaxx = np.log10(perc_total(z_col, 100))
+else:
+    vmaxx = np.log10(200)
+norm = mcb.Normalize(vminn, vmaxx)
+
+minns, maxxs = minnmaxxS(y_col)
+minns = minns - 0.3
+maxxs = maxxs + 0.3
+
+
+minnx = 0.1  #perc_total(x_col, 0) * 0.7
+maxxx = perc_total(x_col, 100) * 1.4
+
+plt.subplot(221)
+
+plt.title('DMO', fontsize=20)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+
+plt.scatter(datos_Js_frag_dmo[:, x_col],
+            np.log10(datos_Js_frag_dmo[:, y_col]),
+            c='none', lw=1, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_Js_frag_dmo[:, z_col]))))
+
+
+plt.subplot(223)
+
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_Js_resi_dmo[:, x_col],
+            np.log10(datos_Js_resi_dmo[:, y_col]),
+            c=np.log10(datos_Js_resi_dmo[:, z_col]),
+            marker='+', s=100, linewidths=1,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+
+plt.subplot(222)
+
+plt.title('Hydro', fontsize=20)
+
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.tick_params('y', labelleft=False)
+
+plt.scatter(datos_Js_frag_hyd[:, x_col],
+            np.log10(datos_Js_frag_hyd[:, y_col]),
+            c='none', lw=1, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_Js_frag_hyd[:, z_col]))))
+
+
+plt.subplot(224)
+
+plt.tick_params('y', labelleft=False)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_Js_resi_hyd[:, x_col],
+            np.log10(datos_Js_resi_hyd[:, y_col]),
+            c=np.log10(datos_Js_resi_hyd[:, z_col]),
+            marker='+', s=100, linewidths=1,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+
+axes[0][0].set_xticklabels([])
+axes[0][1].set_xticklabels([])
+
+
+plt.yticks((19, 20, 21, 22, 23), labels=('19', '', '21', '', '23'))
+
+aa = plt.subplot(2, 2, 3)
+aa.set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', ''))
+
+
+aa = plt.subplot(2, 2, 4)
+aa.set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', '100'))
+
+
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+c2 = plt.colorbar(sm, ax=axes,
+                  extend='both', spacing='proportional',
+                  location='bottom')
+c2.set_label(r'D$_\mathrm{Earth}$ [kpc]', fontsize=20)
+c2.ax.tick_params(axis='x', direction='out')
+yticks = c2.get_ticks()
+print(yticks)
+c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
+c2.set_ticks(np.log10([0.1, 1., 10., 100.]),
+             labels=['0.1', '1', '10', '100'])
+
+plt.savefig(path_name_res + '/VmaxJs_Js' + end_str + '.png',
+            bbox_inches='tight')
+plt.savefig(path_name_res + '/VmaxJs_Js' + end_str + '.pdf',
+            bbox_inches='tight')
+
+
+# ----------------------- Ang size - J (z==Vmax) 2x2 -----------------
+
+fig, axes = plt.subplots(nrows=2, ncols=2, sharey=True,  # sharey=True,
+                         figsize=(7, 9))
+
+plt.subplots_adjust(wspace=0, hspace=0)
+
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
+                          markerfacecolor='w', ls='',
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
+
+x_col = 4
+y_col = 0
+z_col = 3
+
+x_label = r'$\theta\,\,\left[\mathrm{deg}\right]$'
+y1_label = r'log$_{10}$ (J$_\mathrm{S}$ [GeV$^2$ cm$^{-5}$])'
+y2_label = r'log$_{10}$ (J$_{03}$ [GeV$^2$ cm$^{-5}$])'
+
+plt.text(-0.25, 0., r'log$_{10}$ ($J_\mathrm{s}$ [GeV$^2$ cm$^{-5}$])',
+         horizontalalignment='center',
+         verticalalignment='center', transform=axes[0, 0].transAxes,
+         rotation=90)
+plt.text(1., 0.92, r'Fragile',
+         horizontalalignment='center',
+         verticalalignment='top', transform=axes[0, 0].transAxes,
+         backgroundcolor='w')
+plt.text(1., 0.18, r'Resilient',
+         horizontalalignment='center',
+         verticalalignment='top', transform=axes[1, 0].transAxes,
+         backgroundcolor='w')
+
+# vminn = 1e-3
+# vmaxx = np.log10(150)  # 10 ** 1.5
+vminn = np.log10(5) #perc_total(z_col, 5))
+vmaxx = np.log10(perc_total(z_col, 95))
+print(vminn, vmaxx, 10**vminn, 10**vmaxx)
+norm = mcb.Normalize(vminn, vmaxx)
+
+minns, maxxs = minnmaxxS(y_col)
+minns = 18.2
+maxxs = 23.6
+
+minnx = 0.1  # perc_total(x_col, 0) * 0.99
+maxxx = 100  #perc_total(x_col, 100) * 1.3
+
+plt.subplot(221)
+plt.title('DMO', fontsize=20)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.tick_params('x', labelbottom=False)
+
+plt.scatter(datos_Js_frag_dmo[:, x_col],
+            np.log10(datos_Js_frag_dmo[:, y_col]),
+            c='none', lw=1, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_Js_frag_dmo[:, z_col]))))
+
+
+plt.subplot(223)
+
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_Js_resi_dmo[:, x_col],
+            np.log10(datos_Js_resi_dmo[:, y_col]),
+            c=np.log10(datos_Js_resi_dmo[:, z_col]),
+            marker='+', s=100, linewidths=1,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+
+plt.subplot(222)
+
+plt.title('Hydro', fontsize=20)
+
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.tick_params('y', labelleft=False)
+plt.tick_params('x', labelbottom=False)
+
+plt.scatter(datos_Js_frag_hyd[:, x_col],
+            np.log10(datos_Js_frag_hyd[:, y_col]),
+            c='none', lw=1, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_Js_frag_hyd[:, z_col]))))
+
+
+plt.subplot(224)
+
+plt.tick_params('y', labelleft=False)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_Js_resi_hyd[:, x_col],
+            np.log10(datos_Js_resi_hyd[:, y_col]),
+            c=np.log10(datos_Js_resi_hyd[:, z_col]),
+            marker='+', s=100, linewidths=1,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+plt.yticks((19, 20, 21, 22, 23), labels=('19', '', '21', '', '23'))
+
+aa = plt.subplot(2, 2, 3)
+aa.set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', ''))
+
+
+aa = plt.subplot(2, 2, 4)
+aa.set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', '100'))
+
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+c2 = plt.colorbar(sm, ax=axes,
+                  extend='both', spacing='proportional',
+                  location='bottom')
+c2.set_label(r'$V_\mathrm{max}$ [km s$^{-1}$]', fontsize=20)
+yticks = c2.get_ticks()
+print(yticks)
+c2.ax.tick_params(axis='x', direction='out')
+c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
+c2.set_ticks(np.log10([5., 10., 20, 50, 90.]),
+             labels=['5', '10', '20', '50', '90'])
+
+plt.savefig(path_name_res + '/AngJss_full' + end_str + '.png',
+            bbox_inches='tight')
+plt.savefig(path_name_res + '/AngJss_full' + end_str + '.pdf',
+            bbox_inches='tight')
+
+
+# ------------------------ DgcJs ----------------------------------------------
+
+fig, axes = plt.subplots(nrows=2, ncols=2, sharey=True,  # sharey=True,
+                         figsize=(7, 9))
+
+plt.subplots_adjust(wspace=0, hspace=0)
+
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
+                          markerfacecolor='w', ls='',
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
+
+x_col = 1
+y_col = 0
+z_col = 3
+
+x_label = r'D$_\mathrm{GC}$ [kpc]'
+
+plt.text(-0.25, 0., r'log$_{10}$ ($J_\mathrm{s}$ [GeV$^2$ cm$^{-5}$])',
+         horizontalalignment='center',
+         verticalalignment='center', transform=axes[0, 0].transAxes,
+         rotation=90)
+plt.text(1., 0.92, r'Fragile',
+         horizontalalignment='center',
+         verticalalignment='top', transform=axes[0, 0].transAxes,
+         backgroundcolor='w')
+plt.text(1., 0.18, r'Resilient',
+         horizontalalignment='center',
+         verticalalignment='top', transform=axes[1, 0].transAxes,
+         backgroundcolor='w')
+
+# vminn = 1e-3
+# vmaxx = np.log10(150)  # 10 ** 1.5
+vminn = np.log10(5)  # perc_total(z_col, 5))
+vmaxx = np.log10(perc_total(z_col, 95))
+print(vminn, vmaxx, 10**vminn, 10**vmaxx)
+norm = mcb.Normalize(vminn, vmaxx)
+
+minns, maxxs = minnmaxxS(y_col)
+minns = 18.2
+maxxs = 23.7
+
+minnx = 0.1 #perc_total(x_col, 0) * 0.99
+maxxx = perc_total(x_col, 100) * 1.5
+
+plt.subplot(221)
+plt.title('DMO', fontsize=20)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.tick_params('x', labelbottom=False)
+
+plt.scatter(datos_Js_frag_dmo[:, x_col],
+            np.log10(datos_Js_frag_dmo[:, y_col]),
+            c='none', lw=1, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_Js_frag_dmo[:, z_col]))))
+
+
+plt.subplot(223)
+
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_Js_resi_dmo[:, x_col],
+            np.log10(datos_Js_resi_dmo[:, y_col]),
+            c=np.log10(datos_Js_resi_dmo[:, z_col]),
+            marker='+', s=100, linewidths=1,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+
+plt.subplot(222)
+
+plt.title('Hydro', fontsize=20)
+
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.tick_params('y', labelleft=False)
+plt.tick_params('x', labelbottom=False)
+
+plt.scatter(datos_Js_frag_hyd[:, x_col],
+            np.log10(datos_Js_frag_hyd[:, y_col]),
+            c='none', lw=1, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_Js_frag_hyd[:, z_col]))))
+
+
+plt.subplot(224)
+
+plt.tick_params('y', labelleft=False)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_Js_resi_hyd[:, x_col],
+            np.log10(datos_Js_resi_hyd[:, y_col]),
+            c=np.log10(datos_Js_resi_hyd[:, z_col]),
+            marker='+', s=100, linewidths=1,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+plt.yticks((19, 20, 21, 22, 23), labels=('19', '', '21', '', '23'))
+
+
+aa = plt.subplot(2, 2, 3)
+aa.set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', '100'))
+
+
+aa = plt.subplot(2, 2, 4)
+aa.set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', '100'))
+
+dx = 4/72.
+offset = trans.ScaledTranslation(dx, 0, fig.dpi_scale_trans)
+for label in axes[1][0].xaxis.get_majorticklabels():
+    label.set_transform(label.get_transform() - offset)
+
+for label in axes[1][1].xaxis.get_majorticklabels():
+    label.set_transform(label.get_transform() + offset)
+
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+c2 = plt.colorbar(sm, ax=axes,
+                  extend='both', spacing='proportional',
+                  location='bottom')
+c2.ax.tick_params(axis='x', direction='out')
+c2.set_label(r'$V_\mathrm{max}$ [km/s]', fontsize=20)
+yticks = c2.get_ticks()
+# c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
+c2.set_ticks(np.log10([5., 10., 20, 50, 90.]),
+             labels=['5', '10', '20', '50', '90'])
+
+plt.savefig(path_name_res + '/DgcJs' + end_str + '.png',
+            bbox_inches='tight')
+plt.savefig(path_name_res + '/DgcJs' + end_str + '.pdf',
+            bbox_inches='tight')
+
+
 # -------------------- J_hist -------------------------------------------------
-fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
 minS, maxS = minnmaxxS(0)
-min03, max03 = minnmaxx03(0)
-minn = np.min((minS, min03))
-maxx = np.max((maxS, max03))
 
-bines = np.linspace(minn, maxx, 40)
+bines = np.linspace(minS, maxS, 30)
 # bines = np.linspace(19, 23, 40)
 
-ax1 = plt.subplot(221)
+ax1 = plt.subplot(121)
 
-plt.title('DMO', size=18)
-print(np.shape(datos_Js_frag_dmo))
-plt.hist(np.log10(datos_Js_frag_dmo[:, 0]), log=False,
-         label=r'Frag', color='teal', alpha=0.6,
+aaa = plt.hist(np.log10(datos_Js_frag_dmo[:, 0]), log=False,
+         color='white', alpha=0,
          bins=bines)
+plt.fill_between(x=(aaa[1][1:] + aaa[1][:-1])/2., y1=aaa[0],
+                 color='teal', hatch='//', alpha=0.6,
+                 label=r'Frag', step='mid', lw=0)
 
 plt.hist(np.log10(datos_Js_resi_dmo[:, 0]), log=False,
          label=r'Res', color='k', alpha=0.5,
@@ -293,38 +706,28 @@ Js95_resi_dmo = np.log10(np.percentile(datos_Js_resi_dmo[:, 0], 5))
 print('Js, DMO')
 print(Js95_resi_dmo, Js95_frag_dmo, Js95_resi_dmo - Js95_frag_dmo)
 
-plt.axvline(Js95_frag_dmo, color='teal', lw=2)  # , alpha=0.6)
-plt.axvline(Js95_resi_dmo, color='k', lw=2)  # , alpha=0.5)
+plt.axvline(Js95_frag_dmo, color='teal', lw=2, ls='--')  # , alpha=0.6)
+plt.axvline(Js95_resi_dmo, color='k', lw=2, ls='--')  # , alpha=0.5)
 
-plt.xlim(minn, maxx)
+plt.ylabel('Number of repopulations', size=20)
+plt.xlim(minS, maxS)
 plt.ylim(bottom=0.9, top=120)
 
-# plt.setp(axes[0][0].yaxis.get_majorticklabels(), va="bottom" )
-dx = 4/72.
-
-offset = trans.ScaledTranslation(0., dx, fig.dpi_scale_trans)
-
-for label in axes[0][0].yaxis.get_majorticklabels():
-    label.set_transform(label.get_transform() + offset)
-
-for label in axes[1][0].yaxis.get_majorticklabels():
-    label.set_transform(label.get_transform() - offset)
-
 plt.yscale('log')
+plt.xlabel(r'log$_{10}$ (J$_\mathrm{S}$ [GeV$^2$ cm$^{-5}$])',
+           fontsize=20)
 
-ax1.tick_params(labelbottom=False)
+plt.legend(handlelength=0.9, title='DMO', title_fontsize=20)
 
-# plt.annotate(r'J$_S$ 95%', (Js95_frag_dmo, 20), rotation=90, color='k')
-# plt.annotate(r'J$_{03}$ 95%', (J0395_frag_dmo, 20),
-# rotation=90, color='g', horizontalalignment='right')
-plt.legend(title=r'J$_\mathrm{S}$', handlelength=0.9)
+ax2 = plt.subplot(122, sharex=ax1, sharey=ax1)
 
-ax2 = plt.subplot(222, sharex=ax1, sharey=ax1)
-plt.title('Hydro', size=18)
-plt.yscale('log')
-plt.hist(np.log10(datos_Js_frag_hyd[:, 0]), log=False,
-         label=r'Frag', color='yellowgreen', alpha=0.6,
+aaa = plt.hist(np.log10(datos_Js_frag_hyd[:, 0]), log=False,
+         color='yellowgreen', alpha=0,
          bins=bines)
+plt.fill_between(x=(aaa[1][1:] + aaa[1][:-1])/2., y1=aaa[0],
+                 label=r'Frag', color='yellowgreen', hatch='//',
+                 alpha=0.6, lw=0,
+                 step='mid')
 plt.hist(np.log10(datos_Js_resi_hyd[:, 0]), log=False,
          label=r'Res', color=darkgreen, alpha=0.6,
          bins=bines)
@@ -334,73 +737,16 @@ Js95_resi_hyd = np.log10(np.percentile(datos_Js_resi_hyd[:, 0], 5))
 print('Js, Hydro')
 print(Js95_resi_hyd, Js95_frag_hyd, Js95_resi_hyd - Js95_frag_hyd)
 
-plt.axvline(Js95_frag_hyd, color='yellowgreen', lw=2)  # , alpha=0.6)
-plt.axvline(Js95_resi_hyd, color=darkgreen, lw=2)  # , alpha=0.6)
-
-# plt.annotate(r'J$_S$ 95%', (Js95_frag_hyd, 20), rotation=90, color='k')
-# plt.annotate(r'J$_{03}$ 95%', (Js95_resi_hyd, 20),
-# rotation=90, color='g', horizontalalignment='right')
+plt.axvline(Js95_frag_hyd, color='yellowgreen', lw=2, ls='--')  # , alpha=0.6)
+plt.axvline(Js95_resi_hyd, color=darkgreen, lw=2, ls='--')  # , alpha=0.6)
 
 ax2.tick_params(labelleft=False)
 
-plt.legend(title=r'J$_\mathrm{S}$', handlelength=0.9)
-
-plt.subplot(223, sharex=ax1, sharey=ax1)
-
-plt.hist(np.log10(datos_J03_frag_dmo[:, 0]), log=False,
-         label=r'Frag', color='teal', alpha=0.6,
-         bins=bines)
-plt.hist(np.log10(datos_J03_resi_dmo[:, 0]), log=False,
-         label=r'Res', color='k', alpha=0.5,
-         bins=bines)
-
-J0395_frag_dmo = np.log10(np.percentile(datos_J03_frag_dmo[:, 0], 5))
-J0395_resi_dmo = np.log10(np.percentile(datos_J03_resi_dmo[:, 0], 5))
-print('J03, DMO')
-print(J0395_frag_dmo, J0395_resi_dmo, J0395_frag_dmo - J0395_resi_dmo)
-plt.yscale('log')
-
-plt.axvline(J0395_frag_dmo, color='teal', lw=2)  # , alpha=0.6)
-plt.axvline(J0395_resi_dmo, color='k', lw=2)  # , alpha=0.5)
-
-# plt.annotate(r'J$_S$ 95%', (Js95_resi_dmo, 20), rotation=90, color='k')
-# plt.annotate(r'J$_{03}$ 95%', (J0395_resi_dmo, 20),
-# rotation=90, color='g', horizontalalignment='right')
-
-plt.xlabel(r'log$_{10}$ (J$_\mathrm{factor}$ [GeV$^2$ cm$^{-5}$])',
-           fontsize=20)
-plt.legend(title=r'J$_{03}$', handlelength=0.9)
-
-ax4 = plt.subplot(224, sharex=ax1, sharey=ax1)
-
-plt.hist(np.log10(datos_J03_frag_hyd[:, 0]), log=False,
-         label=r'Frag', color='yellowgreen', alpha=0.6,
-         bins=bines)
-plt.hist(np.log10(datos_J03_resi_hyd[:, 0]), log=False,
-         label=r'Res', color=darkgreen, alpha=0.6,
-         bins=bines)
-
-J0395_frag_hyd = np.log10(np.percentile(datos_J03_frag_hyd[:, 0], 5))
-J0395_resi_hyd = np.log10(np.percentile(datos_J03_resi_hyd[:, 0], 5))
-print('J03, Hydro')
-print(J0395_resi_hyd, J0395_frag_hyd, J0395_resi_hyd - J0395_frag_hyd)
-
-plt.axvline(J0395_frag_hyd, color='yellowgreen', lw=2)  # , alpha=0.6)
-plt.axvline(J0395_resi_hyd, color=darkgreen, lw=2)  # , alpha=0.6)
-
-# plt.annotate(r'J$_S$ 95%', (Js95_resi_hyd, 20), rotation=90, color='k')
-# plt.annotate(r'J$_{03}$ 95%', (J0395_resi_hyd, 20),
-# rotation=90, color='g', horizontalalignment='right')
+plt.legend(handlelength=0.9, title='Hydro')
 
 plt.yscale('log')
-plt.xlabel(r'log$_{10}$ (J$_\mathrm{factor}$ [GeV$^2$ cm$^{-5}$])',
+plt.xlabel(r'log$_{10}$ (J$_\mathrm{S}$ [GeV$^2$ cm$^{-5}$])',
            fontsize=20)
-plt.legend(title=r'J$_{03}$', handlelength=0.9)
-
-fig.text(0.05, 0.5, 'Number of repopulations', ha='center',
-         va='center', rotation='vertical')
-
-ax4.tick_params(labelleft=False)
 
 plt.xticks((19, 20, 21, 22, 23))
 
@@ -408,8 +754,322 @@ plt.savefig(path_name_res + '/J_hist.png', bbox_inches='tight')
 plt.savefig(path_name_res + '/J_hist.pdf', bbox_inches='tight')
 
 
+# -------------- Vmax_hist ----------------------------------------------------
+
+fig, _ = plt.subplots(1, 2, figsize=(10, 5))
+
+plt.subplots_adjust(wspace=0, hspace=0)
+
+minS, maxS = minnmaxxS(3)
+bines = np.linspace(10**minS, 10**maxS, 20)
+
+ax1 = plt.subplot(121)
+
+aaa = plt.hist(datos_Js_frag_dmo[:, 3], log=False,
+         color='teal', alpha=0.,
+         bins=bines)
+
+plt.fill_between(x=(aaa[1][1:] + aaa[1][:-1])/2., y1=aaa[0],
+                 label=r'Frag', color='teal', hatch='//',
+                 alpha=0.6, lw=0,
+                 step='mid')
+plt.hist(datos_Js_resi_dmo[:, 3], log=False,
+         label=r'Res', color='k', alpha=0.5,
+         bins=bines)
+
+plt.xlim(10**minS, 10**maxS)
+plt.ylim(bottom=0.9, top=110)
+
+plt.yscale('log')
+
+plt.legend(handlelength=0.9, title='DMO')
+
+plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=20)
+
+ax2 = plt.subplot(122, sharex=ax1, sharey=ax1)
+
+aaa = plt.hist(datos_Js_frag_hyd[:, 3], log=False,
+         color='yellowgreen', alpha=0.,
+         bins=bines)
+
+plt.fill_between(x=(aaa[1][1:] + aaa[1][:-1])/2., y1=aaa[0],
+                 label=r'Frag', color='yellowgreen', hatch='//',
+                 alpha=0.6, lw=0,
+                 step='mid')
+plt.hist(datos_Js_resi_hyd[:, 3], log=False,
+         label=r'Res', color=darkgreen, alpha=0.6,
+         bins=bines)
+
+ax2.tick_params(labelleft=False)
+
+plt.legend(handlelength=0.9, title='Hydro')
+
+plt.yscale('log')
+plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=20)
+
+
+plt.savefig(path_name_res + '/Vmax_hist_linear.png', bbox_inches='tight')
+plt.savefig(path_name_res + '/Vmax_hist_linear.pdf', bbox_inches='tight')
+
+
+fig, _ = plt.subplots(1, 2, figsize=(10, 5))
+
+plt.subplots_adjust(wspace=0, hspace=0)
+
+minS, maxS = minnmaxxS(3)
+bines = np.geomspace(10**minS, 10**maxS, 20)
+
+ax1 = plt.subplot(121)
+
+aaa = plt.hist(datos_Js_frag_dmo[:, 3], log=False,
+         color='teal', alpha=0.,
+         bins=bines)
+
+plt.fill_between(x=(aaa[1][1:] + aaa[1][:-1])/2., y1=aaa[0],
+                 label=r'Frag', color='teal', hatch='//',
+                 alpha=0.6, lw=0,
+                 step='mid')
+plt.hist(datos_Js_resi_dmo[:, 3], log=False,
+         label=r'Res', color='k', alpha=0.5,
+         bins=bines)
+
+plt.xlim(10**minS, 10**maxS)
+plt.ylim(bottom=0.9, top=240)
+
+plt.yscale('log')
+plt.xscale('log')
+
+plt.legend(handlelength=0.9, title='DMO')
+
+plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=20)
+
+ax2 = plt.subplot(122, sharex=ax1, sharey=ax1)
+
+aaa = plt.hist(datos_Js_frag_hyd[:, 3], log=False,
+         color='yellowgreen', alpha=0.,
+         bins=bines)
+
+plt.fill_between(x=(aaa[1][1:] + aaa[1][:-1])/2., y1=aaa[0],
+                 label=r'Frag', color='yellowgreen', hatch='//',
+                 alpha=0.6, lw=0,
+                 step='mid')
+plt.hist(datos_Js_resi_hyd[:, 3], log=False,
+         label=r'Res', color=darkgreen, alpha=0.6,
+         bins=bines)
+
+ax2.tick_params(labelleft=False)
+
+plt.legend(handlelength=0.9, title='Hydro')
+
+plt.yscale('log')
+plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=20)
+plt.savefig(path_name_res + '/Vmax_hist_geom.png', bbox_inches='tight')
+plt.savefig(path_name_res + '/Vmax_hist_geom.pdf', bbox_inches='tight')
+
+
+# ----------------------- Ang size - J (z==Vmax) 2x4 -----------------
+
+fig, axes = plt.subplots(nrows=2, ncols=4, sharey=True,
+                         figsize=(15, 6))
+
+plt.subplots_adjust(wspace=0, hspace=0)
+
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
+                          markerfacecolor='w', ls='',
+                          markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+                          markerfacecolor='k', markersize=12)]
+
+x_col = 4
+y_col = 0
+z_col = 3
+
+x_label = r'$\theta\,\,\left[\mathrm{deg}\right]$'
+y1_label = r'log$_{10}$ (J$_\mathrm{S}$ [GeV$^2$ cm$^{-5}$])'
+y2_label = r'log$_{10}$ (J$_{03}$ [GeV$^2$ cm$^{-5}$])'
+
+# vminn = 1e-3
+# vmaxx = np.log10(150)  # 10 ** 1.5
+vminn = 0 #np.log10(perc_total(z_col, 5))
+vmaxx = np.log10(perc_total(z_col, 95))
+print(vminn, vmaxx)
+norm = mcb.Normalize(vminn, vmaxx)
+
+minns, maxxs = minnmaxxS(y_col)
+minns = 17.5
+maxxs = 23.1
+
+
+minnx = perc_total(x_col, 0) * 0.7
+maxxx = 92 #perc_total(x_col, 100) * 1.3
+
+plt.subplot(241)
+
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+
+plt.text(1., 1.01, 'DMO', horizontalalignment='center',
+ verticalalignment='bottom', transform=axes[0, 0].transAxes)
+
+plt.scatter(datos_Js_frag_dmo[:, x_col],
+            np.log10(datos_Js_frag_dmo[:, y_col]),
+            c='none', lw=2, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_Js_frag_dmo[:, z_col]))))
+
+plt.ylabel(y1_label, fontsize=16)
+
+plt.legend(handles=legend_elements, handletextpad=0.2,
+           handlelength=1, loc=2)
+
+plt.subplot(242)
+
+plt.tick_params('y', labelleft=False)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.axvspan(0.935 * maxxx, maxxx, color='k')
+
+plt.scatter(datos_Js_resi_dmo[:, x_col],
+            np.log10(datos_Js_resi_dmo[:, y_col]),
+            c=np.log10(datos_Js_resi_dmo[:, z_col]),
+            marker = '+', s = 100, linewidths = 2,
+            cmap = colormapp, vmin = vminn, vmax = vmaxx)
+
+
+plt.subplot(243)
+
+plt.text(1., 1.01, 'Hydro', horizontalalignment='center',
+ verticalalignment='bottom', transform=axes[0, 2].transAxes)
+
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.tick_params('y', labelleft=False)
+plt.axvspan(minnx, minnx * 1.04, color='k')
+
+plt.scatter(datos_Js_frag_hyd[:, x_col],
+            np.log10(datos_Js_frag_hyd[:, y_col]),
+            c='none', lw=2, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_Js_frag_hyd[:, z_col]))))
+
+plt.subplot(244)
+
+plt.tick_params('y', labelleft=False)
+plt.tick_params('x', labelbottom=False)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+
+plt.scatter(datos_Js_resi_hyd[:, x_col],
+            np.log10(datos_Js_resi_hyd[:, y_col]),
+            c=np.log10(datos_Js_resi_hyd[:, z_col]),
+            marker = '+', s = 100, linewidths = 2,
+            cmap = colormapp, vmin = vminn, vmax = vmaxx)
+
+
+plt.subplot(245)
+
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+
+plt.ylabel(y2_label, fontsize=16)
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_J03_frag_dmo[:, x_col],
+            np.log10(datos_J03_frag_dmo[:, y_col]),
+            c='none', lw=2, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_J03_frag_dmo[:, z_col]))))
+
+plt.subplot(246)
+
+plt.tick_params('y', labelleft=False)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.axvspan(0.935 * maxxx, maxxx, color='k')
+
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_J03_resi_dmo[:, x_col],
+            np.log10(datos_J03_resi_dmo[:, y_col]),
+            c=np.log10(datos_J03_resi_dmo[:, z_col]),
+            marker = '+', s = 100, linewidths = 2,
+            cmap = colormapp, vmin = vminn, vmax = vmaxx)
+
+
+plt.subplot(247)
+
+plt.tick_params('y', labelleft=False)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.axvspan(minnx, minnx * 1.04, color='k')
+
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_J03_frag_hyd[:, x_col],
+            np.log10(datos_J03_frag_hyd[:, y_col]),
+            c='none', lw=2, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_J03_frag_hyd[:, z_col]))))
+
+plt.subplot(248)
+
+plt.tick_params('y', labelleft=False)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_J03_resi_hyd[:, x_col],
+            np.log10(datos_J03_resi_hyd[:, y_col]),
+            c=np.log10(datos_J03_resi_hyd[:, z_col]),
+            marker = '+', s = 100, linewidths = 2,
+            cmap = colormapp, vmin = vminn, vmax = vmaxx)
+
+for ii in range(5, 9):
+    plt.subplot(2, 4, ii)
+    plt.xticks([0.1, 1, 10], labels=('0.1', '1', '10'))
+
+
+for ii in range(1, 5):
+    plt.subplot(2, 4, ii)
+    plt.yticks((18, 19, 20, 21, 22, 23),
+               labels=('', '19', '', '21', '', '23'))
+
+
+cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+c2 = plt.colorbar(sm, cax=cax, extend='both')
+c2.set_label(r'$V_\mathrm{max}$ [km s$^{-1}$]', fontsize=20)
+yticks = c2.get_ticks()
+c2.ax.tick_params(axis='y', direction='out')
+print(yticks)
+# c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
+c2.set_ticks(np.log10([1., 2., 4, 6]),
+             labels=['1', '2', '4', '6'])
+
+plt.savefig(path_name_res + '/AngJs_full' + end_str + '.png',
+            bbox_inches='tight')
+plt.savefig(path_name_res + '/AngJs_full' + end_str + '.pdf',
+            bbox_inches='tight')
+plt.show()
+
 # ------------------- Cross sections ------------------------------------------
 plt.subplots(1, 2, figsize=(12, 6))
+
+J0395_frag_dmo = np.log10(np.percentile(datos_J03_frag_dmo[:, 0], 5))
+J0395_resi_dmo = np.log10(np.percentile(datos_J03_resi_dmo[:, 0], 5))
+print('J03, DMO')
+print(J0395_frag_dmo, J0395_resi_dmo, J0395_frag_dmo - J0395_resi_dmo)
+
+J0395_frag_hyd = np.log10(np.percentile(datos_J03_frag_hyd[:, 0], 5))
+J0395_resi_hyd = np.log10(np.percentile(datos_J03_resi_hyd[:, 0], 5))
+print('J03, Hydro')
+print(J0395_resi_hyd, J0395_frag_hyd, J0395_resi_hyd - J0395_frag_hyd)
 
 plt.subplots_adjust(wspace=0, hspace=0)
 
@@ -524,166 +1184,6 @@ plt.savefig(path_name_res + '/Cross.png', bbox_inches='tight')
 plt.savefig(path_name_res + '/Cross.pdf', bbox_inches='tight')
 # plt.show()
 
-# ----------------------- Vmax - Jss (z==DistEarth) 2x2 -----------------
-
-fig, axes = plt.subplots(nrows=2, ncols=2, sharey=True,  #, sharex=True,
-                         figsize=(7, 9))
-
-plt.subplots_adjust(wspace=0, hspace=0)
-
-legend_elements = [
-    Line2D([0], [0], marker='o', color='k', label='Frag',
-                          markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5),
-    Line2D([0], [0], marker='P', color='w', label='Res',
-                          markerfacecolor='k', markersize=12)]
-
-x_col = 3
-y_col = 0
-z_col = 2
-
-x_label = r'$V_\mathrm{max}$ $\left[\mathrm{km}\,\,\mathrm{s}^{-1}\right]$'
-y1_label = r'fragile'
-y2_label = r'resilient'
-
-plt.text(-0.25, 0., r'log$_{10}$ ($J_\mathrm{s}$ [GeV$^2$ cm$^{-5}$])',
-         horizontalalignment='center',
-         verticalalignment='center', transform=axes[0, 0].transAxes,
-         rotation=90)
-plt.text(1., 0.92, r'Fragile',
-         horizontalalignment='center',
-         verticalalignment='top', transform=axes[0, 0].transAxes,
-         backgroundcolor='w')
-plt.text(1., 0.18, r'Resilient',
-         horizontalalignment='center',
-         verticalalignment='top', transform=axes[1, 0].transAxes,
-         backgroundcolor='w')
-
-
-vminn = np.log10(perc_total(z_col, 0))
-vmaxx = np.log10(perc_total(z_col, 100))
-print(vminn, vmaxx, 10**vminn, 10**vmaxx)
-vminn = np.log10(0.1)
-if to8:
-    vmaxx = np.log10(perc_total(z_col, 100))
-else:
-    vmaxx = np.log10(200)
-norm = mcb.Normalize(vminn, vmaxx)
-
-minns, maxxs = minnmaxxS(y_col)
-minns = minns - 0.3
-maxxs = maxxs + 0.3
-
-
-minnx = 0.1  #perc_total(x_col, 0) * 0.7
-maxxx = perc_total(x_col, 100) * 1.4
-
-plt.subplot(221)
-
-plt.title('DMO', fontsize=20)
-plt.ylim(minns, maxxs)
-plt.xlim(minnx, maxxx)
-plt.xscale('log')
-# plt.yscale('log')
-
-# plt.text(1., 1.01, 'DMO', horizontalalignment='center',
-#  verticalalignment='bottom', transform=axes[0, 0].transAxes)
-
-plt.scatter(datos_Js_frag_dmo[:, x_col],
-            np.log10(datos_Js_frag_dmo[:, y_col]),
-            c=np.log10(datos_Js_frag_dmo[:, z_col]),
-            lw=0, marker='P', s=75,
-            cmap=colormapp, vmin=vminn, vmax=vmaxx)
-
-# plt.ylabel(y1_label, fontsize=20, labelpad=10)
-
-plt.subplot(223)
-
-# plt.tick_params('y', labelleft=False)
-plt.ylim(minns, maxxs)
-plt.xlim(minnx, maxxx)
-plt.xscale('log')
-# plt.ylabel(y2_label, size=20, labelpad=10)
-plt.xlabel(x_label, size=20)
-
-# plt.yscale('log')
-# plt.axvspan(0.935 * maxxx, maxxx, color='k')
-
-plt.scatter(datos_Js_resi_dmo[:, x_col],
-            np.log10(datos_Js_resi_dmo[:, y_col]),
-            c='none', lw=2, marker='o',
-            edgecolors=cmap(norm(np.log10(datos_Js_resi_dmo[:, z_col]))))
-
-
-plt.subplot(222)
-
-plt.title('Hydro', fontsize=20)
-# plt.text(1., 1.01, 'Hydro', horizontalalignment='center',
-#  verticalalignment='bottom', transform=axes[0, 2].transAxes)
-
-plt.ylim(minns, maxxs)
-plt.xlim(minnx, maxxx)
-plt.xscale('log')
-# plt.yscale('log')
-plt.tick_params('y', labelleft=False)
-# plt.axvspan(minnx, minnx * 1.04, color='k')
-
-plt.scatter(datos_Js_frag_hyd[:, x_col],
-            np.log10(datos_Js_frag_hyd[:, y_col]),
-            c=np.log10(datos_Js_frag_hyd[:, z_col]),
-            lw=0, marker='P', s=75,
-            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
-
-plt.subplot(224)
-
-plt.tick_params('y', labelleft=False)
-plt.ylim(minns, maxxs)
-plt.xlim(minnx, maxxx)
-plt.xscale('log')
-# plt.yscale('log')
-plt.xlabel(x_label, size=20)
-
-plt.scatter(datos_Js_resi_hyd[:, x_col],
-            np.log10(datos_Js_resi_hyd[:, y_col]),
-            c='none', lw=2, marker='o',
-            edgecolors=cmap(norm(np.log10(datos_Js_resi_hyd[:, z_col]))),
-            label='Resilient')
-
-
-axes[0][0].set_xticklabels([])
-axes[0][1].set_xticklabels([])
-
-if not to8:
-    plt.yticks((19, 20, 21, 22, 23), labels=('19', '', '21', '', '23'))
-
-    aa = plt.subplot(2, 2, 3)
-    aa.set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', ''))
-
-
-    aa = plt.subplot(2, 2, 4)
-    aa.set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', '100'))
-
-
-# cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
-sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-c2 = plt.colorbar(sm, ax=axes,
-                  extend='both', spacing='proportional',
-                  location='bottom')
-# c2.set_label(r'log$_{10}$(D$_\mathrm{Earth}$ [kpc])', fontsize=20)
-c2.set_label(r'D$_\mathrm{Earth}$ [kpc]', fontsize=20)
-c2.ax.tick_params(axis='x', direction='out')
-# c2.set_tickparams(direction='out')
-yticks = c2.get_ticks()
-print(yticks)
-c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
-# c2.set_ticks(np.log10([0.1, 1., 2., 5,  10., 20., 50., 100.]),
-#              labels=['0.1', '1', '2', '5', '10', '20', '50', '100'])
-
-plt.savefig(path_name_res + '/VmaxJs_Js' + end_str + '.png',
-            bbox_inches='tight')
-plt.savefig(path_name_res + '/VmaxJs_Js' + end_str + '.pdf',
-            bbox_inches='tight')
-plt.show()
 # ----------------------- Vmax - J (z==DistEarth) 2x4 -----------------
 
 fig, axes = plt.subplots(nrows=2, ncols=4, sharex=True,  # sharey=True,
@@ -1065,204 +1565,6 @@ plt.savefig(path_name_res + '/VmaxAng_full' + end_str + '.png',
 plt.savefig(path_name_res + '/VmaxAng_full' + end_str + '.pdf',
             bbox_inches='tight')
 
-# ----------------------- Ang size - J (z==Vmax) 2x4 -----------------
-
-fig, axes = plt.subplots(nrows=2, ncols=4, sharex=True,  # sharey=True,
-                         figsize=(15, 6))
-
-plt.subplots_adjust(wspace=0, hspace=0)
-
-legend_elements = [
-    Line2D([0], [0], marker='o', color='k', label='Frag',
-                          markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5),
-    Line2D([0], [0], marker='P', color='w', label='Res',
-                          markerfacecolor='k', markersize=12)]
-
-x_col = 4
-y_col = 0
-z_col = 3
-
-x_label = r'$\theta\,\,\left[\mathrm{deg}\right]$'
-y1_label = r'log$_{10}$ (J$_\mathrm{S}$ [GeV$^2$ cm$^{-5}$])'
-y2_label = r'log$_{10}$ (J$_{03}$ [GeV$^2$ cm$^{-5}$])'
-
-# vminn = 1e-3
-# vmaxx = np.log10(150)  # 10 ** 1.5
-vminn = np.log10(perc_total(z_col, 5))
-vmaxx = np.log10(perc_total(z_col, 95))
-print(vminn, vmaxx)
-norm = mcb.Normalize(vminn, vmaxx)
-
-minns, maxxs = minnmaxxS(y_col)
-minns -= 0.2
-maxxs += 0.2
-
-minn03, maxx03 = minnmaxx03(y_col)
-minn03 -= 0.2
-maxx03 += 0.2
-
-minnx = perc_total(x_col, 0) * 0.7
-maxxx = perc_total(x_col, 100) * 1.3
-
-plt.subplot(241)
-
-plt.ylim(minns, maxxs)
-plt.xlim(minnx, maxxx)
-plt.xscale('log')
-
-plt.text(1., 1.01, 'DMO', horizontalalignment='center',
- verticalalignment='bottom', transform=axes[0, 0].transAxes)
-
-plt.scatter(datos_Js_frag_dmo[:, x_col],
-            np.log10(datos_Js_frag_dmo[:, y_col]),
-            c=np.log10(datos_Js_frag_dmo[:, z_col]),
-            lw=0, marker='P', s=75,
-            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
-
-plt.ylabel(y1_label, fontsize=16)
-
-plt.legend(handles=legend_elements, handletextpad=0.2,
-           handlelength=1, loc=2)
-
-plt.subplot(242)
-
-plt.tick_params('y', labelleft=False)
-plt.ylim(minns, maxxs)
-plt.xlim(minnx, maxxx)
-plt.xscale('log')
-plt.axvspan(0.935 * maxxx, maxxx, color='k')
-
-plt.scatter(datos_Js_resi_dmo[:, x_col],
-            np.log10(datos_Js_resi_dmo[:, y_col]),
-            c='none', lw=2, marker='o',
-            edgecolors=cmap(norm(np.log10(datos_Js_resi_dmo[:, z_col]))),
-            label='Resilient')
-
-
-plt.subplot(243)
-
-plt.text(1., 1.01, 'Hydro', horizontalalignment='center',
- verticalalignment='bottom', transform=axes[0, 2].transAxes)
-
-plt.ylim(minns, maxxs)
-plt.xlim(minnx, maxxx)
-plt.xscale('log')
-plt.tick_params('y', labelleft=False)
-plt.axvspan(minnx, minnx * 1.04, color='k')
-
-plt.scatter(datos_Js_frag_hyd[:, x_col],
-            np.log10(datos_Js_frag_hyd[:, y_col]),
-            c=np.log10(datos_Js_frag_hyd[:, z_col]),
-            lw=0, marker='P', s=75,
-            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
-
-plt.subplot(244)
-
-plt.tick_params('y', labelleft=False)
-plt.ylim(minns, maxxs)
-plt.xlim(minnx, maxxx)
-plt.xscale('log')
-
-plt.scatter(datos_Js_resi_hyd[:, x_col],
-            np.log10(datos_Js_resi_hyd[:, y_col]),
-            c='none', lw=2, marker='o',
-            edgecolors=cmap(norm(np.log10(datos_Js_resi_hyd[:, z_col]))),
-            label='Resilient')
-
-
-plt.subplot(245)
-
-plt.ylim(minn03, maxx03)
-plt.xlim(minnx, maxxx)
-plt.xscale('log')
-
-plt.ylabel(y2_label, fontsize=16)
-plt.xlabel(x_label, size=20)
-
-plt.scatter(datos_J03_frag_dmo[:, x_col],
-            np.log10(datos_J03_frag_dmo[:, y_col]),
-            c=np.log10(datos_J03_frag_dmo[:, z_col]),
-            lw=0, marker='P', s=75,
-            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
-
-plt.subplot(246)
-
-plt.tick_params('y', labelleft=False)
-plt.ylim(minn03, maxx03)
-plt.xlim(minnx, maxxx)
-plt.xscale('log')
-plt.axvspan(0.935 * maxxx, maxxx, color='k')
-
-plt.xlabel(x_label, size=20)
-
-plt.scatter(datos_J03_resi_dmo[:, x_col],
-            np.log10(datos_J03_resi_dmo[:, y_col]),
-            c='none', lw=2, marker='o',
-            edgecolors=cmap(norm(np.log10(datos_J03_resi_dmo[:, z_col]))),
-            label='Resilient')
-
-
-plt.subplot(247)
-
-plt.tick_params('y', labelleft=False)
-plt.ylim(minn03, maxx03)
-plt.xlim(minnx, maxxx)
-plt.xscale('log')
-plt.axvspan(minnx, minnx * 1.04, color='k')
-
-plt.xlabel(x_label, size=20)
-
-plt.scatter(datos_J03_frag_hyd[:, x_col],
-            np.log10(datos_J03_frag_hyd[:, y_col]),
-            c=np.log10(datos_J03_frag_hyd[:, z_col]),
-            lw=0, marker='P', s=75,
-            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
-
-plt.subplot(248)
-
-plt.tick_params('y', labelleft=False)
-plt.ylim(minn03, maxx03)
-plt.xlim(minnx, maxxx)
-plt.xscale('log')
-
-plt.xlabel(x_label, size=20)
-
-plt.scatter(datos_J03_resi_hyd[:, x_col],
-            np.log10(datos_J03_resi_hyd[:, y_col]),
-            c='none', lw=2, marker='o',
-            edgecolors=cmap(norm(np.log10(datos_J03_resi_hyd[:, z_col]))),
-            label='Resilient')
-
-# plt.subplot(2, 4, 5)
-# axes[1, 0].set_xticks([0.1, 1, 10], labels=('aaaa', '1', '10'))
-    # a.set_xticklabels(['0.01', '0.1', '1', '10'])
-# axes[1, 0].set_xticks([1,4,5])
-# axes[1, 0].set_xticklabels([1,4,5], fontsize=12)
-
-for ii in range(1, 5):
-    plt.subplot(2, 4, ii)
-    plt.yticks((19, 20, 21, 22, 23), labels=('19', '', '21', '', '23'))
-
-# plt.subplot(2, 4, 8)
-# axes[1, 3].set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', '100'))
-
-
-cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
-sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-c2 = plt.colorbar(sm, cax=cax, extend='both')
-# c2.set_label(r'log$_{10}$(D$_\mathrm{Earth}$ [kpc])', fontsize=20)
-c2.set_label(r'$V_\mathrm{max}$ [km s$^{-1}$]', fontsize=20)
-yticks = c2.get_ticks()
-print(yticks)
-c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
-# c2.set_ticks(np.log10([2., 5,  10., 20., 50., 100.]),
-#              labels=['2', '5', '10', '20', '50', '100'])
-
-plt.savefig(path_name_res + '/AngJs_full' + end_str + '.png',
-            bbox_inches='tight')
-plt.savefig(path_name_res + '/AngJs_full' + end_str + '.pdf',
-            bbox_inches='tight')
 # plt.show()
 # ----------------------- Dgc - Vmax (z==Js) 1x2 --------------------------
 
@@ -1847,8 +2149,8 @@ plt.xscale('log')
 cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 c2 = plt.colorbar(sm, cax=cax, extend='both')
-# c2.set_label(r'log$_{10}$(V$_\mathrm{max}$ [km/s])', fontsize=20)
-c2.set_label(r'V$_\mathrm{max}$ [km/s])', fontsize=20)
+# c2.set_label(r'log$_{10}$($V_\mathrm{max}$ [km/s])', fontsize=20)
+c2.set_label(r'$V_\mathrm{max}$ [km/s])', fontsize=20)
 yticks = c2.get_ticks()
 c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
 
@@ -1977,8 +2279,8 @@ plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
 cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 c2 = plt.colorbar(sm, cax=cax, extend='both')
-# c2.set_label(r'log$_{10}$(V$_\mathrm{max}$ [km/s])', fontsize=20)
-c2.set_label(r'V$_\mathrm{max}$ [km/s]', fontsize=20)
+# c2.set_label(r'log$_{10}$($V_\mathrm{max}$ [km/s])', fontsize=20)
+c2.set_label(r'$V_\mathrm{max}$ [km/s]', fontsize=20)
 yticks = c2.get_ticks()
 c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
 
@@ -1987,139 +2289,6 @@ plt.savefig(path_name_res + '/Dgc_Dearth' + end_str + '.png',
 plt.savefig(path_name_res + '/Dgc_Dearth' + end_str + '.pdf',
             bbox_inches='tight')
 
-# ------------------------ DgcJs ----------------------------------------------
-fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
-                         figsize=(12, 9))
-
-plt.subplots_adjust(wspace=0, hspace=0)
-
-legend_elements = [
-    Line2D([0], [0], marker='o', color='k', label='Frag',
-                          markerfacecolor='w', ls='',
-                          markersize=8, mew=2.5),
-    Line2D([0], [0], marker='P', color='w', label='Res',
-                          markerfacecolor='k', markersize=12)]
-vminn = 1.
-vmaxx = np.log10(100)  # 10 ** 1.5
-vminn = np.log10(perc_total(3, 5))
-vmaxx = np.log10(perc_total(3, 95))
-print('Vmax perc', 10 ** vminn, 10 ** vmaxx)
-norm = mcb.Normalize(vminn, vmaxx)
-
-plt.subplot(221)
-
-minn, maxx = minnmaxxS(0)
-plt.ylim(minn - 0.1, maxx + 0.1)
-
-minnx = perc_total(1, 0)
-maxxx = perc_total(1, 100)
-plt.xlim(minnx * 0.8, maxxx * 1.2)
-
-plt.title('DMO', size=18)
-plt.xscale('log')
-
-if plot_res:
-    plt.scatter(datos_Js_resi_dmo[:, 1], np.log10(datos_Js_resi_dmo[:, 0]),
-            c='none', lw=2, marker='o',
-            edgecolors=cmap(norm(np.log10(datos_Js_resi_dmo[:, 3]))),
-            label='Resilient')
-
-if plot_frag:
-    plt.scatter(datos_Js_frag_dmo[:, 1], np.log10(datos_Js_frag_dmo[:, 0]),
-            c=np.log10(datos_Js_frag_dmo[:, 3]),
-            lw=0, marker='P', s=75,
-            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
-
-plt.ylabel(r'log$_{10}$ (J$_\mathrm{S}$ [GeV$^2$ cm$^{-5}$])', fontsize=18)
-plt.legend(handles=legend_elements, handletextpad=0.2,
-           handlelength=1, loc=2, title=r'J$_\mathrm{S}$')
-
-plt.subplot(222)
-plt.title('Hydro', size=18)
-
-if plot_res:
-    plt.scatter(datos_Js_resi_hyd[:, 1], np.log10(datos_Js_resi_hyd[:, 0]),
-            c='none', lw=2, marker='o',
-            edgecolors=cmap(norm(np.log10(datos_Js_resi_hyd[:, 3]))),
-            label='Resilient')
-
-if plot_frag:
-    plt.scatter(datos_Js_frag_hyd[:, 1], np.log10(datos_Js_frag_hyd[:, 0]),
-c=np.log10(datos_Js_frag_hyd[:, 3]),
-lw=0, marker='P', s=75,
-cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
-
-plt.xscale('log')
-
-ytickss = plt.yticks()
-plt.yticks(ytickss[0], ['' for i in range(len(ytickss[0]))])
-plt.ylim(minn - 0.1, maxx + 0.1)
-
-plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
-           loc=2, title=r'J$_\mathrm{S}$')
-
-plt.subplot(223)
-
-if plot_res:
-    plt.scatter(datos_J03_resi_dmo[:, 1], np.log10(datos_J03_resi_dmo[:, 0]),
-            c='none', lw=2, marker='o',
-            edgecolors=cmap(norm(np.log10(datos_J03_resi_dmo[:, 3]))),
-            label='Resilient')
-if plot_frag:
-    plt.scatter(datos_J03_frag_dmo[:, 1], np.log10(datos_J03_frag_dmo[:, 0]),
-            c=np.log10(datos_J03_frag_dmo[:, 3]),
-            lw=0, marker='P', s=75,
-            cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
-
-minn, maxx = minnmaxx03(0)
-plt.ylim(minn - 0.1, maxx + 0.1)
-# plt.yticks((19, 20))
-
-plt.xscale('log')
-
-plt.xlabel(r'log$_{10}$ (D$_\mathrm{GC}$ [kpc])', fontsize=18)
-plt.ylabel(r'log$_{10}$ (J$_{03}$ [GeV$^2$ cm$^{-5}$])', fontsize=18)
-
-plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
-           loc=2, framealpha=0.9, title=r'J$_\mathrm{03}$')
-
-plt.subplot(224)
-
-plt.xscale('log')
-
-if plot_res:
-    plt.scatter(datos_J03_resi_hyd[:, 1], np.log10(datos_J03_resi_hyd[:, 0]),
-            c='none', lw=2, marker='o',
-            edgecolors=cmap(norm(np.log10(datos_J03_resi_hyd[:, 3]))),
-            label='Resilient')
-
-if plot_frag:
-    plt.scatter(datos_J03_frag_hyd[:, 1], np.log10(datos_J03_frag_hyd[:, 0]),
-                 c=np.log10(datos_J03_frag_hyd[:, 3]),
-                 lw=0, marker='P', s=75,
-                 cmap=colormapp, label='Fragile', vmin=vminn, vmax=vmaxx)
-
-ytickss = plt.yticks()
-plt.yticks(ytickss[0], ['' for i in range(len(ytickss[0]))])
-plt.ylim(minn - 0.1, maxx + 0.1)
-
-plt.xlabel(r'log$_{10}$ (D$_\mathrm{GC}$ [kpc])', fontsize=18)
-
-plt.legend(handles=legend_elements, handletextpad=0.2, handlelength=1,
-           loc=2, title=r'J$_\mathrm{03}$')
-
-cax, kw = colorbarr.make_axes([ax for ax in axes.flat])
-sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-c2 = plt.colorbar(sm, cax=cax, extend='both')
-# c2.set_label(r'log$_{10}$(V$_\mathrm{max}$ [km/s])', fontsize=20)
-c2.set_label(r'V$_\mathrm{max}$ [km/s]', fontsize=20)
-yticks = c2.get_ticks()
-c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
-
-plt.savefig(path_name_res + '/DgcJs' + end_str + '.png',
-            bbox_inches='tight')
-plt.savefig(path_name_res + '/DgcJs' + end_str + '.pdf',
-            bbox_inches='tight')
 
 # ---------------------- VmaxDEarth -------------------------------------------
 fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True,  # sharey=True,
@@ -2255,84 +2424,6 @@ plt.savefig(path_name_res + '/VmaxDEarth' + end_str + '.png',
 plt.savefig(path_name_res + '/VmaxDEarth' + end_str + '.pdf',
             bbox_inches='tight')
 
-# -------------- Vmax_hist ----------------------------------------------------
-
-fig, _ = plt.subplots(2, 2, figsize=(12, 9))
-
-plt.subplots_adjust(wspace=0, hspace=0)
-
-minS, maxS = minnmaxxS(3)
-min03, max03 = minnmaxx03(3)
-minn = 10 ** np.min((minS, min03))
-maxx = 10 ** np.max((maxS, max03))
-
-bines = np.linspace(minn, maxx, 20)
-
-ax1 = plt.subplot(221)
-
-plt.title('DMO', size=18)
-plt.hist(datos_Js_frag_dmo[:, 3], log=False,
-         label=r'Frag', color='teal', alpha=0.6,
-         bins=bines)
-plt.hist(datos_Js_resi_dmo[:, 3], log=False,
-         label=r'Res', color='k', alpha=0.5,
-         bins=bines)
-
-plt.xlim(minn, maxx)
-plt.ylim(bottom=0.9, top=240)
-
-plt.yscale('log')
-
-ax1.tick_params(labelbottom=False)
-plt.legend(title=r'J$_\mathrm{S}$')
-
-ax2 = plt.subplot(222, sharex=ax1, sharey=ax1)
-plt.title('Hydro', size=18)
-plt.yscale('log')
-plt.hist(datos_Js_frag_hyd[:, 3], log=False,
-         label=r'Frag', color='yellowgreen', alpha=0.6,
-         bins=bines)
-plt.hist(datos_Js_resi_hyd[:, 3], log=False,
-         label=r'Res', color=darkgreen, alpha=0.6,
-         bins=bines)
-
-ax2.tick_params(labelleft=False)
-
-plt.legend(title=r'J$_\mathrm{S}$')
-
-plt.subplot(223, sharex=ax1, sharey=ax1)
-plt.hist(datos_J03_frag_dmo[:, 3], log=False,
-         label=r'Frag', color='teal', alpha=0.6,
-         bins=bines)
-plt.hist(datos_J03_resi_dmo[:, 3], log=False,
-         label=r'Res', color='k', alpha=0.5,
-         bins=bines)
-
-plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=20)
-plt.legend(title=r'J$_{03}$')
-
-ax4 = plt.subplot(224, sharex=ax1, sharey=ax1)
-plt.hist(datos_J03_frag_hyd[:, 3], log=False,
-         label=r'Frag', color='yellowgreen', alpha=0.6,
-         bins=bines)
-plt.hist(datos_J03_resi_hyd[:, 3], log=False,
-         label=r'Res', color=darkgreen, alpha=0.6,
-         bins=bines)
-
-plt.yscale('log')
-plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=20)
-
-plt.legend(title=r'J$_{03}$')
-
-fig.text(0.06, 0.5, 'Number of repops', ha='center',
-         va='center', rotation='vertical')
-
-ax4.tick_params(labelleft=False)
-
-# plt.savefig(path_name_res + '/Vmax_hist_geom.png', bbox_inches='tight')
-# plt.savefig(path_name_res + '/Vmax_hist_geom.pdf', bbox_inches='tight')
-plt.savefig(path_name_res + '/Vmax_hist_linear.png', bbox_inches='tight')
-plt.savefig(path_name_res + '/Vmax_hist_linear.pdf', bbox_inches='tight')
 
 # ----------------------- Vmax - J (z==DistEarth) 2x2 --------------------------
 
