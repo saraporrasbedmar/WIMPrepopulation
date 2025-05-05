@@ -39,6 +39,11 @@ data_release_dmo = np.loadtxt(
 data_release_hydro = np.loadtxt(
     '../Data_subhalo_simulations/hydro_table.txt', skiprows=3)
 
+# data_release_dmo = np.loadtxt(
+#     '../Data_subhalo_simulations/data_dmo_level4.txt')
+# data_release_hydro = np.loadtxt(
+#     '../Data_subhalo_simulations/data_hydro_level4.txt')
+
 data_release_dmo = data_release_dmo[
                    data_release_dmo[:, 0] > 0.184, :]
 data_release_hydro = data_release_hydro[
@@ -128,13 +133,18 @@ lineas_verticales_hydro = [8.279260254013769, 11.590964355619276,
                            31.805606191819287, 44.527848668547,
                            62.3389881359658, 87.27458339035212]
 # v_cut = [0.0, 9., 13., 18., 25., 36., 50., 70., 90.]
-v_cut = lineas_verticales_dmo
+# v_cut = [0., 3., 4., 5., 6., 7., 8., 9., 13.]
+v_cut = np.arange(3., 10., 5.)
+# v_cut = lineas_verticales_dmo
 
 from matplotlib import cm
 
 num_bins = 15
 bins = np.linspace(0, 1., num=num_bins)
 bins_mean = (bins[:-1] + bins[1:]) / 2.
+# bins = np.geomspace(1e-2, 1., num=num_bins)
+# bins_mean = np.sqrt(bins[:-1] * bins[1:])
+# plt.xscale('log')
 volume = 4 / 3 * np.pi * (bins[1:] ** 3 - bins[:-1] ** 3)
 print('bins: ', bins * 220)
 
@@ -149,14 +159,14 @@ for ni, ii in enumerate(v_cut):
     print(release_dmo_over[0, 2] * 220/data_release_dmo[0, 5],)
     srd_dmo_over_release, std_dmo_num = (
         np.array(encontrar_SRD_sinVol(release_dmo_over, bins))
-        # / len(release_dmo_over)
+        / len(release_dmo_over)
     )
-    srd_dmo_over_release[srd_dmo_over_release==0] = 0.01
+    # srd_dmo_over_release[srd_dmo_over_release==0] = 0.01
     srd_hydro_over_release, std_hydro_num = (
         np.array(encontrar_SRD_sinVol(release_hydro_over, bins))
-        # / len(release_hydro_over)
+        / len(release_hydro_over)
     )
-    srd_hydro_over_release[srd_hydro_over_release==0] = 0.01
+    # srd_hydro_over_release[srd_hydro_over_release==0] = 0.01
 
     # print('under stuff')
 
@@ -167,28 +177,30 @@ for ni, ii in enumerate(v_cut):
 
     ax1.plot(bins_mean, srd_dmo_over_release,
              c=cm.CMRmap(ni / float(len(v_cut))))
-    ax1.plot(bins_mean, srdnum_dmo_under,  # /sum(data_release_dmo[:, 1] < ii),
+    ax1.plot(bins_mean, srdnum_dmo_under/sum(data_release_dmo[:, 1] < ii),
              c=cm.CMRmap(ni / float(len(v_cut))), ls='--')
 
     ax2.plot(bins_mean, srd_hydro_over_release,
              c=cm.CMRmap(ni / float(len(v_cut))), label='%.1f' % ii)
-    ax2.plot(bins_mean, srdnum_hydro_under,
-             # /sum(data_release_hydro[:, 1] < ii),
+    ax2.plot(bins_mean, srdnum_hydro_under
+              /sum(data_release_hydro[:, 1] < ii),
              c=cm.CMRmap(ni / float(len(v_cut))),
              ls='--')
 
 plt.ylabel(r'$N(D_\mathrm{GC})$')
+plt.ylabel(r'$N(D_\mathrm{GC})/N_\mathrm{total}$')
 plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
 
-plt.xscale('linear')
-# plt.yscale('log')
+# plt.xscale('linear')
+plt.yscale('log')
 
 plt.xlim(0, 1.)
-plt.ylim(0.009, 630)
+plt.ylim(0.001, 0.03)
 
 plt.subplot(122)
-plt.ylim(0.009, 630)
-plt.title('hydro')
+plt.xlim(0, 1.)
+plt.ylim(0.001, 0.03)
+plt.title('MHD')
 plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
 
 legend11 = plt.legend(loc=2, framealpha=1,
@@ -203,272 +215,336 @@ legend22 = plt.legend(
 ax2.add_artist(legend11)
 ax2.add_artist(legend22)
 
-# plt.yscale('log')
-plt.xlim(0., 1.)
+plt.yscale('log')
+
+plt.savefig('outputs/srd_compar_Vmax_cut.png')
 
 # plt.show()
 # ------------------------ N(r)/Ntot figure ------------------------------
 print()
 print('N/Ntot figures')
+vv_array = [0., 1., 5., 6., 7., 8., 9., 10., 13.]
+vv_array = np.arange(0., 12., 0.5)
+vv_array = [8.]
+alpha_dmo = []
+beta_dmo = []
+alpha_hydro = []
+beta_hydro = []
+
+for aa in vv_array:
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
+    plt.subplots_adjust(wspace=0.27)
+    plt.subplot(121)
+
+    v_cut = [aa]  #
+    # v_cut = np.linspace(1., 8., num=10)
+
+    xxx = np.linspace(0., 1., num=200)
+
+    for ni, ii in enumerate(v_cut):
+        print('v_cut: ', ii, ni)
+        release_dmo_over = data_release_dmo[data_release_dmo[:, 1] >= ii, :]
+        release_hydro_over = data_release_hydro[data_release_hydro[:, 1] >= ii, :]
+
+        minnDgc = np.argmin(data_release_dmo[:, 2])
+
+        bins_dmo = np.linspace(
+            data_release_dmo[minnDgc, 2] / data_release_dmo[minnDgc, 5],
+            1., num=num_bins)
+        bins_mean_dmo = (bins_dmo[:-1] + bins_dmo[1:]) / 2.
+        volume_dmo = 4 / 3 * np.pi * (bins_dmo[1:] ** 3 - bins_dmo[:-1] ** 3)
+        srd_dmo_over_release, std_dmo_num = (np.array(encontrar_SRD_sinVol(
+            release_dmo_over, bins_dmo))
+            # / len(release_dmo_over)
+        )
+
+        print('dmo')
+        srddensity_dmo_over_release, std_dmo_den = (encontrar_SRD(
+            release_dmo_over, bins_dmo))
+
+        bins_hydro = np.linspace(
+            data_release_hydro[minnDgc, 2] / data_release_hydro[minnDgc, 5],
+            1., num=num_bins)
+        bins_mean_hydro = (bins_hydro[:-1] + bins_hydro[1:]) / 2.
+        volume_hydro = 4 / 3 * np.pi * (bins_hydro[1:] ** 3 - bins_hydro[:-1] ** 3)
+        srd_hydro_over_release, std_hydro_num = (np.array(encontrar_SRD_sinVol(
+            release_hydro_over, bins_hydro))
+            # / len(release_hydro_over)
+        )
+
+        print('\nhydro')
+        srddensity_hydro_over_release, std_hydro_den = (encontrar_SRD(
+            release_hydro_over, bins_hydro))
+
+        ax1.errorbar(bins_mean_dmo, srd_dmo_over_release,
+                     yerr=std_dmo_num,
+                     ls='',
+                     c='k',
+                     ms=15, marker='.', markeredgewidth=2,
+                     alpha=1, zorder=15,
+                     label='Data',
+                     capsize=5
+                     # label=ii
+                     )
+
+        ax1.errorbar(bins_mean_hydro, srd_hydro_over_release,
+                     yerr=std_hydro_num,
+                     ls='',
+                     c='g',
+                     ms=15, marker='.', markeredgewidth=2,
+                     alpha=1, zorder=15,
+                     capsize=5)
+
+        ax2.errorbar(bins_mean_dmo, srddensity_dmo_over_release,
+                     yerr=std_dmo_den,
+                     ls='',
+                     color='k',
+                     ms=15, marker='.', markeredgewidth=2,
+                     alpha=1, zorder=15,
+                     label='Data',
+                     capsize=5
+                     # label=ii
+                     )
+
+        ax2.errorbar(bins_mean_hydro, srddensity_hydro_over_release,
+                     yerr=std_hydro_den,
+                     ls='',
+                     color='g',
+                     ms=15, marker='.',  # markeredgewidth=3,
+                     alpha=1, zorder=15,
+                     capthick=2.,
+                     capsize=5)
+
+
+    def funct_ale(Dgc, a, b):
+        return b * np.exp(a / Dgc)
+
+
+    # --------------
+    print('Release')
+    cts_dmo = opt.curve_fit(funct_ale, xdata=bins_mean_dmo,
+                            ydata=srd_dmo_over_release,
+                            sigma=std_dmo_num,
+                            p0=[-0.5, 200])
+    print('Funct Ale: ', cts_dmo[0])
+    bbb = np.diag(cts_dmo[1]) ** 0.5
+    alpha_dmo.append([cts_dmo[0][0], bbb[0]])
+    beta_dmo.append([cts_dmo[0][1], bbb[1]])
+
+    cts_hydro = opt.curve_fit(funct_ale, xdata=bins_mean_hydro,
+                              ydata=srd_hydro_over_release,
+                              sigma=std_hydro_num,
+                              p0=[0, 200])
+    print('Funct Ale: ', cts_hydro[0])
+    bbb = np.diag(cts_hydro[1]) ** 0.5
+    alpha_hydro.append([cts_hydro[0][0], bbb[0]])
+    beta_hydro.append([cts_hydro[0][1], bbb[1]])
+
+    plt.plot(xxx, funct_ale(xxx, cts_dmo[0][0], cts_dmo[0][1]),
+             'dimgray', linestyle='--', lw=3, alpha=0.7,
+             label='Fragile fit', zorder=5)
+    plt.plot(xxx, funct_ale(xxx, cts_hydro[0][0], cts_hydro[0][1]),
+             'limegreen', linestyle='--', lw=3, zorder=5)
+
+    plt.plot(xxx, np.ones(len(xxx))
+             * funct_ale(1., cts_dmo[0][0], cts_dmo[0][1]),
+             'dimgray', linestyle='dotted', lw=4, alpha=0.7,
+             label='Resilient fit', zorder=5)
+    plt.plot(xxx, np.ones(len(xxx))
+             * funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]),
+             'limegreen', linestyle='dotted', lw=4, zorder=5)
+    print('resilient values: ',
+          funct_ale(1., cts_dmo[0][0], cts_dmo[0][1]),
+          funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]))
+
+    print('resilient errors: ',
+          funct_ale(1., cts_dmo[0][0], cts_dmo[0][1]),
+          funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]))
+
+    # ----------------
+    plt.axvline(8.5 / 220., linestyle='-.', alpha=1, color='Sandybrown', lw=3)
+    # plt.annotate('Earth', (0.05, 0.130), color='Saddlebrown', rotation=0.,
+    #              fontsize=20, zorder=10)
+    plt.annotate(r'$\oplus$', (0.05, 39),  color='chocolate',
+                 rotation=0., weight='bold',
+                 fontsize=20, zorder=10)
+
+    # plt.axvline(data_release_dmo[0, 2] / data_release_dmo[0, 5],
+    #             alpha=0.5, color='k', linestyle='-',
+    #             lw=3, label='Last subhalo')
+    # plt.axvline(data_release_hydro[0, 2] / data_release_hydro[0, 5],
+    #             alpha=0.5, color='limegreen',
+    #             linestyle='-', lw=3)
+
+    # plt.ylabel(r'$N(D_\mathrm{GC}) \, / \, N_\mathrm{Total}$')
+    plt.ylabel(r'$N(D_\mathrm{GC})$')
+    plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
+    # plt.xlabel(r'D$_\mathrm{GC}$ [kpc]', size=24)
+
+    plt.xscale('linear')
+    plt.yscale('log')
+
+    plt.xlim(0, 1.)
+    # plt.ylim(1, 300)
+    plt.ylim(0.5, 50)
+
+    # plt.legend(framealpha=1, fontsize=10, loc=4)
+    handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
+               mpatches.Patch(color='limegreen', label='MHD', alpha=0.8)
+               )
+
+    legend_colors = plt.legend(handles=handles, loc=1,
+                               bbox_to_anchor=(0.99, 0.5),
+                               fontsize=20)
+
+    legend11 = plt.legend(loc=4, framealpha=1)
+
+    ax1.add_artist(legend11)
+    ax1.add_artist(legend_colors)
+    plt.savefig('outputs/srd_compar_lin_after.png', bbox_inches='tight')
+    plt.savefig('outputs/srd_compar_lin_after.pdf', bbox_inches='tight')
+    # plt.show()
+    # -------------------------------------------------------------------------
+    print('Density figure')
+
+    # plt.figure(figsize=(10, 8))
+    plt.subplot(122)
+
+
+    mean_r_dmo = sum([
+        i * sum(data_release_dmo[:, 5] == i)
+        for i in np.unique(data_release_dmo[:, 5])]) / len(data_release_dmo)
+
+    mean_r_hyd = sum([
+        i * sum(data_release_hydro[:, 5] == i)
+        for i in np.unique(data_release_hydro[:, 5])]) / len(data_release_hydro)
+
+    print(mean_r_dmo, mean_r_hyd)
+
+    volume_220_dmo = volume_dmo * mean_r_dmo ** 3.
+    volume_220_hydro = volume_hydro * mean_r_hyd ** 3.
+
+    # print((bins[:-1] - bins[1:]))
+    # print(cts_hydro[0][1] / volume / (cts_dmo[0][1] / volume))
+
+    aaa = UnivariateSpline(
+        x=bins_mean_dmo,
+        y=funct_ale(bins_mean_dmo, cts_dmo[0][0], cts_dmo[0][1])
+          / volume_220_dmo, k=1, s=0)
+    new_x = np.concatenate([[bins_dmo[0]], bins_mean_dmo, [bins_dmo[-1]]])
+    plt.plot(new_x, aaa(new_x),
+             '--', marker='', ms=20, lw=3,
+             color='dimgray', alpha=0.7, label='Fragile fit')
+
+    aaa = UnivariateSpline(
+        x=bins_mean_hydro,
+        y=funct_ale(bins_mean_hydro, cts_hydro[0][0], cts_hydro[0][1])
+          / volume_220_hydro, k=1, s=0)
+    new_x = np.concatenate([[bins_hydro[0]], bins_mean_hydro, [bins_hydro[-1]]])
+    plt.plot(new_x, aaa(new_x),
+             '--', marker='', ms=20, color='limegreen', alpha=1, lw=3)
+
+    aaa = UnivariateSpline(
+        x=bins_mean_dmo,
+        y=np.log10(funct_ale(1., cts_dmo[0][0], cts_dmo[0][1])
+          / volume_220_dmo), k=1, s=0)
+    new_x = np.concatenate([[bins_dmo[0]], bins_mean_dmo, [bins_dmo[-1]]])
+    plt.plot(new_x, 10**aaa(new_x),
+             marker='', ms=10, lw=3,
+             color='dimgray', alpha=0.7, linestyle='dotted',
+             label='Resilient fit')
+
+    aaa = UnivariateSpline(
+        x=bins_mean_hydro,
+        y=np.log10(funct_ale(1., cts_hydro[0][0], cts_hydro[0][1])
+          / volume_220_hydro), k=1, s=0)
+    new_x = np.concatenate(
+        [[bins_hydro[0]], bins_mean_hydro, [bins_hydro[-1]]])
+    plt.plot(new_x, 10**aaa(new_x),
+             marker='', linestyle='dotted', ms=10, color='limegreen',
+             alpha=1, lw=3)
+    # print(cts_dmo, cts_hydro)
+
+
+    plt.axvline(8.5 / 220., linestyle='-.', alpha=1, color='Sandybrown', lw=3)
+    # plt.annotate('Earth', (0.05, 0.130), color='Saddlebrown', rotation=0.,
+    #              fontsize=20, zorder=10)
+    plt.annotate(r'$\oplus$', (0.05, 1.47e-3), color='chocolate',
+                 rotation=0., weight='bold',
+                 fontsize=20, zorder=10)
+
+    # plt.axvline(data_release_dmo[0, 2] / data_release_dmo[0, 5],
+    #             alpha=0.5, color='k', linestyle='-',
+    #             lw=3, label='Last subhalo')
+    # plt.axvline(data_release_hydro[0, 2] / data_release_hydro[0, 5],
+    #             alpha=0.5, color='limegreen',
+    #             linestyle='-', lw=3)
+
+    # plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{\mathrm{Unit\,\,volume}}$',
+    #            size=24)
+    plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{Volume}$'
+               r' $\left[\mathrm{kpc}^{-3}\right]$',
+               size=24)
+    plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
+
+    legend_elements = [Line2D([0], [0], marker='o', color='w',
+                              markerfacecolor='k', markersize=8),
+                       Line2D([0], [0], marker='o', color='w',
+                              markerfacecolor='limegreen', markersize=8)]
+    legend1 = plt.legend(handles, ['DMO', 'MHD'], loc=1,
+                         bbox_to_anchor=(0.995, 0.67),
+                         fontsize=20)
+    leg = plt.legend(framealpha=1, loc=1)
+    plt.gca().add_artist(legend1)
+
+    # plt.xscale('log')
+    plt.yscale('log')
+    plt.xlim(0., 1.)
+
+    # plt.ylim(0, 60)
+
+    plt.savefig('outputs/srd_compar_den'+ str(aa) + '.png',
+                bbox_inches='tight')
+    plt.savefig('outputs/srd_compar_den'+ str(aa) + '.pdf',
+                bbox_inches='tight')
+
+# plt.close('all')
+alpha_dmo = np.array(alpha_dmo)
+beta_dmo = np.array(beta_dmo)
+alpha_hydro = np.array(alpha_hydro)
+beta_hydro = np.array(beta_hydro)
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
-plt.subplots_adjust(wspace=0.27)
-plt.subplot(121)
+plt.suptitle(r'$y = b \cdot e^{a / Dgc}$')
+ax1.errorbar(vv_array, alpha_dmo[:, 0], yerr=alpha_dmo[:, 1], c='k',
+             ls='',
+             ms=15, marker='.', markeredgewidth=2,
+             capsize=5
+             )
+ax1.errorbar(vv_array, alpha_hydro[:, 0], yerr=alpha_hydro[:, 1], c='g',
+             ls='',
+             ms=15, marker='.', markeredgewidth=2,
+             capsize=5
+             )
 
-v_cut = [8.]  #
-# v_cut = np.linspace(1., 8., num=10)
+ax1.axhline(-0.15, alpha=0.5, zorder=0, color='k')
+ax1.axhline(-0.27, alpha=0.5, zorder=0, color='g')
 
-xxx = np.linspace(0., 1., num=200)
+ax2.errorbar(vv_array, beta_dmo[:, 0], yerr=beta_dmo[:, 1], c='k',
+             ls='',
+             ms=15, marker='.', markeredgewidth=2,
+             capsize=5
+             )
+ax2.errorbar(vv_array, beta_hydro[:, 0], yerr=beta_hydro[:, 1], c='g',
+             ls='',
+             ms=15, marker='.', markeredgewidth=2,
+             capsize=5
+             )
 
-for ni, ii in enumerate(v_cut):
-    print('v_cut: ', ii, ni)
-    release_dmo_over = data_release_dmo[data_release_dmo[:, 1] >= ii, :]
-    release_hydro_over = data_release_hydro[data_release_hydro[:, 1] >= ii, :]
+ax1.set_ylabel('a')
+ax2.set_ylabel('b')
 
-    minnDgc = np.argmin(data_release_dmo[:, 2])
+ax1.set_xlabel(r'$V_{\mathrm{max}}$ [km s$^{-1}$]')
+ax2.set_xlabel(r'$V_{\mathrm{max}}$ [km s$^{-1}$]')
 
-    bins_dmo = np.linspace(
-        data_release_dmo[minnDgc, 2] / data_release_dmo[minnDgc, 5],
-        1., num=num_bins)
-    bins_mean_dmo = (bins_dmo[:-1] + bins_dmo[1:]) / 2.
-    volume_dmo = 4 / 3 * np.pi * (bins_dmo[1:] ** 3 - bins_dmo[:-1] ** 3)
-    srd_dmo_over_release, std_dmo_num = (np.array(encontrar_SRD_sinVol(
-        release_dmo_over, bins_dmo))
-        # / len(release_dmo_over)
-    )
-
-    print('dmo')
-    srddensity_dmo_over_release, std_dmo_den = (encontrar_SRD(
-        release_dmo_over, bins_dmo))
-
-    bins_hydro = np.linspace(
-        data_release_hydro[minnDgc, 2] / data_release_hydro[minnDgc, 5],
-        1., num=num_bins)
-    bins_mean_hydro = (bins_hydro[:-1] + bins_hydro[1:]) / 2.
-    volume_hydro = 4 / 3 * np.pi * (bins_hydro[1:] ** 3 - bins_hydro[:-1] ** 3)
-    srd_hydro_over_release, std_hydro_num = (np.array(encontrar_SRD_sinVol(
-        release_hydro_over, bins_hydro))
-        # / len(release_hydro_over)
-    )
-
-    print('\nhydro')
-    srddensity_hydro_over_release, std_hydro_den = (encontrar_SRD(
-        release_hydro_over, bins_hydro))
-
-    ax1.errorbar(bins_mean_dmo, srd_dmo_over_release,
-                 yerr=std_dmo_num,
-                 ls='',
-                 c='k',
-                 ms=15, marker='.', markeredgewidth=2,
-                 alpha=1, zorder=15,
-                 label='Data',
-                 capsize=5
-                 # label=ii
-                 )
-
-    ax1.errorbar(bins_mean_hydro, srd_hydro_over_release,
-                 yerr=std_hydro_num,
-                 ls='',
-                 c='g',
-                 ms=15, marker='.', markeredgewidth=2,
-                 alpha=1, zorder=15,
-                 capsize=5)
-
-    ax2.errorbar(bins_mean_dmo, srddensity_dmo_over_release,
-                 yerr=std_dmo_den,
-                 ls='',
-                 color='k',
-                 ms=15, marker='.', markeredgewidth=2,
-                 alpha=1, zorder=15,
-                 label='Data',
-                 capsize=5
-                 # label=ii
-                 )
-
-    ax2.errorbar(bins_mean_hydro, srddensity_hydro_over_release,
-                 yerr=std_hydro_den,
-                 ls='',
-                 color='g',
-                 ms=15, marker='.',  # markeredgewidth=3,
-                 alpha=1, zorder=15,
-                 capthick=2.,
-                 capsize=5)
-
-
-def funct_ale(Dgc, a, b):
-    return b * np.exp(a / Dgc)
-
-
-# --------------
-print('Release')
-cts_dmo = opt.curve_fit(funct_ale, xdata=bins_mean_dmo,
-                        ydata=srd_dmo_over_release,
-                        sigma=std_dmo_num,
-                        p0=[-0.5, 200])
-print('Funct Ale: ', cts_dmo[0])
-print(np.diag(cts_dmo[1]) ** 0.5)
-
-cts_hydro = opt.curve_fit(funct_ale, xdata=bins_mean_hydro,
-                          ydata=srd_hydro_over_release,
-                          sigma=std_hydro_num,
-                          p0=[0, 200])
-print('Funct Ale: ', cts_hydro[0])
-print(np.diag(cts_hydro[1]) ** 0.5)
-
-plt.plot(xxx, funct_ale(xxx, cts_dmo[0][0], cts_dmo[0][1]),
-         'dimgray', linestyle='--', lw=3, alpha=0.7,
-         label='Fragile fit', zorder=5)
-plt.plot(xxx, funct_ale(xxx, cts_hydro[0][0], cts_hydro[0][1]),
-         'limegreen', linestyle='--', lw=3, zorder=5)
-
-plt.plot(xxx, np.ones(len(xxx))
-         * funct_ale(1., cts_dmo[0][0], cts_dmo[0][1]),
-         'dimgray', linestyle='dotted', lw=4, alpha=0.7,
-         label='Resilient fit', zorder=5)
-plt.plot(xxx, np.ones(len(xxx))
-         * funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]),
-         'limegreen', linestyle='dotted', lw=4, zorder=5)
-print('resilient values: ',
-      funct_ale(1., cts_dmo[0][0], cts_dmo[0][1]),
-      funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]))
-
-print('resilient errors: ',
-      funct_ale(1., cts_dmo[0][0], cts_dmo[0][1]),
-      funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]))
-
-# ----------------
-plt.axvline(8.5 / 220., linestyle='-.', alpha=1, color='Sandybrown', lw=3)
-# plt.annotate('Earth', (0.05, 0.130), color='Saddlebrown', rotation=0.,
-#              fontsize=20, zorder=10)
-plt.annotate('Earth', (0.05, 35),  color='chocolate',
-             rotation=0., weight='bold',
-             fontsize=20, zorder=10)
-
-# plt.axvline(data_release_dmo[0, 2] / data_release_dmo[0, 5],
-#             alpha=0.5, color='k', linestyle='-',
-#             lw=3, label='Last subhalo')
-# plt.axvline(data_release_hydro[0, 2] / data_release_hydro[0, 5],
-#             alpha=0.5, color='limegreen',
-#             linestyle='-', lw=3)
-
-# plt.ylabel(r'$N(D_\mathrm{GC}) \, / \, N_\mathrm{Total}$')
-plt.ylabel(r'$N(D_\mathrm{GC})$')
-plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
-# plt.xlabel(r'D$_\mathrm{GC}$ [kpc]', size=24)
-
-plt.xscale('linear')
-plt.yscale('log')
-
-plt.xlim(0, 1.)
-# plt.ylim(1e-3, 2e-1)
-plt.ylim(0.1, 50)
-
-# plt.legend(framealpha=1, fontsize=10, loc=4)
-handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
-           mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)
-           )
-
-legend_colors = plt.legend(handles=handles, loc=5,
-                           # bbox_to_anchor=(0.13, 0.2),
-                           fontsize=20)
-
-legend11 = plt.legend(loc=4, framealpha=1)
-
-ax1.add_artist(legend11)
-ax1.add_artist(legend_colors)
-plt.savefig('outputs/srd_compar_lin_after.png', bbox_inches='tight')
-plt.savefig('outputs/srd_compar_lin_after.pdf', bbox_inches='tight')
-# plt.show()
-# -------------------------------------------------------------------------
-print('Density figure')
-
-# plt.figure(figsize=(10, 8))
-plt.subplot(122)
-
-
-mean_r_dmo = sum([
-    i * sum(data_release_dmo[:, 5] == i)
-    for i in np.unique(data_release_dmo[:, 5])]) / len(data_release_dmo)
-
-mean_r_hyd = sum([
-    i * sum(data_release_hydro[:, 5] == i)
-    for i in np.unique(data_release_hydro[:, 5])]) / len(data_release_hydro)
-
-print(mean_r_dmo, mean_r_hyd)
-
-volume_220_dmo = volume_dmo * mean_r_dmo ** 3.
-volume_220_hydro = volume_hydro * mean_r_hyd ** 3.
-
-# print((bins[:-1] - bins[1:]))
-# print(cts_hydro[0][1] / volume / (cts_dmo[0][1] / volume))
-
-plt.plot(bins_mean_dmo, funct_ale(bins_mean_dmo, cts_dmo[0][0], cts_dmo[0][1])
-         / volume_220_dmo
-         # / len(release_dmo_over)
-         ,
-         '--', marker='', ms=20, lw=3,
-         color='dimgray', alpha=0.7, label='Fragile fit')
-plt.plot(bins_mean_hydro,
-         funct_ale(bins_mean_hydro, cts_hydro[0][0], cts_hydro[0][1])
-         / volume_220_hydro
-         # / len(release_hydro_over)
-         ,
-         '--', marker='', ms=20, color='limegreen', alpha=1, lw=3)
-
-plt.plot(bins_mean_dmo, funct_ale(1., cts_dmo[0][0], cts_dmo[0][1])
-         / volume_220_dmo
-         # / len(release_dmo_over)
-         ,  # * (bins[1:] - bins[
-         # :-1])*1e3,
-         marker='', ms=10, lw=3,
-         color='dimgray', alpha=0.7, linestyle='dotted', label='Resilient fit')
-plt.plot(bins_mean_hydro,
-         funct_ale(1., cts_hydro[0][0], cts_hydro[0][1])
-         / volume_220_hydro
-         # / len(release_hydro_over)
-         ,
-         marker='', linestyle='dotted', ms=10, color='limegreen',
-         alpha=1, lw=3)
-# print(cts_dmo, cts_hydro)
-
-
-plt.axvline(8.5 / 220., linestyle='-.', alpha=1, color='Sandybrown', lw=3)
-# plt.annotate('Earth', (0.05, 0.130), color='Saddlebrown', rotation=0.,
-#              fontsize=20, zorder=10)
-plt.annotate('Earth', (0.05, 6.5e-4), color='chocolate',
-             rotation=0., weight='bold',
-             fontsize=20, zorder=10)
-
-# plt.axvline(data_release_dmo[0, 2] / data_release_dmo[0, 5],
-#             alpha=0.5, color='k', linestyle='-',
-#             lw=3, label='Last subhalo')
-# plt.axvline(data_release_hydro[0, 2] / data_release_hydro[0, 5],
-#             alpha=0.5, color='limegreen',
-#             linestyle='-', lw=3)
-
-# plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{\mathrm{Unit\,\,volume}}$',
-#            size=24)
-plt.ylabel(r'$\frac{N(D_\mathrm{GC})}{Volume}$'
-           r' $\left[\mathrm{kpc}^{-3}\right]$',
-           size=24)
-plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
-
-legend_elements = [Line2D([0], [0], marker='o', color='w',
-                          markerfacecolor='k', markersize=8),
-                   Line2D([0], [0], marker='o', color='w',
-                          markerfacecolor='limegreen', markersize=8)]
-legend1 = plt.legend(handles, ['DMO', 'Hydro'], loc=1,
-                     bbox_to_anchor=(0.995, 0.67),
-                     fontsize=20)
-leg = plt.legend(framealpha=1, loc=1)
-plt.gca().add_artist(legend1)
-
-# plt.xscale('log')
-plt.yscale('log')
-plt.xlim(0., 1.)
-
-# plt.ylim(0, 60)
-
-plt.savefig('outputs/srd_compar_den.png', bbox_inches='tight')
-plt.savefig('outputs/srd_compar_den.pdf', bbox_inches='tight')
 plt.show()

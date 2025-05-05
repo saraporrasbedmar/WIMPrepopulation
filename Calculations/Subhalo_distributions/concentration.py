@@ -31,6 +31,12 @@ data_release_dmo = np.loadtxt(
 data_release_hydro = np.loadtxt(
     '../Data_subhalo_simulations/hydro_table.txt', skiprows=3)
 
+
+# data_release_dmo = np.loadtxt(
+#     '../Data_subhalo_simulations/data_dmo_level4.txt')
+# data_release_hydro = np.loadtxt(
+#     '../Data_subhalo_simulations/data_hydro_level4.txt')
+
 data_release_dmo = data_release_dmo[
                    data_release_dmo[:, 0] > 0.184, :]
 data_release_hydro = data_release_hydro[
@@ -510,16 +516,61 @@ n_dmo, bins_dmo, _ = plt.hist(
     # bins=np.geomspace(0.01, 10, num=40),
     # density=True,
     color='grey', alpha=0.7,
-    bins=20
+    bins=20,
+         histtype='stepfilled'
 )
 n_hydro, bins_hydro, _ = plt.hist(
     data_hydro,
     # bins=np.geomspace(0.01, 10, num=40),
     # density=True,
     color='limegreen', alpha=0.7,
-    bins=20
+    bins=20,
+         histtype='stepfilled'
 )
+def loglikelihood(xx, mean, sigma10, aa):
+    return aa / (xx * sigma10) * np.exp(
+        -(np.log10(xx) - mean) ** 2. / 2. / sigma10 ** 2.)
 
+
+def gaussian(xx, mean, sigma10, aa):
+    return aa * np.exp(
+        -(xx - mean) ** 2. / 2. / sigma10 ** 2.)
+
+def C_Scatt(C, Cv_sigma):
+    scatter = np.random.normal(loc=0, scale=Cv_sigma, size=C.size)
+    return C * 10 ** scatter
+
+
+aaa = curve_fit(f=gaussian,
+    xdata=(bins_dmo[1:] + bins_dmo[:-1])/2.,  ydata=n_dmo,
+    p0=(5.,0.5, 200))[0]
+print(aaa)
+
+# xxx_plot = np.linspace(3, 6, num=100)
+# plt.plot(xxx_plot, gaussian(xxx_plot, aaa[0], aaa[1], aaa[2]), c='k')
+# vv_random = np.geomspace(1, 100, num=5000)
+# cc_random = np.log10(C_Scatt(Moline21_normalization(
+#     vv_random, c0_array_dmo[0]),
+#             Cv_sigma=aaa[1]))
+# ax0.scatter(vv_random, cc_random, s=20)
+# n_dmo_new, bins_dmo_new, _ = ax1.hist(cc_random - np.log10(
+#     Moline21_normalization(
+#     vv_random, c0_array_dmo[0])),
+#          hatch='//', color='b', alpha=0.2, bins=20)
+# aaa = curve_fit(f=gaussian,
+#     xdata=(bins_dmo_new[1:] + bins_dmo_new[:-1])/2.,  ydata=n_dmo_new,
+#     p0=(0.,0.5, 200))[0]
+# print('new one', aaa)
+#
+# aaa = curve_fit(f=gaussian,
+#     xdata=(bins_hydro[1:] + bins_hydro[:-1])/2.,  ydata=n_hydro,
+#     p0=(5.,0.5, 200))[0]
+# print(aaa)
+
+
+
+# xxx_plot = np.linspace(3, 6, num=500)
+# plt.plot(xxx_plot, gaussian(xxx_plot, aaa[0], aaa[1], aaa[2]), c='green')
 # plt.axvline(np.median(data_dmo)
 #             , color='k', ls='--', lw=4, label='Median')
 # plt.axvline(np.percentile(data_dmo, 75)
@@ -570,7 +621,7 @@ ax0.text(x=10.5, y=5.6, s='resolution\nlimit', c='k', fontsize=20)
 leg1 = plt.legend(loc=2, bbox_to_anchor=(0.05, 0.98), fontsize=20)
 
 handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
-           mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)
+           mpatches.Patch(color='limegreen', label='MHD', alpha=0.8)
            )
 legend_colors = plt.legend(handles=handles, loc=1,
                            # bbox_to_anchor=(0.5, 0.04),
@@ -643,7 +694,7 @@ plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
 plt.figure(fig0)
 plt.subplot(121)
 handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
-           mpatches.Patch(color='limegreen', label='Hydro', alpha=0.8)
+           mpatches.Patch(color='limegreen', label='MHD', alpha=0.8)
            )
 legend_colors = plt.legend(handles=handles, loc=8,
                            bbox_to_anchor=(0.45, 0.04),
@@ -661,6 +712,7 @@ ax0.add_artist(legend_colors)
 ax0.add_artist(leg1)
 
 ax0.set_xlim(0.5, 121)
+ax1.set_xlim(3., 6.)
 
 plt.savefig('outputs/cv_hist.pdf', bbox_inches='tight')
 plt.savefig('outputs/cv_hist.png', bbox_inches='tight')

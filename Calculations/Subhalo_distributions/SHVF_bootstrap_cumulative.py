@@ -45,6 +45,7 @@ data_release_hydro = data_release_hydro[
 
 data_release_dmo = data_release_dmo[np.argsort(data_release_dmo[:, 1])]
 data_release_hydro = data_release_hydro[np.argsort(data_release_hydro[:, 1])]
+unique_halos = np.unique(data_release_hydro[:, 6])
 
 x_cumul = np.geomspace(1., 120., num=25)
 x_mean = (x_cumul[:-1] + x_cumul[1:]) / 2.
@@ -64,13 +65,39 @@ def calcular_dNdV(Vmax):
 
     for radius in range(len(Vmax_cumul)):
         aa = Vmax >= x_cumul[radius]
-        bb = Vmax < x_cumul[radius + 1]
+        # bb = Vmax < x_cumul[radius + 1]
 
-        Vmax_cumul[radius] = sum(aa * bb) / (
-                x_cumul[radius + 1] - x_cumul[radius])
-        num_cumul[radius] = sum(aa * bb)
+        Vmax_cumul[radius] = sum(aa)  #\
+                             # / (
+                # x_cumul[radius + 1] - x_cumul[radius])
+        num_cumul[radius] = sum(aa)
 
     return Vmax_cumul/6., num_cumul
+
+# def calcular_dNdV_individual(data):
+#     Vmax_cumul = np.zeros(len(x_cumul) - 1)
+#     std_fin = np.zeros(len(x_cumul) - 1)
+#
+#     for delta in range(len(x_mean)):
+#         aaa = []
+#         for halo in unique_halos:
+#             data_ind = data[data[:, 6] == halo, :]
+#             interval = ((data_ind[:, 1] /  >= bins[delta])
+#                         * (data_ind[:, 2] / data_ind[:, 5] <= bins[delta + 1]))
+#             aaa.append(sum(interval))
+#
+#         # if delta == 0 or delta == 1 or delta == 2:
+#         #     print(aaa, np.nanmean(aaa), np.std(aaa))
+#         Vmax_cumul.append(np.nanmean(aaa))
+#         std_fin.append(np.std(aaa))
+#     return np.array(Vmax_cumul), np.array(std_fin)
+#     ###
+#     Vmax = Vmax[:, 1]
+#
+#     for radius in range(len(Vmax_cumul)):
+#         aa = Vmax >= x_cumul[radius]
+#         Vmax_cumul[radius] = sum(aa)
+
 
 Vmax_cumul_dmo_original, num_dmo = calcular_dNdV(data_release_dmo)
 vmax_dmo = x_cumul[np.argwhere(num_dmo >= 10.)[-1][0] + 1]
@@ -85,8 +112,8 @@ def powerlaw(vv_array, V0, alpha):
 def linear_funct(vv_array, V0, alpha):
     return V0 + vv_array * alpha
 
-repop = True
-# repop = False
+# repop = True
+repop = False
 
 if repop:
 
@@ -112,7 +139,7 @@ if repop:
 
 
         # Fit to the power laws
-        limit_inf_dmo = rng.random(1) * 2. + 7.4
+        limit_inf_dmo = rng.random(1) * 2. + 6.
         # limit_inf_dmo = rng.random(1) * 2. + 8.
         limit_sup_dmo = -rng.random(1) * 20. + vmax_dmo
 
@@ -357,7 +384,7 @@ plt.plot(xxx, 10 ** np.nanmean(bb_hyd) * xxx ** np.nanmean(mm_hyd),
                  color='#00FF00', alpha=1,
                  linestyle='-', lw=2.5)
 
-
+plt.plot(xxx, 0.038*(xxx/201.)**-2.97, c='b', label='VLII paper Ale')
 
 plt.xscale('log')
 plt.yscale('log')
@@ -385,7 +412,7 @@ legend22 = plt.legend(loc=3, framealpha=1)
 ax.add_artist(legend11)
 ax.add_artist(legend22)
 
-plt.ylim(0.005, 3000)
+plt.ylim(0.005, 1e4)
 
 ax.set_xticks([1., 10, 100],
               labels=('1', '10', '100')
