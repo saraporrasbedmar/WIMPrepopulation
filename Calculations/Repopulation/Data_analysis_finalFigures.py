@@ -2483,7 +2483,8 @@ aa.set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', '100'))
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 c2 = plt.colorbar(sm, ax=axes,
                   extend='both', spacing='proportional',
-                  location='bottom')
+                  # location='bottom'
+                  )
 c2.set_label(r'$V_\mathrm{max}$ [km s$^{-1}$]', fontsize=20)
 yticks = c2.get_ticks()
 print(yticks)

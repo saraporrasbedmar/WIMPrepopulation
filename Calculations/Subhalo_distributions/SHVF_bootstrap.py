@@ -24,7 +24,7 @@ plt.rc('figure', titlesize=all_size)
 plt.rc('xtick', top=True, direction='in')
 plt.rc('ytick', right=True, direction='in')
 plt.rc('xtick.major', size=10, width=2, top=False, pad=10)
-plt.rc('ytick.major', size=10, width=2, right=True, pad=10)
+plt.rc('ytick.major', size=10, width=2, right=True, pad=5)
 plt.rc('xtick.minor', size=7, width=1.5, top=False)
 plt.rc('ytick.minor', size=7, width=1.5)
 
@@ -47,7 +47,8 @@ data_release_dmo = data_release_dmo[np.argsort(data_release_dmo[:, 1])]
 data_release_hydro = data_release_hydro[np.argsort(data_release_hydro[:, 1])]
 
 x_cumul = np.geomspace(1., 120., num=25)
-x_mean = (x_cumul[:-1] + x_cumul[1:]) / 2.
+# x_mean = (x_cumul[:-1] + x_cumul[1:]) / 2.
+x_mean = np.sqrt(x_cumul[:-1] * x_cumul[1:])
 
 rng = np.random.default_rng()
 
@@ -69,6 +70,7 @@ def calcular_dNdV(Vmax):
         Vmax_cumul[radius] = sum(aa * bb) / (
                 x_cumul[radius + 1] - x_cumul[radius])
         num_cumul[radius] = sum(aa * bb)
+        print(x_cumul[radius + 1] - x_cumul[radius])
 
     return Vmax_cumul/6., num_cumul
 
@@ -85,8 +87,8 @@ def powerlaw(vv_array, V0, alpha):
 def linear_funct(vv_array, V0, alpha):
     return V0 + vv_array * alpha
 
-repop = True
-# repop = False
+# repop = True
+repop = False
 
 if repop:
 
@@ -316,7 +318,8 @@ plt.savefig('outputs/SHVF_bootstrap_hist.png', bbox_inches='tight')
 
 
 # -- SHVF figure -----------------------------------------------
-fig, ax = plt.subplots(figsize=(8, 7))
+# fig, ax = plt.subplots(figsize=(8, 7))
+fig, ax = plt.subplots(figsize=(6., 6.))  # icrc
 
 Vmax_cumul_dmo_release, num_dmo = calcular_dNdV(data_release_dmo)
 Vmax_cumul_hydro_release, num_hydro = calcular_dNdV(data_release_hydro)
@@ -324,20 +327,24 @@ Vmax_cumul_hydro_release, num_hydro = calcular_dNdV(data_release_hydro)
 
 plt.plot(x_mean, Vmax_cumul_dmo_release,
          linestyle='', ms=10, marker='.', markeredgewidth=2,
-         color='k', zorder=10, label='Auriga data')
-plt.axvline(7.4,
-            color='k',
-            alpha=1,
-            linewidth=2.5, ls=':',
-            zorder=0, label='Completion velocity')
+         color='k', zorder=10, label='Auriga')
+
 xxx = np.geomspace(1., 120, num=100)
 plt.plot(xxx, 10 ** np.nanmean(bb_dmo) * xxx ** np.nanmean(mm_dmo),
                  color='dimgray', alpha=1,
                  linestyle='--', lw=2.5)
+
 xxx = np.geomspace(7.4, 120, num=100)
 plt.plot(xxx, 10 ** np.nanmean(bb_dmo) * xxx ** np.nanmean(mm_dmo),
                  color='dimgray', alpha=1,
-                 linestyle='-', lw=2.5, label='Power-law fit')
+                 linestyle='-', lw=2.5,
+         label='Best fit, Eq.(5)')
+
+plt.axvline(7.4,
+            color='k',
+            alpha=1,
+            linewidth=2.5, ls=':',
+            zorder=0, label=r'$V_\mathrm{cut}$')
 
 plt.plot(x_mean, Vmax_cumul_hydro_release,
          linestyle='',
@@ -363,7 +370,10 @@ plt.xscale('log')
 plt.yscale('log')
 
 plt.xlabel(r'$V_{\mathrm{max}}$ [km s$^{-1}$]', size=24)
-plt.ylabel(r'$\frac{dN(V_{\mathrm{max}})}{dV_{\mathrm{max}}}$', size=27)
+plt.ylabel(r'$\frac{dN(V_{\mathrm{max}})}{dV_{\mathrm{max}}}$',
+           size=27, labelpad=-5)
+# plt.ylabel(r'$dN(V_{\mathrm{max}})/dV_{\mathrm{max}}$',
+#            size=27)
 
 
 # plt.axvline(54, linestyle='-.', color='r', alpha=0.5,
@@ -386,6 +396,7 @@ ax.add_artist(legend11)
 ax.add_artist(legend22)
 
 plt.ylim(0.005, 3000)
+plt.xlim(0.8, 130)
 
 ax.set_xticks([1., 10, 100],
               labels=('1', '10', '100')

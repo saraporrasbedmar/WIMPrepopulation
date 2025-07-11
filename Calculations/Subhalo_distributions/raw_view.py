@@ -29,10 +29,10 @@ data_release_dmo = np.loadtxt(
 data_release_hydro = np.loadtxt(
     '../Data_subhalo_simulations/hydro_table.txt', skiprows=3)
 
-data_release_dmo = np.loadtxt(
-    '../Data_subhalo_simulations/data_dmo_level4.txt')
-data_release_hydro = np.loadtxt(
-    '../Data_subhalo_simulations/data_hydro_level4.txt')
+# data_release_dmo = np.loadtxt(
+#     '../Data_subhalo_simulations/data_dmo_level4.txt')
+# data_release_hydro = np.loadtxt(
+#     '../Data_subhalo_simulations/data_hydro_level4.txt')
 print(np.min(data_release_dmo[:, 1]), np.min(data_release_hydro[:, 1]))
 print(np.shape(data_release_dmo), np.shape(data_release_hydro))
 

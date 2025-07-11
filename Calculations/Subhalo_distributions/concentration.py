@@ -381,7 +381,7 @@ ax0.errorbar(vv_medians_dmo_release, cv_dmo_median_release,
              markeredgewidth=2.,
              color='k', ls='', lw=10, zorder=11,
              elinewidth=2,
-             capsize=5, label='Data', capthick=2.)
+             capsize=5, label='Auriga', capthick=2.)
 
 ax0.errorbar(vv_medians_hydro_release,
              cv_hydro_median_release,
@@ -463,7 +463,7 @@ for i in range(len(vcut_array)):
     fit_range = xx_plot > 10
     ax0.plot(xx_plot[fit_range],
              Moline21_norm_log(xx_plot, c0=c0_array_dmo[i])[fit_range],
-             zorder=10, label='Fit to data',
+             zorder=10, label='Our fit, Eq.(10)',
              color='k', alpha=0.7, lw=3, ls='-')
 
     ax0.plot(xx_plot[~fit_range],
@@ -546,45 +546,6 @@ aaa = curve_fit(f=gaussian,
     p0=(5.,0.5, 200))[0]
 print(aaa)
 
-# xxx_plot = np.linspace(3, 6, num=100)
-# plt.plot(xxx_plot, gaussian(xxx_plot, aaa[0], aaa[1], aaa[2]), c='k')
-# vv_random = np.geomspace(1, 100, num=5000)
-# cc_random = np.log10(C_Scatt(Moline21_normalization(
-#     vv_random, c0_array_dmo[0]),
-#             Cv_sigma=aaa[1]))
-# ax0.scatter(vv_random, cc_random, s=20)
-# n_dmo_new, bins_dmo_new, _ = ax1.hist(cc_random - np.log10(
-#     Moline21_normalization(
-#     vv_random, c0_array_dmo[0])),
-#          hatch='//', color='b', alpha=0.2, bins=20)
-# aaa = curve_fit(f=gaussian,
-#     xdata=(bins_dmo_new[1:] + bins_dmo_new[:-1])/2.,  ydata=n_dmo_new,
-#     p0=(0.,0.5, 200))[0]
-# print('new one', aaa)
-#
-# aaa = curve_fit(f=gaussian,
-#     xdata=(bins_hydro[1:] + bins_hydro[:-1])/2.,  ydata=n_hydro,
-#     p0=(5.,0.5, 200))[0]
-# print(aaa)
-
-
-
-# xxx_plot = np.linspace(3, 6, num=500)
-# plt.plot(xxx_plot, gaussian(xxx_plot, aaa[0], aaa[1], aaa[2]), c='green')
-# plt.axvline(np.median(data_dmo)
-#             , color='k', ls='--', lw=4, label='Median')
-# plt.axvline(np.percentile(data_dmo, 75)
-#             , color='k', ls='--', lw=2, label='25 and 75 perc')
-# plt.axvline(np.percentile(data_dmo, 25)
-#             , color='k', ls='--', lw=2, zorder=200)
-#
-# plt.axvline(np.median(data_hydro)
-#             , color='lime', ls='--', lw=4)
-# plt.axvline(np.percentile(data_hydro, 75)
-#             , color='lime', ls='--', lw=2)
-# plt.axvline(np.percentile(data_hydro, 25)
-#             , color='lime', ls='--', lw=2)
-
 plt.axvline(np.mean(data_dmo)
             , color='k', ls='-', lw=3, label='Mean')
 plt.axvline(np.mean(data_dmo) + np.std(data_dmo)
@@ -603,22 +564,24 @@ plt.axvline(np.mean(data_hydro) - np.std(data_hydro)
 print(np.mean(data_hydro), np.std(data_hydro),
       10**np.mean(data_hydro) * (10**np.std(data_hydro) - 1.))
 
+xx_plotaa = np.geomspace(0.5, 120)
 ax0.fill_between(
-    xx_plot,
-    Moline21_norm_log(xx_plot, c0=c0_array_dmo) - np.std(data_dmo),
-    Moline21_norm_log(xx_plot, c0=c0_array_dmo) + np.std(data_dmo),
+    xx_plotaa,
+    Moline21_norm_log(xx_plotaa, c0=c0_array_dmo) - np.std(data_dmo),
+    Moline21_norm_log(xx_plotaa, c0=c0_array_dmo) + np.std(data_dmo),
     color='grey', alpha=0.5, label=r'$1\sigma$', zorder=0)
 
 ax0.fill_between(
-    xx_plot,
-    Moline21_norm_log(xx_plot, c0=c0_array_hydro) - np.std(data_hydro),
-    Moline21_norm_log(xx_plot, c0=c0_array_hydro) + np.std(data_hydro),
+    xx_plotaa,
+    Moline21_norm_log(xx_plotaa, c0=c0_array_hydro) - np.std(data_hydro),
+    Moline21_norm_log(xx_plotaa, c0=c0_array_hydro) + np.std(data_hydro),
     color='#48DC48', alpha=0.3, zorder=0)
 
 # ax0.text(x=10.5, y=5.65, s=r'$V_\mathrm{Cut}$', c='k')
-ax0.text(x=10.5, y=5.6, s='resolution\nlimit', c='k', fontsize=20)
+ax0.text(x=10.5, y=5.7, s=r'$V_\mathrm{res}$', c='k', fontsize=22)
 
-leg1 = plt.legend(loc=2, bbox_to_anchor=(0.05, 0.98), fontsize=20)
+leg1 = plt.legend(loc=2, #bbox_to_anchor=(0.05, 0.98),
+                  fontsize=20)
 
 handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
            mpatches.Patch(color='limegreen', label='MHD', alpha=0.8)
@@ -634,10 +597,10 @@ plt.xlabel(r'log$_{10}(\mathrm{c}_V)$')
 #          fontsize=22)
 # plt.text(x=3.23, y=130, s=r'$V_\mathrm{max} > V_\mathrm{Cut}$',
 #          fontsize=22)
-plt.text(x=3.17, y=130, s=r'$V_\mathrm{max} > $',
+plt.text(x=3.17, y=130, s=r'$V_\mathrm{max} > V_\mathrm{res}$',
          fontsize=22)
-plt.text(x=3.85, y=126., s='resolution\nlimit', c='k', fontsize=20,
-         ha='center')
+# plt.text(x=3.85, y=126., s='resolution\nlimit', c='k', fontsize=20,
+#          ha='center')
 
 '''
 plt.subplot(122)
@@ -697,11 +660,11 @@ handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
            mpatches.Patch(color='limegreen', label='MHD', alpha=0.8)
            )
 legend_colors = plt.legend(handles=handles, loc=8,
-                           bbox_to_anchor=(0.45, 0.04),
+                           bbox_to_anchor=(0.4, 0.04),
                            fontsize=20, framealpha=1)
 
 handles, labels = ax0.get_legend_handles_labels()
-handles[3] = handles[3][0]
+# handles[3] = handles[3][0]
 print(labels)
 order = [3, 0, 2, 1]
 leg1 = plt.legend([handles[idx] for idx in order],
@@ -712,7 +675,13 @@ ax0.add_artist(legend_colors)
 ax0.add_artist(leg1)
 
 ax0.set_xlim(0.5, 121)
+ax0.set_ylim(1.7, 6)
 ax1.set_xlim(3., 6.)
+
+ax0.set_xticks([1., 10, 100],
+              labels=('1', '10', '100')
+              )
+
 
 plt.savefig('outputs/cv_hist.pdf', bbox_inches='tight')
 plt.savefig('outputs/cv_hist.png', bbox_inches='tight')

@@ -386,6 +386,11 @@ plt.plot(xxx, 10 ** np.nanmean(bb_hyd) * xxx ** np.nanmean(mm_hyd),
 
 plt.plot(xxx, 0.038*(xxx/201.)**-2.97, c='b', label='VLII paper Ale')
 
+data_grand21_shvf = np.loadtxt(
+    '../Data_subhalo_simulations/grand21_level3_shvf.txt')
+plt.scatter(data_grand21_shvf[:, 0], data_grand21_shvf[:, 1],
+         )
+
 plt.xscale('log')
 plt.yscale('log')
 

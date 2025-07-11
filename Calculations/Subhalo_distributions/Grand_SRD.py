@@ -30,7 +30,7 @@ plt.rc('figure', titlesize=all_size)
 plt.rc('xtick', top=True, direction='in')
 plt.rc('ytick', right=True, direction='in')
 plt.rc('xtick.major', size=10, width=2, top=True, pad=10)
-plt.rc('ytick.major', size=10, width=2, right=True, pad=10)
+plt.rc('ytick.major', size=10, width=2, right=True, pad=5)
 plt.rc('xtick.minor', size=7, width=1.5)
 plt.rc('ytick.minor', size=7, width=1.5)
 
@@ -282,7 +282,7 @@ for aa in vv_array:
                      c='k',
                      ms=15, marker='.', markeredgewidth=2,
                      alpha=1, zorder=15,
-                     label='Data',
+                     label='Auriga',
                      capsize=5
                      # label=ii
                      )
@@ -301,7 +301,7 @@ for aa in vv_array:
                      color='k',
                      ms=15, marker='.', markeredgewidth=2,
                      alpha=1, zorder=15,
-                     label='Data',
+                     label='Auriga',
                      capsize=5
                      # label=ii
                      )
@@ -342,14 +342,14 @@ for aa in vv_array:
 
     plt.plot(xxx, funct_ale(xxx, cts_dmo[0][0], cts_dmo[0][1]),
              'dimgray', linestyle='--', lw=3, alpha=0.7,
-             label='Fragile fit', zorder=5)
+             label='Fragile', zorder=5)
     plt.plot(xxx, funct_ale(xxx, cts_hydro[0][0], cts_hydro[0][1]),
              'limegreen', linestyle='--', lw=3, zorder=5)
 
     plt.plot(xxx, np.ones(len(xxx))
              * funct_ale(1., cts_dmo[0][0], cts_dmo[0][1]),
              'dimgray', linestyle='dotted', lw=4, alpha=0.7,
-             label='Resilient fit', zorder=5)
+             label='Resilient', zorder=5)
     plt.plot(xxx, np.ones(len(xxx))
              * funct_ale(1., cts_hydro[0][0], cts_hydro[0][1]),
              'limegreen', linestyle='dotted', lw=4, zorder=5)
@@ -365,7 +365,7 @@ for aa in vv_array:
     plt.axvline(8.5 / 220., linestyle='-.', alpha=1, color='Sandybrown', lw=3)
     # plt.annotate('Earth', (0.05, 0.130), color='Saddlebrown', rotation=0.,
     #              fontsize=20, zorder=10)
-    plt.annotate(r'$\oplus$', (0.05, 39),  color='chocolate',
+    plt.annotate(r'$R_\oplus$', (0.05, 39),  color='chocolate',
                  rotation=0., weight='bold',
                  fontsize=20, zorder=10)
 
@@ -378,7 +378,7 @@ for aa in vv_array:
 
     # plt.ylabel(r'$N(D_\mathrm{GC}) \, / \, N_\mathrm{Total}$')
     plt.ylabel(r'$N(D_\mathrm{GC})$')
-    plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=26)
+    plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=30)
     # plt.xlabel(r'D$_\mathrm{GC}$ [kpc]', size=24)
 
     plt.xscale('linear')
@@ -393,11 +393,12 @@ for aa in vv_array:
                mpatches.Patch(color='limegreen', label='MHD', alpha=0.8)
                )
 
-    legend_colors = plt.legend(handles=handles, loc=1,
-                               bbox_to_anchor=(0.99, 0.5),
+    legend_colors = plt.legend(handles=handles, loc=8,
+                               # bbox_to_anchor=(0.99, 0.26),
                                fontsize=20)
 
-    legend11 = plt.legend(loc=4, framealpha=1)
+    legend11 = plt.legend(loc=4, bbox_to_anchor=(0.99, 0.01),
+                          framealpha=1)
 
     ax1.add_artist(legend11)
     ax1.add_artist(legend_colors)
@@ -434,7 +435,7 @@ for aa in vv_array:
     new_x = np.concatenate([[bins_dmo[0]], bins_mean_dmo, [bins_dmo[-1]]])
     plt.plot(new_x, aaa(new_x),
              '--', marker='', ms=20, lw=3,
-             color='dimgray', alpha=0.7, label='Fragile fit')
+             color='dimgray', alpha=0.7, label='Fragile')
 
     aaa = UnivariateSpline(
         x=bins_mean_hydro,
@@ -452,7 +453,7 @@ for aa in vv_array:
     plt.plot(new_x, 10**aaa(new_x),
              marker='', ms=10, lw=3,
              color='dimgray', alpha=0.7, linestyle='dotted',
-             label='Resilient fit')
+             label='Resilient')
 
     aaa = UnivariateSpline(
         x=bins_mean_hydro,
@@ -469,7 +470,7 @@ for aa in vv_array:
     plt.axvline(8.5 / 220., linestyle='-.', alpha=1, color='Sandybrown', lw=3)
     # plt.annotate('Earth', (0.05, 0.130), color='Saddlebrown', rotation=0.,
     #              fontsize=20, zorder=10)
-    plt.annotate(r'$\oplus$', (0.05, 1.47e-3), color='chocolate',
+    plt.annotate(r'$R_\oplus$', (0.05, 1.47e-3), color='chocolate',
                  rotation=0., weight='bold',
                  fontsize=20, zorder=10)
 
@@ -491,10 +492,11 @@ for aa in vv_array:
                               markerfacecolor='k', markersize=8),
                        Line2D([0], [0], marker='o', color='w',
                               markerfacecolor='limegreen', markersize=8)]
-    legend1 = plt.legend(handles, ['DMO', 'MHD'], loc=1,
-                         bbox_to_anchor=(0.995, 0.67),
+    legend1 = plt.legend(handles, ['DMO', 'MHD'], loc=7,
+                         # bbox_to_anchor=(0.99, 0.74),
                          fontsize=20)
-    leg = plt.legend(framealpha=1, loc=1)
+    leg = plt.legend(framealpha=1, loc=1,
+                     bbox_to_anchor=(0.99, 0.99))
     plt.gca().add_artist(legend1)
 
     # plt.xscale('log')
@@ -547,4 +549,4 @@ ax2.set_ylabel('b')
 ax1.set_xlabel(r'$V_{\mathrm{max}}$ [km s$^{-1}$]')
 ax2.set_xlabel(r'$V_{\mathrm{max}}$ [km s$^{-1}$]')
 
-plt.show()
+# plt.show()
