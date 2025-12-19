@@ -9,6 +9,8 @@ import time
 
 from scipy.optimize import newton
 from scipy.interpolate import UnivariateSpline
+
+
 #
 # from numba import njit, jit
 # from numba.core.errors import NumbaDeprecationWarning, \
@@ -179,13 +181,13 @@ def read_config_file(ConfigFile):
     return parsed_yaml
 
 
-#@njit()
+# @njit()
 def ff(c):
     return np.log(1. + c) - c / (1. + c)
 
 
 # SHVF --------------------------------------
-#@njit
+# @njit
 def SHVF_Grand2012(V,
                    sim_type, res_string,
                    cosmo_G,
@@ -228,7 +230,7 @@ def SHVF_Grand2012(V,
             * V ** SHVF_mm)
 
 
-#@njit
+# @njit
 def SHVF_Grand2012_int(V1, V2,
                        SHVF_bb,
                        SHVF_mm):
@@ -251,7 +253,7 @@ def SHVF_Grand2012_int(V1, V2,
 
 
 # ----------- CONCENTRATIONS ----------------------
-#@njit
+# @njit
 def Cv_Grand2012(Vmax, Cv_bb, Cv_mm):
     """
     Calculate the concentration of a subhalo population.
@@ -284,7 +286,7 @@ def Moline21_normalization(V, c0):
                                 c2=0.2749, c3=-0.028)
 
 
-#@jit
+# @jit
 def C_Scatt(C, Cv_sigma):
     """
     Create a scatter in the concentration parameter of the
@@ -304,7 +306,7 @@ def C_Scatt(C, Cv_sigma):
 
 
 # ----------- J-FACTORS --------------------------------
-#@njit
+# @njit
 def J_abs_vel(V, D_earth, C,
               cosmo_G,
               cosmo_H_0,
@@ -339,7 +341,7 @@ def J_abs_vel(V, D_earth, C,
     return yy
 
 
-#@njit
+# @njit
 def Js_vel(V, D_earth, C,
            cosmo_G,
            cosmo_H_0, change_units=True):
@@ -367,7 +369,7 @@ def Js_vel(V, D_earth, C,
                      change_units=change_units) * 7 / 8
 
 
-#@njit
+# @njit
 def J03_vel(V, D_earth, C,
             cosmo_G,
             cosmo_H_0, change_units=True):
@@ -399,7 +401,7 @@ def J03_vel(V, D_earth, C,
 
 
 # ----------- REPOPULATION ----------------
-#@njit
+# @njit
 def R_max(V, C,
           cosmo_H_0):
     """
@@ -416,7 +418,7 @@ def R_max(V, C,
     return V / cosmo_H_0 * np.sqrt(2. / C) * 1e3
 
 
-#@njit
+# @njit
 def R_s(V, C, cosmo_H_0):
     """
     Calculate scale radius (R_s) of a subhalo following the NFW
@@ -433,7 +435,7 @@ def R_s(V, C, cosmo_H_0):
     return R_max(V, C, cosmo_H_0) / 2.163
 
 
-#@jit(forceobj=True)
+# @jit(forceobj=True)
 def R_t(V, C, DistGC,
         cosmo_H_0, cosmo_G,
         host_rho_0, host_r_s,
@@ -469,7 +471,7 @@ def R_t(V, C, DistGC,
             * DistGC)
 
 
-#@njit
+# @njit
 def Mhost_encapsulated(R, host_rho_0, host_r_s):
     """
     Host mass encapsulated up to a certain radius. We are following
@@ -487,7 +489,7 @@ def Mhost_encapsulated(R, host_rho_0, host_r_s):
                - R / (host_r_s + R)))
 
 
-#@jit()
+# @jit()
 def N_subs_resilient(DistGC, args):
     # xx = np.log10(np.array(args[0]))
     # yy = np.log10(np.array(args[1]))
@@ -497,7 +499,7 @@ def N_subs_resilient(DistGC, args):
     return args * np.ones_like(DistGC)
 
 
-#@njit()
+# @njit()
 def N_subs_fragile(DistGC, args):
     # xx = np.array(args[0])
     # yy = np.log10(np.array(args[1]))
@@ -514,7 +516,7 @@ def N_subs_fragile(DistGC, args):
     return args[1] * np.exp(args[0] / DistGC * args[2])
 
 
-#@jit(forceobj=True)
+# @jit(forceobj=True)
 def Nr_Ntot_visible(
         DistGC,
         sim_type, res_string,
@@ -554,7 +556,7 @@ def Nr_Ntot_visible(
     #         * (DistGC >= srd_last_sub))
 
 
-#@jit(forceobj=True)
+# @jit(forceobj=True)
 def Nr_Ntot_repop(
         DistGC,
         sim_type, res_string,
@@ -595,14 +597,14 @@ def Nr_Ntot_repop(
     """
     if res_string == 'resilient':
         return (N_subs_resilient(DistGC, srd_args_repop))
-                # * (DistGC >= srd_last_sub))
+        # * (DistGC >= srd_last_sub))
 
     else:
         return (N_subs_fragile(DistGC, srd_args_repop)
                 * (DistGC >= srd_last_sub))
 
 
-#@njit
+# @njit
 def mass_from_Vmax(Vmax, Rmax, c200,
                    cosmo_G):
     """
@@ -622,7 +624,7 @@ def mass_from_Vmax(Vmax, Rmax, c200,
             * ff(c200) / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)))
 
 
-#@njit
+# @njit
 def def_Cv(c200, Cv):
     """
     Formula to find c200 knowing Cv to input in the Newton
@@ -641,7 +643,7 @@ def def_Cv(c200, Cv):
             / ff(c200) * (c200 / 2.163) ** 3 - Cv)
 
 
-#@njit
+# @njit
 def newton2(fun, x0, args):
     """
     Newton method to find the root of a function.
@@ -663,7 +665,7 @@ def newton2(fun, x0, args):
     return x
 
 
-#@jit()
+# @jit()
 def C200_from_Cv_array(Cv):
     """
     Function to find c200 knowing Cv.
@@ -681,7 +683,7 @@ def C200_from_Cv_array(Cv):
     return np.array(C200_med)
 
 
-#@njit()
+# @njit()
 def C200_from_Cv_float(Cv):
     """
     Function to find c200 knowing Cv.
@@ -697,7 +699,7 @@ def C200_from_Cv_float(Cv):
     return C200_med
 
 
-#@jit(forceobj=True)
+# @jit(forceobj=True)
 def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
                          sim_type, res_string,
                          cosmo_G,
@@ -785,7 +787,7 @@ def montecarlo_algorithm(x_min, x_max, pdf, num_subhalos,
     return spline(np.random.random(num_subhalos))
 
 
-#@jit(forceobj=True)
+# @jit(forceobj=True)
 def calculate_characteristics_subhalo(
         Vmax, Distgc,
         sim_type, res_string,
@@ -817,8 +819,11 @@ def calculate_characteristics_subhalo(
         srd_last_sub):
     # Random distribution of subhalos around the celestial sphere
     num_subs = len(Vmax)
-    repop_theta = 2 * math.pi * np.random.random(num_subs)
-    repop_phi = math.pi * np.random.random(num_subs)
+    # repop_theta = 2 * math.pi * np.random.random(num_subs)
+    # repop_phi = math.pi * np.random.random(num_subs)
+    repop_theta = np.random.uniform(0, 2 * np.pi, num_subs)  # el que va a 2pi
+    repop_phi = np.arccos(
+        2 * np.random.uniform(0, 1, num_subs) - 1)  # el que va a pi
 
     # Positions of the subhalos
     repop_Xs = (Distgc * np.cos(repop_theta)
@@ -858,12 +863,12 @@ def calculate_characteristics_subhalo(
                             Vmax, repop_Theta, repop_C))
 
 
-#@njit
+# @njit
 def xx(mmax, mmin, SHVF_bb, SHVF_mm, root):
     return SHVF_Grand2012_int(mmin, mmax, SHVF_bb, SHVF_mm) - root
 
 
-#@njit
+# @njit
 def xxx(mmax, params):
     return (SHVF_Grand2012_int(params[0], mmax,
                                params[1], params[2]) - params[3])
@@ -903,8 +908,17 @@ def interior_loop_singularbrightest(
     # We have 6 variables we want to save in our files,
     # change this number if necessary
     # (output from 'calculate_characteristics_subhalo()')
-    brightest_Js = np.zeros((2 * repop_num_brightest, 6))
-    brightest_J03 = np.zeros((2 * repop_num_brightest, 6))
+    full_repop = True
+    if not full_repop:
+        brightest_Js = np.zeros((2 * repop_num_brightest, 6))
+        brightest_J03 = np.zeros((2 * repop_num_brightest, 6))
+    else:
+        # In case some of the specific ranges gives a number bigger
+        # than the general Vmax range, allow for a few more slots
+        # (they get erased before shipping out)
+        brightest_Js = np.zeros((repop_num_brightest+5, 6))
+        brightest_J03 = np.zeros((repop_num_brightest+5, 6))
+        nn = 0
 
     # We calculate our subhalo population in bins to save memory
     m_min = SHVF_cts_RangeMin
@@ -924,17 +938,16 @@ def interior_loop_singularbrightest(
             new_mmin = m_min * repop_inc_factor
 
             if (SHVF_Grand2012_int(
-                m_max, np.minimum(
+                    m_max, np.minimum(
                         m_max * repop_inc_factor,
                         SHVF_cts_RangeMax),
-                SHVF_bb, SHVF_mm) < 1.) and (
+                    SHVF_bb, SHVF_mm) < 1.) and (
                     m_max < SHVF_cts_RangeMax
             ):
                 m_max = SHVF_cts_RangeMax
                 new_mmin = SHVF_cts_RangeMax
 
         min_distGC = 1e-3
-
 
         repop_Vmax = montecarlo_algorithm(
             m_min, m_max,
@@ -1002,42 +1015,6 @@ def interior_loop_singularbrightest(
             srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
 
-        # repop_DistGC_upper = montecarlo_algorithm(
-        #     min_distGC, host_R_vir,
-        #     Nr_Ntot_visible,
-        #     num_subhalos=SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm),
-        #     sim_type=sim_type,
-        #     res_string=res_string,
-        #
-        #     cosmo_G=cosmo_G,
-        #     cosmo_H_0=cosmo_H_0,
-        #     cosmo_rho_crit=cosmo_rho_crit,
-        #
-        #     host_R_vir=host_R_vir,
-        #     host_rho_0=host_rho_0,
-        #     host_r_s=host_r_s,
-        #
-        #     pathname=pathname,
-        #     repop_its=repop_its,
-        #     repop_print_freq=repop_print_freq,
-        #     repop_inc_factor=repop_inc_factor,
-        #
-        #     SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-        #     SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-        #     SHVF_bb=SHVF_bb,
-        #     SHVF_mm=SHVF_mm,
-        #
-        #     Cv_bb=Cv_bb,
-        #     Cv_mm=Cv_mm,
-        #     Cv_sigma=Cv_sigma,
-        #
-        #     srd_args_repop=srd_args_repop,
-        #     srd_args_visible=srd_args_visible,
-        #     srd_last_sub=srd_last_sub)
-        #
-        # repop_DistGC = (repop_DistGC_lower * (repop_Vmax <= Vmax_completion)
-        #                 + repop_DistGC_upper * (repop_Vmax > Vmax_completion))
-
         new_data = calculate_characteristics_subhalo(
             repop_Vmax, repop_DistGC,
             sim_type=sim_type,
@@ -1070,29 +1047,12 @@ def interior_loop_singularbrightest(
             srd_args_visible=srd_args_visible,
             srd_last_sub=srd_last_sub)
 
-        # if sum(new_data[:, 0]) < 1.:
-        #     progress = open(pathname + '/progress_' +
-        #                     sim_type + '_'
-        #                     + str(res_string)
-        #                     + '_results.txt', 'a')
-        #     progress.write(str(m_min) + '   '
-        #                    + str(m_max) + '  Js\n')
-        #     progress.close()
-        #
-        # if sum(new_data[:, 1]) < 1.:
-        #     progress = open(pathname + '/progress_' +
-        #                     sim_type + '_'
-        #                     + str(res_string)
-        #                     + '_results.txt', 'a')
-        #     progress.write(str(m_min) + '   '
-        #                    + str(m_max) + '  J03\n')
-        #     progress.close()
+        if not full_repop:
+            for new_sub in range(repop_num_brightest):
 
-        for new_sub in range(repop_num_brightest):
+                bright_Js = np.argmax(new_data[:, 0])
 
-            bright_Js = np.argmax(new_data[:, 0])
-
-            while (R_t(new_data[bright_Js, 4],
+                while (R_t(new_data[bright_Js, 4],
                            new_data[bright_Js, 6],
                            new_data[bright_Js, 2],
                            cosmo_H_0, cosmo_G,
@@ -1100,22 +1060,24 @@ def interior_loop_singularbrightest(
                            singular_case=True)
                        < R_s(new_data[bright_Js, 4],
                              new_data[bright_Js, 6],
-                             cosmo_H_0))\
-                    and (new_data[bright_Js, 0] > 1.):
+                             cosmo_H_0)) \
+                        and (new_data[bright_Js, 0] > 1.):
+                    print('broken Js')
+                    print(new_data[bright_Js, :])
 
-                new_data[bright_Js, 0] = 0.
-                bright_Js = np.argmax(new_data[:, 0])
+                    new_data[bright_Js, 0] = 0.
+                    bright_Js = np.argmax(new_data[:, 0])
 
-            brightest_Js[
+                brightest_Js[
                 repop_num_brightest + new_sub, :] = new_data[
                     bright_Js, [0, 2, 3, 4, 5, 6]]
-            new_data[bright_Js, 0] = 0.
+                new_data[bright_Js, 0] = 0.
 
-        for new_sub in range(repop_num_brightest):
+            for new_sub in range(repop_num_brightest):
 
-            bright_J03 = np.argmax(new_data[:, 1])
+                bright_J03 = np.argmax(new_data[:, 1])
 
-            while (R_t(new_data[bright_J03, 4],
+                while (R_t(new_data[bright_J03, 4],
                            new_data[bright_J03, 6],
                            new_data[bright_J03, 2],
                            cosmo_H_0, cosmo_G,
@@ -1123,112 +1085,143 @@ def interior_loop_singularbrightest(
                            singular_case=True)
                        < R_s(new_data[bright_J03, 4],
                              new_data[bright_J03, 6],
-                             cosmo_H_0))\
-                    and (new_data[bright_J03, 1] > 1.):
+                             cosmo_H_0)) \
+                        and (new_data[bright_J03, 1] > 1.):
+                    print('broken J03')
+                    print(new_data[bright_J03, :])
 
+                    new_data[bright_J03, 1] = 0.
+                    bright_J03 = np.argmax(new_data[:, 1])
+
+                brightest_J03[
+                repop_num_brightest + new_sub, :] = new_data[bright_J03, 1:]
                 new_data[bright_J03, 1] = 0.
-                bright_J03 = np.argmax(new_data[:, 1])
 
-            brightest_J03[
-            repop_num_brightest + new_sub, :] = new_data[bright_J03, 1:]
-            new_data[bright_J03, 1] = 0.
+            # if sum(new_data[:, 0]) > 1.:
+            #     for new_sub in range(repop_num_brightest):
+            #
+            #         while sum(new_data[:, 0]) > 1.:
+            #
+            #             bright_Js = np.argmax(new_data[:, 0])
+            #
+            #             brightest_Js[
+            #             repop_num_brightest + new_sub, :] = new_data[
+            #                 bright_Js, [0, 2, 3, 4, 5, 6]]
+            #             new_data[bright_Js, 0] = 0.
 
-        # if sum(new_data[:, 0]) > 1.:
-        #     for new_sub in range(repop_num_brightest):
-        #
-        #         while sum(new_data[:, 0]) > 1.:
-        #
-        #             bright_Js = np.argmax(new_data[:, 0])
-        #
-        #             brightest_Js[
-        #             repop_num_brightest + new_sub, :] = new_data[
-        #                 bright_Js, [0, 2, 3, 4, 5, 6]]
-        #             new_data[bright_Js, 0] = 0.
+            # while (R_t(new_data[bright_Js, 4],
+            #                new_data[bright_Js, 6],
+            #                new_data[bright_Js, 2],
+            #                cosmo_H_0, cosmo_G,
+            #                host_rho_0, host_r_s,
+            #                singular_case=True)
+            #            < R_s(new_data[bright_Js, 4],
+            #                  new_data[bright_Js, 6],
+            #                  cosmo_H_0)):
+            #         print('subhalo broken (Js)')
+            # progress = open(pathname + '/progress_' +
+            #                 sim_type + '_'
+            #                 + str(res_string)
+            #                 + '_results.txt', 'a')
+            # progress.write('subhalo broken (Js)'
+            #                + str(new_data[bright_Js, :])
+            #                + str(R_t(new_data[bright_Js, 4],
+            #                          new_data[bright_Js, 6],
+            #                          new_data[bright_Js, 2],
+            #                          cosmo_H_0, cosmo_G,
+            #                          host_rho_0, host_r_s,
+            #                          singular_case=True))
+            #                + '  '
+            #                + str(R_s(new_data[bright_Js, 4],
+            #                          new_data[bright_Js, 6],
+            #                          cosmo_H_0))
+            #                + '\n')
+            # progress.write(bright_Js + '\n')
+            # new_data[bright_Js, 0] = 0.
+            # bright_Js = np.argmax(new_data[:, 0])
+            # progress.write('Js  ' + bright_Js + '\n')
+            # progress.close()
 
-                # while (R_t(new_data[bright_Js, 4],
-                #                new_data[bright_Js, 6],
-                #                new_data[bright_Js, 2],
-                #                cosmo_H_0, cosmo_G,
-                #                host_rho_0, host_r_s,
-                #                singular_case=True)
-                #            < R_s(new_data[bright_Js, 4],
-                #                  new_data[bright_Js, 6],
-                #                  cosmo_H_0)):
-                #         print('subhalo broken (Js)')
-                        # progress = open(pathname + '/progress_' +
-                        #                 sim_type + '_'
-                        #                 + str(res_string)
-                        #                 + '_results.txt', 'a')
-                        # progress.write('subhalo broken (Js)'
-                        #                + str(new_data[bright_Js, :])
-                        #                + str(R_t(new_data[bright_Js, 4],
-                        #                          new_data[bright_Js, 6],
-                        #                          new_data[bright_Js, 2],
-                        #                          cosmo_H_0, cosmo_G,
-                        #                          host_rho_0, host_r_s,
-                        #                          singular_case=True))
-                        #                + '  '
-                        #                + str(R_s(new_data[bright_Js, 4],
-                        #                          new_data[bright_Js, 6],
-                        #                          cosmo_H_0))
-                        #                + '\n')
-                        # progress.write(bright_Js + '\n')
-                        # new_data[bright_Js, 0] = 0.
-                        # bright_Js = np.argmax(new_data[:, 0])
-                        # progress.write('Js  ' + bright_Js + '\n')
-                        # progress.close()
+            # if sum(new_data[:, 1]) > 1.:
+            #     for new_sub in range(repop_num_brightest):
+            #         while sum(new_data[:, 1]) > 1.:
+            #             bright_J03 = np.argmax(new_data[:, 1])
+            #
+            #             brightest_J03[
+            #             repop_num_brightest + new_sub, :] = new_data[bright_J03, 1:]
+            #             new_data[bright_J03, 1] = 0.
 
+            # while (R_t(new_data[bright_J03, 4],
+            #            new_data[bright_J03, 6],
+            #            new_data[bright_J03, 2],
+            #            cosmo_H_0, cosmo_G,
+            #            host_rho_0, host_r_s,
+            #            singular_case=True)
+            #        < R_s(new_data[bright_J03, 4],
+            #              new_data[bright_J03, 6],
+            #              cosmo_H_0)):
+            #     print('subhalo broken (J03)')
+            # progress = open(pathname + '/progress_' +
+            #                 sim_type + '_'
+            #                 + str(res_string)
+            #                 + '_results.txt', 'a')
+            # progress.write('subhalo broken (J03)'
+            #                + str(new_data[bright_J03, :])
+            #                + str(R_t(new_data[bright_J03, 4],
+            #                          new_data[bright_J03, 6],
+            #                          new_data[bright_J03, 2],
+            #                          cosmo_H_0, cosmo_G,
+            #                          host_rho_0, host_r_s,
+            #                          singular_case=True))
+            #                + '  '
+            #                + str(R_s(new_data[bright_J03, 4],
+            #                          new_data[bright_J03, 6],
+            #                          cosmo_H_0))
+            #                + '\n')
+            # progress.write(bright_J03 + '\n')
+            # new_data[bright_J03, 1] = 0.
+            # bright_J03 = np.argmax(new_data[:, 1])
+            # progress.write('J03 ' + bright_J03 + '\n')
+            # progress.close()
 
-        # if sum(new_data[:, 1]) > 1.:
-        #     for new_sub in range(repop_num_brightest):
-        #         while sum(new_data[:, 1]) > 1.:
-        #             bright_J03 = np.argmax(new_data[:, 1])
-        #
-        #             brightest_J03[
-        #             repop_num_brightest + new_sub, :] = new_data[bright_J03, 1:]
-        #             new_data[bright_J03, 1] = 0.
+            # We take the brightest subhalos only
+            brightest_Js = brightest_Js[np.argsort(brightest_Js[:, 0])[::-1],
+                           :]
+            brightest_J03 = brightest_J03[
+                            np.argsort(brightest_J03[:, 0])[::-1], :]
 
-                # while (R_t(new_data[bright_J03, 4],
-                #            new_data[bright_J03, 6],
-                #            new_data[bright_J03, 2],
-                #            cosmo_H_0, cosmo_G,
-                #            host_rho_0, host_r_s,
-                #            singular_case=True)
-                #        < R_s(new_data[bright_J03, 4],
-                #              new_data[bright_J03, 6],
-                #              cosmo_H_0)):
-                #     print('subhalo broken (J03)')
-                    # progress = open(pathname + '/progress_' +
-                    #                 sim_type + '_'
-                    #                 + str(res_string)
-                    #                 + '_results.txt', 'a')
-                    # progress.write('subhalo broken (J03)'
-                    #                + str(new_data[bright_J03, :])
-                    #                + str(R_t(new_data[bright_J03, 4],
-                    #                          new_data[bright_J03, 6],
-                    #                          new_data[bright_J03, 2],
-                    #                          cosmo_H_0, cosmo_G,
-                    #                          host_rho_0, host_r_s,
-                    #                          singular_case=True))
-                    #                + '  '
-                    #                + str(R_s(new_data[bright_J03, 4],
-                    #                          new_data[bright_J03, 6],
-                    #                          cosmo_H_0))
-                    #                + '\n')
-                    # progress.write(bright_J03 + '\n')
-                    # new_data[bright_J03, 1] = 0.
-                    # bright_J03 = np.argmax(new_data[:, 1])
-                    # progress.write('J03 ' + bright_J03 + '\n')
-                    # progress.close()
-
-        # We take the brightest subhalos only
-        brightest_Js = brightest_Js[np.argsort(brightest_Js[:, 0])[::-1], :]
-        brightest_J03 = brightest_J03[np.argsort(brightest_J03[:, 0])[::-1], :]
+        else:
+            aa = SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm)
+            brightest_Js[nn:nn + aa, :] = new_data[:, [0, 2, 3, 4, 5, 6]]
+            brightest_J03[nn:nn + aa, :] = new_data[:, 1:]
+            nn += aa
 
         m_min = new_mmin
 
-    return (brightest_Js[:repop_num_brightest, :],
-            brightest_J03[:repop_num_brightest, :])
+    if not full_repop:
+        return (brightest_Js[:repop_num_brightest, :],
+                brightest_J03[:repop_num_brightest, :])
+
+    else:
+        brightest_Js[:, 0] *= (
+                R_t(brightest_Js[:, 3], brightest_Js[:, 5],
+                    brightest_Js[:, 1],
+                    cosmo_H_0, cosmo_G,
+                    host_rho_0, host_r_s,
+                    singular_case=False)
+                > R_s(brightest_Js[:, 3],
+                      brightest_Js[:, 5],
+                      cosmo_H_0))
+
+        brightest_Js = brightest_Js[:nn, :]
+        brightest_J03 = brightest_J03[:nn, :]
+
+        brightest_Js = brightest_Js[
+                       np.argsort(brightest_Js[:, 0])[::-1], :]
+        brightest_J03 = brightest_J03[
+                        np.argsort(brightest_J03[:, 0])[::-1], :]
+
+        return (brightest_Js, brightest_J03)
 
 
 # #@jit(forceobj=True)
@@ -1530,37 +1523,37 @@ def repopulation_bin_by_bin(num_subs_max, sim_type, res_string,
 
         # if repop_num_brightest < 100:
         brightest_Js, brightest_J03 = interior_loop_singularbrightest(
-                num_subs_max=num_subs_max,
-                sim_type=sim_type,
-                res_string=res_string,
+            num_subs_max=num_subs_max,
+            sim_type=sim_type,
+            res_string=res_string,
 
-                cosmo_G=cosmo_G,
-                cosmo_H_0=cosmo_H_0,
-                cosmo_rho_crit=cosmo_rho_crit,
+            cosmo_G=cosmo_G,
+            cosmo_H_0=cosmo_H_0,
+            cosmo_rho_crit=cosmo_rho_crit,
 
-                host_R_vir=host_R_vir,
-                host_rho_0=host_rho_0,
-                host_r_s=host_r_s,
+            host_R_vir=host_R_vir,
+            host_rho_0=host_rho_0,
+            host_r_s=host_r_s,
 
-                pathname=pathname,
-                repop_its=repop_its,
-                repop_print_freq=repop_print_freq,
-                repop_inc_factor=repop_inc_factor,
-                repop_num_brightest=repop_num_brightest,
+            pathname=pathname,
+            repop_its=repop_its,
+            repop_print_freq=repop_print_freq,
+            repop_inc_factor=repop_inc_factor,
+            repop_num_brightest=repop_num_brightest,
 
-                SHVF_cts_RangeMin=SHVF_cts_RangeMin,
-                SHVF_cts_RangeMax=SHVF_cts_RangeMax,
-                SHVF_bb=SHVF_bb,
-                SHVF_mm=SHVF_mm,
+            SHVF_cts_RangeMin=SHVF_cts_RangeMin,
+            SHVF_cts_RangeMax=SHVF_cts_RangeMax,
+            SHVF_bb=SHVF_bb,
+            SHVF_mm=SHVF_mm,
 
-                Cv_bb=Cv_bb,
-                Cv_mm=Cv_mm,
-                Cv_sigma=Cv_sigma,
+            Cv_bb=Cv_bb,
+            Cv_mm=Cv_mm,
+            Cv_sigma=Cv_sigma,
 
-                srd_args_repop=srd_args_repop,
-                srd_args_visible=srd_args_visible,
-                srd_last_sub=srd_last_sub,
-                Vmax_completion=Vmax_completion)
+            srd_args_repop=srd_args_repop,
+            srd_args_visible=srd_args_visible,
+            srd_last_sub=srd_last_sub,
+            Vmax_completion=Vmax_completion)
         # else:
         #     brightest_Js, brightest_J03 = interior_loop_manybrigthest(
         #         num_subs_max=num_subs_max,

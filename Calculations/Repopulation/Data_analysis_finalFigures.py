@@ -1,22 +1,14 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jun  7 10:02:09 2022
-
-@author: saraporras
-"""
 import os
 
 import matplotlib.transforms as trans
 import numpy as np
 import matplotlib.colorbar as colorbarr
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit, newton
 from matplotlib.lines import Line2D
 import matplotlib.cm as cm
 import matplotlib.colors as mcb
-import matplotlib.ticker as ticker
 import matplotlib.patches as mpatches
-from matplotlib.ticker import MaxNLocator, LogLocator
 
 import Calculations.Repopulation.attemp_at_functions2 as funct_repop
 
@@ -39,15 +31,23 @@ plt.rc('ytick.minor', size=4, width=1)
 to8 = True
 
 
+# path_name = ('/home/porrassa/Desktop/WIMPS_project/'
+#                  'Physnet_outputs_repops/2024/'
+#                  '/compiled_results_allRoche/'
+#                  'final_2024_8max'
+#                  )
+# path_name_res = ('/home/porrassa/Desktop/WIMPS_project/'
+#                      'Physnet_outputs_repops/2024/'
+#                      '/compiled_results_allRoche/'
+#                      'final_2024_8max')
+
 path_name = ('/home/porrassa/Desktop/WIMPS_project/'
-                 'Physnet_outputs_repops/2024/'
-                 '/compiled_results_allRoche/'
-                 'final_2024_8max'
+                 'Physnet_outputs_repops/2025'
+                 '/2025_to8_angles'
                  )
 path_name_res = ('/home/porrassa/Desktop/WIMPS_project/'
-                     'Physnet_outputs_repops/2024/'
-                     '/compiled_results_allRoche/'
-                     'final_2024_8max')
+                 'Physnet_outputs_repops/2025'
+                 '/2025_to8_angles')
 
 print(os.getcwd())
 print(os.listdir(path_name))
@@ -57,28 +57,86 @@ plot_frag = True
 
 end_str = '_to8'
 
-datos_Js_frag_hyd = np.loadtxt(path_name +
-                               '/Js_hydro_fragile_results.txt'
-                               )
-datos_Js_frag_dmo = np.loadtxt(path_name +
-                               '/Js_dmo_fragile_results.txt')
+final_size = (500, 100, 6)
 
-datos_J03_frag_hyd = np.loadtxt(path_name +
-                                '/J03_hydro_fragile_results.txt')
-datos_J03_frag_dmo = np.loadtxt(path_name +
-                                '/J03_dmo_fragile_results.txt'
-                                )
+datos_Js_resi_hyd = np.ones((1, 6))
+datos_Js_resi_dmo = np.ones((1, 6))
 
-datos_Js_resi_hyd = np.loadtxt(path_name +
-                               '/Js_hydro_resilient_results.txt')
-datos_Js_resi_dmo = np.loadtxt(path_name +
-                               '/Js_dmo_resilient_results.txt'
-                               )
+datos_J03_resi_hyd = np.ones((1, 6))
+datos_J03_resi_dmo = np.ones((1, 6))
 
-datos_J03_resi_hyd = np.loadtxt(path_name +
-                                '/J03_hydro_resilient_results.txt')
-datos_J03_resi_dmo = np.loadtxt(path_name +
-                                '/J03_dmo_resilient_results.txt')
+datos_Js_frag_hyd = np.ones((1, 6))
+datos_Js_frag_dmo = np.ones((1, 6))
+
+datos_J03_frag_hyd = np.ones((1, 6))
+datos_J03_frag_dmo = np.ones((1, 6))
+
+for i in range(1, 6, 1):
+    print(i, np.shape(datos_Js_resi_dmo),
+          np.shape(np.loadtxt(path_name_res + '/' + str(i) +
+                              '/Js_dmo_resilient_results.txt')))
+    datos_Js_resi_dmo = np.concatenate((
+        datos_Js_resi_dmo,
+        np.loadtxt(path_name_res + '/' + str(i) +
+                   '/Js_dmo_resilient_results.txt')))
+    datos_Js_resi_hyd = np.concatenate((
+        datos_Js_resi_hyd,
+        np.loadtxt(path_name_res + '/' + str(i) +
+                   '/Js_hydro_resilient_results.txt')))
+    datos_J03_resi_dmo = np.concatenate((
+        datos_J03_resi_dmo,
+        np.loadtxt(path_name_res + '/' + str(i) +
+                   '/J03_dmo_resilient_results.txt')))
+    datos_J03_resi_hyd = np.concatenate((
+        datos_J03_resi_hyd,
+        np.loadtxt(path_name_res + '/' + str(i) +
+                   '/J03_hydro_resilient_results.txt')))
+
+    datos_Js_frag_dmo = np.concatenate((datos_Js_frag_dmo,
+                                        np.loadtxt(path_name + '/' + str(i) +
+                                                   '/Js_dmo_fragile_results.txt')))
+    datos_Js_frag_hyd = np.concatenate((datos_Js_frag_hyd,
+                                        np.loadtxt(path_name + '/' + str(i) +
+                                                   '/Js_hydro_fragile_results.txt')))
+    datos_J03_frag_dmo = np.concatenate((datos_J03_frag_dmo,
+                                         np.loadtxt(path_name + '/' + str(i) +
+                                                    '/J03_dmo_fragile_results.txt')))
+    datos_J03_frag_hyd = np.concatenate((datos_J03_frag_hyd,
+                                         np.loadtxt(path_name + '/' + str(i) +
+                                                    '/J03_hydro_fragile_results.txt')))
+
+datos_Js_resi_hyd = datos_Js_resi_hyd[1:, :]
+datos_Js_resi_dmo = datos_Js_resi_dmo[1:, :]
+datos_J03_resi_hyd = datos_J03_resi_hyd[1:, :]
+datos_J03_resi_dmo = datos_J03_resi_dmo[1:, :]
+
+datos_Js_frag_hyd = datos_Js_frag_hyd[1:, :]
+datos_Js_frag_dmo = datos_Js_frag_dmo[1:, :]
+datos_J03_frag_hyd = datos_J03_frag_hyd[1:, :]
+datos_J03_frag_dmo = datos_J03_frag_dmo[1:, :]
+
+# datos_Js_frag_hyd = np.loadtxt(path_name +
+#                                '/Js_hydro_fragile_results.txt'
+#                                )
+# datos_Js_frag_dmo = np.loadtxt(path_name +
+#                                '/Js_dmo_fragile_results.txt')
+#
+# datos_J03_frag_hyd = np.loadtxt(path_name +
+#                                 '/J03_hydro_fragile_results.txt')
+# datos_J03_frag_dmo = np.loadtxt(path_name +
+#                                 '/J03_dmo_fragile_results.txt'
+#                                 )
+#
+# datos_Js_resi_hyd = np.loadtxt(path_name +
+#                                '/Js_hydro_resilient_results.txt')
+# datos_Js_resi_dmo = np.loadtxt(path_name +
+#                                '/Js_dmo_resilient_results.txt'
+#                                )
+#
+# datos_J03_resi_hyd = np.loadtxt(path_name +
+#                                 '/J03_hydro_resilient_results.txt')
+# datos_J03_resi_dmo = np.loadtxt(path_name +
+#                                 '/J03_dmo_resilient_results.txt')
 
 
 rr_ss = funct_repop.R_s(
@@ -148,7 +206,8 @@ J03_min95_2204 = 18.9208  # From digitalizing
 Js_min95_2204 = 19.4642  # From digitalizing
 
 path_name_res = path_name_res + '/figures'
-
+if not os.path.exists(path_name_res):
+    os.makedirs(path_name_res)
 
 
 def minnmaxxS(i):
@@ -200,6 +259,12 @@ darkgreen = (0.024, 0.278, 0.047)
 cmap = cm.viridis
 colormapp = 'viridis'
 
+def pow_law_old(x, j0, m):
+    return 10**j0 * x**m
+def pow_law(x, j0, m):
+    yy = j0 + m * np.log10(x)
+    return yy
+'''
 # ------------------------ Vmax ang size -----------------------------
 
 fig, axes = plt.subplots(nrows=2, ncols=2,  # sharey=True,  # sharey=True,
@@ -306,7 +371,7 @@ aa.set_yticks([0.1, 1, 10, 100], labels=[])
 
 aa = plt.subplot(2, 2, 3)
 aa.set_xticks([0.1, 1, 10], labels=('0.1', '1', ''))
-aa.set_yticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', ''))
+aa.set_yticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', '100'))
 
 aa = plt.subplot(2, 2, 4)
 aa.set_xticks([0.1, 1, 10], labels=('0.1', '1', '10'))
@@ -320,15 +385,18 @@ c2.ax.tick_params(axis='x', direction='out')
 c2.set_label(r'D$_\mathrm{Earth}$ [kpc]', fontsize=20)
 yticks = c2.get_ticks()
 # c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
-c2.set_ticks(np.log10([0.5, 1., 2, 5., 10., 30]),
-             labels=['0.5', '1', '2', '5', '10', '30'])
+c2.set_ticks(np.log10([0.5, 1., 2, 5., 10., 25]),
+             labels=['0.5', '1', '2', '5', '10', '25'])
 
 plt.savefig(path_name_res + '/VmaxAng' + end_str + '.png',
             bbox_inches='tight')
 plt.savefig(path_name_res + '/VmaxAng' + end_str + '.pdf',
             bbox_inches='tight')
+plt.show()
 
 # ----------------------- Ang size - J (z==Vmax) 2x4 -----------------
+
+xx_plot = np.geomspace(0.01, 100)
 
 fig, axes = plt.subplots(nrows=2, ncols=4, sharey=True,
                          figsize=(15, 6))
@@ -399,10 +467,22 @@ plt.scatter(datos_Js_frag_dmo[:, x_col],
             c='none', lw=1, marker='o',
             edgecolors=cmap(norm(np.log10(datos_Js_frag_dmo[:, z_col]))))
 
+# aaa, cov = curve_fit(pow_law,
+#                      xdata=datos_Js_frag_dmo[:, x_col],
+#                      ydata=datos_Js_frag_dmo[:, y_col],
+#                      p0=(18, 0.6)
+# )
+aaa, cov = curve_fit(pow_law,
+                     xdata=datos_Js_frag_dmo[:, x_col],
+                     ydata=np.log10(datos_Js_frag_dmo[:, y_col]),
+                     p0=(18, 0.6)
+)
+print('datos_Js_frag_dmo')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
 
-# plt.text(1., 1.15, r'J$_\mathrm{s}$', horizontalalignment='center',
-#          verticalalignment='bottom', transform=axes[0, 0].transAxes,
-#          size=22)
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
 
 
 plt.subplot(242)
@@ -419,6 +499,23 @@ plt.scatter(datos_Js_frag_hyd[:, x_col],
             c='none', lw=1, marker='o',
             edgecolors=cmap(norm(np.log10(datos_Js_frag_hyd[:, z_col]))))
 
+# aaa, cov = curve_fit(pow_law,
+#                      xdata=datos_Js_frag_hyd[:, x_col],
+#                      ydata=datos_Js_frag_hyd[:, y_col],
+#                      p0=(18, 0.6)
+# )
+aaa, cov = curve_fit(pow_law,
+                     xdata=datos_Js_frag_hyd[:, x_col],
+                     ydata=np.log10(datos_Js_frag_hyd[:, y_col]),
+                     p0=(18, 0.6)
+)
+print('datos_Js_frag_hyd')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
 plt.subplot(243)
 
 
@@ -427,7 +524,7 @@ plt.subplot(243)
 #          size=22)
 plt.title('DMO', size=20)
 
-plt.axvline(0.15, c='grey', alpha=0.5, zorder=0, ls=':')
+plt.axvline(0.15, c='grey', alpha=0.5, zorder=0, ls='-')
 
 plt.ylim(minns, maxxs)
 plt.xlim(minnx, maxxx)
@@ -440,6 +537,20 @@ plt.scatter(datos_J03_frag_dmo[:, x_col],
             c='none', lw=1, marker='o',
             edgecolors=cmap(norm(np.log10(datos_J03_frag_dmo[:, z_col]))))
 
+# aaa, cov = curve_fit(pow_law,
+#                      xdata=datos_J03_frag_dmo[:, x_col],
+#                      ydata=datos_J03_frag_dmo[:, y_col],
+#                      p0=(18, 0.6)
+# )
+aaa, cov = curve_fit(pow_law,
+                     xdata=datos_J03_frag_dmo[:, x_col],
+                     ydata=np.log10(datos_J03_frag_dmo[:, y_col]),
+                     p0=(18, 0.6)
+)
+print('datos_J03_frag_dmo')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
 plt.subplot(244)
 plt.title('MHD', size=20)
 plt.tick_params('y', labelleft=False)
@@ -448,12 +559,27 @@ plt.ylim(minns, maxxs)
 plt.xlim(minnx, maxxx)
 plt.xscale('log')
 
-plt.axvline(0.15, c='grey', alpha=0.5, zorder=0, ls=':')
+plt.axvline(0.15, c='grey', alpha=0.5, zorder=0, ls='-')
 
 plt.scatter(datos_J03_frag_hyd[:, x_col],
             np.log10(datos_J03_frag_hyd[:, y_col]),
             c='none', lw=1, marker='o',
             edgecolors=cmap(norm(np.log10(datos_J03_frag_hyd[:, z_col]))))
+
+# aaa, cov = curve_fit(pow_law,
+#                      xdata=datos_J03_frag_hyd[:, x_col],
+#                      ydata=datos_J03_frag_hyd[:, y_col],
+#                      p0=(18, 0.6)
+# )
+aaa, cov = curve_fit(pow_law,
+                     xdata=datos_J03_frag_hyd[:, x_col],
+                     ydata=np.log10(datos_J03_frag_hyd[:, y_col]),
+                     p0=(18, 0.6)
+)
+print('datos_J03_frag_hyd')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
 print('percentage of extended subhalos')
 print(sum(datos_J03_frag_hyd[:, x_col]<0.15), np.shape(datos_J03_frag_hyd[:, x_col]))
 plt.subplot(245)
@@ -471,6 +597,23 @@ plt.scatter(datos_Js_resi_dmo[:, x_col],
             marker='+', s=100, linewidths=1,
             cmap=colormapp, vmin=vminn, vmax=vmaxx)
 
+# aaa, cov = curve_fit(pow_law,
+#                      xdata=datos_Js_resi_dmo[:, x_col],
+#                      ydata=datos_Js_resi_dmo[:, y_col],
+#                      p0=(18, 0.6)
+# )
+aaa, cov = curve_fit(pow_law,
+                     xdata=datos_Js_resi_dmo[:, x_col],
+                     ydata=np.log10(datos_Js_resi_dmo[:, y_col]),
+                     p0=(18, 0.6)
+)
+print('datos_Js_resi_dmo')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
 plt.subplot(246)
 
 plt.tick_params('y', labelleft=False)
@@ -487,6 +630,31 @@ plt.scatter(datos_Js_resi_hyd[:, x_col],
             marker='+', s=100, linewidths=1,
             cmap=colormapp, vmin=vminn, vmax=vmaxx)
 
+ddd = np.argsort(datos_Js_resi_hyd[:, y_col])
+datos_Js_resi_hyd = datos_Js_resi_hyd[ddd, :]
+# aaa, cov = curve_fit(pow_law,
+#                      xdata=datos_Js_resi_hyd[:-2, x_col],
+#                      ydata=datos_Js_resi_hyd[:-2, y_col],
+#                      p0=(19.4, 1.1)
+# )
+aaa, cov = curve_fit(pow_law,
+                     xdata=datos_Js_resi_hyd[:-2, x_col],
+                     ydata=np.log10(datos_Js_resi_hyd[:-2, y_col]),
+                     p0=(19.4, 1.1)
+)
+print('datos_Js_resi_hyd')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+print(sum((datos_Js_resi_hyd[:, y_col]
+           -pow_law(datos_Js_resi_hyd[:, x_col],
+                    j0=aaa[0], m=aaa[1]))**2.))
+print(sum((datos_Js_resi_hyd[:, y_col]
+           -pow_law(datos_Js_resi_hyd[:, x_col],
+                    j0=aaa[0]+0.1, m=aaa[1]))**2.))
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
 plt.subplot(247)
 
 plt.tick_params('y', labelleft=False)
@@ -495,7 +663,7 @@ plt.xlim(minnx, maxxx)
 plt.xscale('log')
 plt.axvspan(minnx, minnx * 1.04, color='k')
 
-plt.axvline(0.15, c='grey', alpha=0.5, zorder=0, ls=':')
+plt.axvline(0.15, c='grey', alpha=0.5, zorder=0, ls='-')
 
 plt.xlabel(x_label, size=20)
 
@@ -504,6 +672,20 @@ plt.scatter(datos_J03_resi_dmo[:, x_col],
             c=np.log10(datos_J03_resi_dmo[:, z_col]),
             marker='+', s=100, linewidths=1,
             cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+# aaa, cov = curve_fit(pow_law,
+#                      xdata=datos_J03_resi_dmo[:, x_col],
+#                      ydata=datos_J03_resi_dmo[:, y_col],
+#                      p0=(18, 0.6)
+# )
+aaa, cov = curve_fit(pow_law,
+                     xdata=datos_J03_resi_dmo[:, x_col],
+                     ydata=np.log10(datos_J03_resi_dmo[:, y_col]),
+                     p0=(18, 0.6)
+)
+print('datos_J03_resi_dmo')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
 
 plt.subplot(248)
 
@@ -514,13 +696,27 @@ plt.xscale('log')
 
 plt.xlabel(x_label, size=20)
 
-plt.axvline(0.15, c='grey', alpha=0.5, zorder=0, ls=':')
+plt.axvline(0.15, c='grey', alpha=0.5, zorder=0, ls='-')
 
 plt.scatter(datos_J03_resi_hyd[:, x_col],
             np.log10(datos_J03_resi_hyd[:, y_col]),
             c=np.log10(datos_J03_resi_hyd[:, z_col]),
             marker='+', s=100, linewidths=1,
             cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+# aaa, cov = curve_fit(pow_law,
+#                      xdata=datos_J03_resi_hyd[:, x_col],
+#                      ydata=datos_J03_resi_hyd[:, y_col],
+#                      p0=(18, 0.6)
+# )
+aaa, cov = curve_fit(pow_law,
+                     xdata=datos_J03_resi_hyd[:, x_col],
+                     ydata=np.log10(datos_J03_resi_hyd[:, y_col]),
+                     p0=(18, 0.6)
+)
+print('datos_J03_resi_hyd')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
 
 for ii in range(5, 9):
     plt.subplot(2, 4, ii)
@@ -546,7 +742,320 @@ plt.savefig(path_name_res + '/AngJs_full' + end_str + '.png',
             bbox_inches='tight')
 plt.savefig(path_name_res + '/AngJs_full' + end_str + '.pdf',
             bbox_inches='tight')
+
+
+fig, ax = plt.subplots(1, 2, figsize=(14, 5))
+plt.subplot(121)
+data_subplot = datos_Js_frag_dmo
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+plt.ylabel(r'log$_{10}$ (J$_\mathrm{S}$ [GeV$^2$ cm$^{-5}$])', size=20)
+
+plt.title(r'DMO', size=20, pad=15, fontweight='bold')
+
+plt.scatter(data_subplot[:, x_col],
+            np.log10(data_subplot[:, y_col]),
+            c='none', lw=1, marker='o',
+            edgecolors=cmap(norm(np.log10(data_subplot[:, z_col]))))
+
+aaa, cov = curve_fit(pow_law,
+                     xdata=data_subplot[:, x_col],
+                     ydata=np.log10(data_subplot[:, y_col]),
+                     p0=(18, 0.6)
+)
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
+plt.xticks([0.1, 1, 10], labels=('0.1', '1', '10'))
+
+plt.xlim(np.min(data_subplot[:, x_col])*0.8,
+         np.max(data_subplot[:, x_col])*1.2)
+plt.ylim(np.min(np.log10(data_subplot[:, y_col]))-0.2,
+         np.max(np.log10(data_subplot[:, y_col]))+0.2)
+
+plt.subplot(122)
+data_subplot = datos_Js_frag_hyd
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+
+plt.title(r'MHD', size=20, pad=15, fontweight='bold')
+
+plt.scatter(data_subplot[:, x_col],
+            np.log10(data_subplot[:, y_col]),
+            c='none', lw=1, marker='o',
+            edgecolors=cmap(norm(np.log10(data_subplot[:, z_col]))))
+
+plt.xticks([0.1, 1, 10], labels=('0.1', '1', '10'))
+plt.xlim(np.min(data_subplot[:, x_col])*0.8,
+         np.max(data_subplot[:, x_col])*1.2)
+plt.ylim(np.min(np.log10(data_subplot[:, y_col]))-0.2,
+         np.max(np.log10(data_subplot[:, y_col]))+0.2)
+
+aaa, cov = curve_fit(pow_law,
+                     xdata=data_subplot[:, x_col],
+                     ydata=np.log10(data_subplot[:, y_col]),
+                     p0=(18, 0.6)
+)
+print(aaa, np.sqrt(np.diag(cov)))
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
+cax, kw = colorbarr.make_axes([axi for axi in ax.flat])
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+c2 = plt.colorbar(sm, cax=cax, extend='both')
+c2.set_label(r'$V_\mathrm{max}$ [km s$^{-1}$]', fontsize=20)
+yticks = c2.get_ticks()
+c2.ax.tick_params(axis='y', direction='out')
+c2.set_ticks(np.log10([1., 2., 4, 6]),
+             labels=['1', '2', '4', '6'])
+
+print('%.3f\n%.3f' % (aaa[0], aaa[1]))
+
+plt.savefig(path_name_res + '/datos_Js_frag' + end_str + '.png',
+            bbox_inches='tight', dpi=400)
+plt.savefig(path_name_res + '/datos_Js_frag' + end_str + '.pdf',
+            bbox_inches='tight')
+
+# ----------------------------------------------------------------------
+fig, ax = plt.subplots(1, 2, figsize=(14, 5))
+plt.subplot(121)
+plt.xscale('log')
+data_subplot = datos_J03_frag_dmo
+plt.xlabel(x_label, size=20)
+plt.ylabel(r'log$_{10}$ (J$_\mathrm{03}$ [GeV$^2$ cm$^{-5}$])', size=20)
+
+plt.title(r'DMO', size=20, pad=15, fontweight='bold')
+
+plt.axvline(0.15, c='grey', alpha=0.5, zorder=0, ls='-')
+
+plt.scatter(datos_J03_frag_dmo[:, x_col],
+            np.log10(datos_J03_frag_dmo[:, y_col]),
+            c='none', lw=1, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_J03_frag_dmo[:, z_col]))))
+
+aaa, cov = curve_fit(pow_law,
+                     xdata=data_subplot[:, x_col],
+                     ydata=np.log10(data_subplot[:, y_col]),
+                     p0=(18, 0.6)
+)
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
+plt.xticks([0.1, 1, 10], labels=('0.1', '1', '10'))
+plt.xlim(np.min(data_subplot[:, x_col])*0.8,
+         np.max(data_subplot[:, x_col])*1.2)
+plt.ylim(np.min(np.log10(data_subplot[:, y_col]))-0.2,
+         np.max(np.log10(data_subplot[:, y_col]))+0.2)
+
+
+plt.subplot(122)
+data_subplot = datos_J03_frag_hyd
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+plt.title(r'MHD', size=20, pad=15, fontweight='bold')
+
+plt.axvline(0.15, c='grey', alpha=0.5, zorder=0, ls='-')
+
+plt.scatter(datos_J03_frag_hyd[:, x_col],
+            np.log10(datos_J03_frag_hyd[:, y_col]),
+            c='none', lw=1, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_J03_frag_hyd[:, z_col]))))
+
+plt.xticks([0.1, 1, 10], labels=('0.1', '1', '10'))
+plt.xlim(np.min(data_subplot[:, x_col])*0.8,
+         np.max(data_subplot[:, x_col])*1.2)
+plt.ylim(np.min(np.log10(data_subplot[:, y_col]))-0.2,
+         np.max(np.log10(data_subplot[:, y_col]))+0.2)
+
+aaa, cov = curve_fit(pow_law,
+                     xdata=data_subplot[:, x_col],
+                     ydata=np.log10(data_subplot[:, y_col]),
+                     p0=(18, 0.6)
+)
+print(aaa, np.sqrt(np.diag(cov)))
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
+cax, kw = colorbarr.make_axes([axi for axi in ax.flat])
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+c2 = plt.colorbar(sm, cax=cax, extend='both')
+c2.set_label(r'$V_\mathrm{max}$ [km s$^{-1}$]', fontsize=20)
+yticks = c2.get_ticks()
+c2.ax.tick_params(axis='y', direction='out')
+c2.set_ticks(np.log10([1., 2., 4, 6]),
+             labels=['1', '2', '4', '6'])
+
+plt.savefig(path_name_res + '/datos_J03_frag' + end_str + '.png',
+            bbox_inches='tight', dpi=400)
+plt.savefig(path_name_res + '/datos_J03_frag' + end_str + '.pdf',
+            bbox_inches='tight')
+
+# ----------------------------------------------------------------------
+fig, ax = plt.subplots(1, 2, figsize=(14, 5))
+plt.subplot(121)
+data_subplot = datos_Js_resi_dmo
+plt.xscale('log')
+plt.title(r'DMO', size=20, pad=15, fontweight='bold')
+plt.xlabel(x_label, size=20)
+plt.ylabel(r'log$_{10}$ (J$_\mathrm{S}$ [GeV$^2$ cm$^{-5}$])', size=20)
+
+plt.scatter(datos_Js_resi_dmo[:, x_col],
+            np.log10(datos_Js_resi_dmo[:, y_col]),
+            c=np.log10(datos_Js_resi_dmo[:, z_col]),
+            marker='+', s=100, linewidths=1,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+aaa, cov = curve_fit(pow_law,
+                     xdata=data_subplot[:, x_col],
+                     ydata=np.log10(data_subplot[:, y_col]),
+                     p0=(18, 0.6)
+)
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
+plt.xticks([0.1, 1, 10], labels=('0.1', '1', '10'))
+
+plt.xlim(np.min(data_subplot[:, x_col])*0.8,
+         np.max(data_subplot[:, x_col])*1.2)
+plt.ylim(np.min(np.log10(data_subplot[:, y_col]))-0.2,
+         np.max(np.log10(data_subplot[:, y_col]))+0.2)
+
+plt.subplot(122)
+data_subplot = datos_Js_resi_hyd
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+
+plt.title(r'MHD', size=20, pad=15, fontweight='bold')
+
+plt.scatter(datos_Js_resi_hyd[:, x_col],
+            np.log10(datos_Js_resi_hyd[:, y_col]),
+            c=np.log10(datos_Js_resi_hyd[:, z_col]),
+            marker='+', s=100, linewidths=1,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+plt.xticks([0.1, 1, 10], labels=('0.1', '1', '10'))
+plt.xlim(np.min(data_subplot[:, x_col])*0.8,
+         np.max(data_subplot[:, x_col])*1.2)
+plt.ylim(np.min(np.log10(data_subplot[:, y_col]))-0.2,
+         np.max(np.log10(data_subplot[:, y_col]))+0.2)
+
+ddd = np.argsort(datos_Js_resi_hyd[:, y_col])
+datos_Js_resi_hyd = datos_Js_resi_hyd[ddd, :]
+aaa, cov = curve_fit(pow_law,
+                     xdata=data_subplot[:, x_col],
+                     ydata=np.log10(data_subplot[:, y_col]),
+                     p0=(18, 0.6)
+)
+print(aaa, np.sqrt(np.diag(cov)))
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
+cax, kw = colorbarr.make_axes([axi for axi in ax.flat])
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+c2 = plt.colorbar(sm, cax=cax, extend='both')
+c2.set_label(r'$V_\mathrm{max}$ [km s$^{-1}$]', fontsize=20)
+yticks = c2.get_ticks()
+c2.ax.tick_params(axis='y', direction='out')
+c2.set_ticks(np.log10([1., 2., 4, 6]),
+             labels=['1', '2', '4', '6'])
+
+print('%.3f\n%.3f' % (aaa[0], aaa[1]))
+
+plt.savefig(path_name_res + '/datos_Js_res' + end_str + '.png',
+            bbox_inches='tight', dpi=400)
+plt.savefig(path_name_res + '/datos_Js_res' + end_str + '.pdf',
+            bbox_inches='tight')
 # plt.show()
+# ----------------------------------------------------------------------
+fig, ax = plt.subplots(1, 2, figsize=(14, 5))
+plt.subplot(121)
+data_subplot = datos_J03_resi_dmo
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+plt.ylabel(r'log$_{10}$ (J$_\mathrm{03}$ [GeV$^2$ cm$^{-5}$])', size=20)
+
+plt.title(r'DMO', size=20, pad=15, fontweight='bold')
+
+plt.axvline(0.15, c='grey', alpha=0.5, zorder=0, ls='-')
+plt.scatter(datos_J03_resi_dmo[:, x_col],
+            np.log10(datos_J03_resi_dmo[:, y_col]),
+            c=np.log10(datos_J03_resi_dmo[:, z_col]),
+            marker='+', s=100, linewidths=1,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+aaa, cov = curve_fit(pow_law,
+                     xdata=data_subplot[:, x_col],
+                     ydata=np.log10(data_subplot[:, y_col]),
+                     p0=(18, 0.6)
+)
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
+plt.xticks([0.1, 1, 10], labels=('0.1', '1', '10'))
+
+plt.xlim(np.min(data_subplot[:, x_col])*0.8,
+         np.max(data_subplot[:, x_col])*1.2)
+plt.ylim(np.min(np.log10(data_subplot[:, y_col]))-0.2,
+         np.max(np.log10(data_subplot[:, y_col]))+0.2)
+
+plt.subplot(122)
+data_subplot = datos_J03_resi_hyd
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+
+plt.axvline(0.15, c='grey', alpha=0.5, zorder=0, ls='-')
+plt.title(r'MHD', size=20, pad=15, fontweight='bold')
+
+
+plt.scatter(datos_J03_resi_hyd[:, x_col],
+            np.log10(datos_J03_resi_hyd[:, y_col]),
+            c=np.log10(datos_J03_resi_hyd[:, z_col]),
+            marker='+', s=100, linewidths=1,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+plt.xticks([0.1, 1, 10], labels=('0.1', '1', '10'))
+plt.xlim(np.min(data_subplot[:, x_col])*0.8,
+         np.max(data_subplot[:, x_col])*1.2)
+plt.ylim(np.min(np.log10(data_subplot[:, y_col]))-0.2,
+         np.max(np.log10(data_subplot[:, y_col]))+0.2)
+
+aaa, cov = curve_fit(pow_law,
+                     xdata=data_subplot[:, x_col],
+                     ydata=np.log10(data_subplot[:, y_col]),
+                     p0=(18, 0.6)
+)
+print(aaa, np.sqrt(np.diag(cov)))
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
+cax, kw = colorbarr.make_axes([axi for axi in ax.flat])
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+c2 = plt.colorbar(sm, cax=cax, extend='both')
+c2.set_label(r'$V_\mathrm{max}$ [km s$^{-1}$]', fontsize=20)
+yticks = c2.get_ticks()
+c2.ax.tick_params(axis='y', direction='out')
+c2.set_ticks(np.log10([1., 2., 4, 6]),
+             labels=['1', '2', '4', '6'])
+
+print('%.3f\n%.3f' % (aaa[0], aaa[1]))
+
+plt.savefig(path_name_res + '/datos_J03_resi' + end_str + '.png',
+            bbox_inches='tight', dpi=400)
+plt.savefig(path_name_res + '/datos_J03_resi' + end_str + '.pdf',
+            bbox_inches='tight')
+
+plt.show()
 # ----------------------- Solid ang size - J (z==Vmax) 2x2 -------------
 
 fig, axes = plt.subplots(nrows=2, ncols=2, sharey=True,  # sharey=True,
@@ -792,9 +1301,10 @@ print(Js95_resi_dmo, Js95_frag_dmo, Js95_resi_dmo - Js95_frag_dmo)
 plt.axvline(Js95_frag_dmo, color='#004F7D', lw=1.5, ls='--')  # , alpha=0.6)
 plt.axvline(Js95_resi_dmo, color='k', lw=1.5, ls='--')  # , alpha=0.5)
 
-plt.xlim(minn, maxx)
+plt.xlim(18., maxx)
 plt.ylim(bottom=0., top=130)
 
+plt.xticks((18, 19, 20, 21, 22), labels=('', '', '', '', ''))
 # plt.yscale('log')
 
 ax1.tick_params(labelbottom=False)
@@ -804,7 +1314,7 @@ ax1.tick_params(labelbottom=False)
 # rotation=90, color='g', horizontalalignment='right')
 plt.legend(title=r'J$_\mathrm{S}$', handlelength=0.9,
            handletextpad=0.5, fontsize=16)
-ax2 = plt.subplot(222, sharex=ax1, sharey=ax1)
+ax2 = plt.subplot(222)
 plt.title('MHD', size=18)
 plt.tick_params('x', labelbottom=False)
 # plt.yscale('log')
@@ -821,6 +1331,11 @@ Js95_resi_hyd = np.log10(np.percentile(datos_Js_resi_hyd[:, 0], 5))
 print('Js, MHD')
 print(Js95_resi_hyd, Js95_frag_hyd, Js95_resi_hyd - Js95_frag_hyd)
 
+plt.xlim(18., maxx)
+plt.ylim(bottom=0., top=130)
+
+plt.xticks((18, 19, 20, 21, 22), labels=('', '', '', '', ''))
+
 plt.axvline(Js95_frag_hyd, color='#006E0B', lw=1.5, ls='--')  # , alpha=0.6)
 plt.axvline(Js95_resi_hyd, color='k', lw=1.5, ls='--')  # , alpha=0.6)
 
@@ -833,7 +1348,7 @@ ax2.tick_params(labelleft=False)
 plt.legend(title=r'J$_\mathrm{S}$', handlelength=0.9,
            handletextpad=0.5, fontsize=16)
 
-plt.subplot(223, sharex=ax1, sharey=ax1)
+plt.subplot(223)
 
 plt.hist(np.log10(datos_J03_frag_dmo[:, 0]), log=False,
          label=r'Frag', color='teal', alpha=0.6,
@@ -849,6 +1364,9 @@ print('J03, DMO')
 print(J0395_frag_dmo, J0395_resi_dmo, J0395_frag_dmo - J0395_resi_dmo)
 # plt.yscale('log')
 
+plt.xlim(18., maxx)
+plt.ylim(bottom=0., top=130)
+
 plt.axvline(J0395_frag_dmo, color='#004F7D', lw=1.5, ls='--')  # , alpha=0.6)
 plt.axvline(J0395_resi_dmo, color='k', lw=1.5, ls='--')  # , alpha=0.5)
 
@@ -856,12 +1374,13 @@ plt.axvline(J0395_resi_dmo, color='k', lw=1.5, ls='--')  # , alpha=0.5)
 # plt.annotate(r'J$_{03}$ 95%', (J0395_resi_dmo, 20),
 # rotation=90, color='g', horizontalalignment='right')
 
+plt.xticks((18, 19, 20, 21, 22))
 # plt.xlabel(r'log$_{10}$ (J$_\mathrm{factor}$ [GeV$^2$ cm$^{-5}$])',
 #            fontsize=20)
 plt.legend(title=r'J$_{03}$', handlelength=0.9,
            handletextpad=0.5, fontsize=16)
 
-ax4 = plt.subplot(224, sharex=ax1, sharey=ax1)
+ax4 = plt.subplot(224)
 
 plt.hist(np.log10(datos_J03_frag_hyd[:, 0]), log=False,
          label=r'Frag', color='yellowgreen', alpha=0.6,
@@ -879,6 +1398,8 @@ print(J0395_resi_hyd, J0395_frag_hyd, J0395_resi_hyd - J0395_frag_hyd)
 plt.axvline(J0395_frag_hyd, color='#006E0B', lw=1.5, ls='--')  # , alpha=0.6)
 plt.axvline(J0395_resi_hyd, color='k', lw=1.5, ls='--')  # , alpha=0.6)
 
+plt.xlim(18., maxx)
+plt.ylim(bottom=0., top=130)
 # plt.annotate(r'J$_S$ 95%', (Js95_resi_hyd, 20), rotation=90, color='k')
 # plt.annotate(r'J$_{03}$ 95%', (J0395_resi_hyd, 20),
 # rotation=90, color='g', horizontalalignment='right')
@@ -900,13 +1421,13 @@ fig.text(0.5, 0.01,
 
 ax4.tick_params(labelleft=False)
 
-plt.xticks((19, 20, 21, 22))
+plt.xticks((18, 19, 20, 21, 22), labels=('', 19, 20, 21, 22))
 
 plt.savefig(path_name_res + '/J_hist' + end_str + '.png',
             bbox_inches='tight')
 plt.savefig(path_name_res + '/J_hist' + end_str + '.pdf',
             bbox_inches='tight')
-
+plt.show()
 # ------------------- Cross sections ------------------------------------------
 fig, axes = plt.subplots(1, 2, figsize=(12, 6))
 
@@ -941,9 +1462,9 @@ plt.plot(constraints_bb_2204[:, 0],
          ':', color='limegreen', alpha=1, lw=2.5)
 
 plt.plot(constraints_bb_2204[:, 0], constraints_bb_2204[:, 1], '--',
-         label='CB+22', alpha=1., color='#6CCAFF', lw=2)
+         label='CB22', alpha=1., color='#6CCAFF', lw=2)
 plt.plot(constraints_bb_2204[:, 0], 2*constraints_bb_2204[:, 1], '--',
-         label='CB+22', alpha=1., color='#6CCAFF', lw=2)
+         label='CB22', alpha=1., color='#6CCAFF', lw=2)
 
 plt.plot(sigmav_bb_2204[:, 0], sigmav_bb_2204[:, 1], '-.',
          c='silver', lw=2, zorder=0)
@@ -953,13 +1474,13 @@ plt.xlim(sigmav_bb_2204[0, 0], sigmav_bb_2204[-1, 0])
 plt.text(0.7, 0.85, r'$b\bar{b}$', transform=ax1.transAxes,
          horizontalalignment='center', size=30)
 
-plt.annotate(r'<$\sigma\nu$>$_\mathrm{th}$', (1000, 3e-26))
+plt.annotate(r'$\langle\sigma\nu\rangle_\mathrm{th}$', (1000, 3e-26))
 
 plt.xscale('log')
 plt.yscale('log')
 
 plt.xlabel('m$_{\chi}$ [GeV]', size=20)
-plt.ylabel(r'<$\sigma\nu$> [cm$^3$ s$^{-1}$]', size=20)
+plt.ylabel(r'$\langle\sigma\nu\rangle$ [cm$^3$ s$^{-1}$]', size=20)
 
 # legend1 = plt.legend(legend_elements, ['Fragile', 'Resilient'], loc=2,
 #                      bbox_to_anchor=(0.1, 0.6))
@@ -968,7 +1489,7 @@ legend_elements = [mpatches.Patch(color='limegreen', alpha=0.8),
                    mpatches.Patch(color='k', alpha=0.8),
                    Line2D([0], [0], color='#6CCAFF',
                           linestyle='--', lw=2)]
-leg = plt.legend(legend_elements, ['MHD', 'DMO', 'CB+22'], loc=2)
+leg = plt.legend(legend_elements, ['MHD', 'DMO', 'CB22'], loc=2)
 
 bapad = plt.rcParams['legend.borderaxespad']
 fontsize = plt.rcParams['font.size']
@@ -1019,12 +1540,12 @@ plt.plot(constraints_tau_2204[:, 0],
 plt.plot(sigmav_tau_2204[1:, 0], sigmav_tau_2204[1:, 1],
          '-.', c='silver', lw=2)
 plt.plot(constraints_tau_2204[:, 0], constraints_tau_2204[:, 1], '--',
-         label='CB+22', alpha=1., color='#6CCAFF', lw=2)
+         label='CB22', alpha=1., color='#6CCAFF', lw=2)
 
 plt.text(0.7, 0.85, r'$\tau^+\tau^-$', transform=ax2.transAxes, size=30,
          horizontalalignment='center',
          )
-plt.annotate(r'<$\sigma\nu$>$_\mathrm{th}$', (1000, 3e-26))
+plt.annotate(r'$\langle\sigma\nu\rangle_\mathrm{th}$', (1000, 3e-26))
 
 plt.xscale('log')
 plt.yscale('log')
@@ -1067,7 +1588,7 @@ plt.plot(constraints_bb_2204[:, 0],
          ':', color='limegreen', alpha=1, lw=2.5)
 
 plt.plot(constraints_bb_2204[:, 0], constraints_bb_2204[:, 1], '-',
-         label='CB+22', alpha=1., color='dodgerblue', lw=1.)
+         label='CB22', alpha=1., color='dodgerblue', lw=1.)
 
 plt.plot(sigmav_bb_2204[:, 0], sigmav_bb_2204[:, 1], '-.',
          c='silver', lw=2, zorder=0)
@@ -1075,11 +1596,11 @@ plt.plot(sigmav_bb_2204[:, 0], sigmav_bb_2204[:, 1], '-.',
 plt.xlim(sigmav_bb_2204[0, 0], sigmav_bb_2204[-1, 0])
 plt.text(0.7, 0.85, r'$b\bar{b}$', transform=ax1.transAxes,
          horizontalalignment='center', size=30)
-plt.annotate(r'<$\sigma\nu$>$_\mathrm{th}$', (1000, 3e-26))
+plt.annotate(r'$\langle\sigma\nu\rangle_\mathrm{th}$', (1000, 3e-26))
 plt.xscale('log')
 plt.yscale('log')
 plt.xlabel('m$_{\chi}$ [GeV]', size=20)
-plt.ylabel(r'<$\sigma\nu$> [cm$^3$ s$^{-1}$]', size=20)
+plt.ylabel(r'$\langle\sigma\nu\rangle$ [cm$^3$ s$^{-1}$]', size=20)
 # legend1 = plt.legend(legend_elements, ['Fragile', 'Resilient'], loc=2,
 #                      bbox_to_anchor=(0.1, 0.6))
 legend_elements = [Line2D([0], [0], color='k', label='Frag',
@@ -1105,7 +1626,7 @@ legend_elements = [mpatches.Patch(color='limegreen', alpha=0.8),
                    mpatches.Patch(color='k', alpha=0.8),
                    Line2D([0], [0], color='dodgerblue',
                           linestyle='-', lw=1.)]
-leg = plt.legend(legend_elements, ['MHD', 'DMO', 'CB+22'],
+leg = plt.legend(legend_elements, ['MHD', 'DMO', 'CB22'],
                      loc=(pad_xaxis, 0.45), handlelength=0.95,)
 plt.gca().add_artist(leg)
 plt.gca().add_artist(legend1)
@@ -1132,12 +1653,12 @@ plt.plot(constraints_tau_2204[:, 0],
 plt.plot(sigmav_tau_2204[1:, 0], sigmav_tau_2204[1:, 1],
          '-.', c='silver', lw=2)
 plt.plot(constraints_tau_2204[:, 0], constraints_tau_2204[:, 1], '-',
-         label='CB+22', alpha=1., color='dodgerblue', lw=1)
+         label='CB22', alpha=1., color='dodgerblue', lw=1)
 
 plt.text(0.7, 0.85, r'$\tau^+\tau^-$', transform=ax2.transAxes, size=30,
          horizontalalignment='center',
          )
-plt.annotate(r'<$\sigma\nu$>$_\mathrm{th}$', (1000, 3e-26))
+plt.annotate(r'$\langle\sigma\nu\rangle_\mathrm{th}$', (1000, 3e-26))
 plt.xscale('log')
 plt.yscale('log')
 plt.xlim(sigmav_tau_2204[0, 0], sigmav_tau_2204[-1, 0])
@@ -1183,7 +1704,7 @@ plt.plot(constraints_bb_2204[:, 0],
          ':', color='limegreen', alpha=1, lw=2.5)
 
 plt.plot(constraints_bb_2204[:, 0], constraints_bb_2204[:, 1], '--',
-         label='CB+22', alpha=1., color='#6CCAFF', lw=2)
+         label='CB22', alpha=1., color='#6CCAFF', lw=2)
 
 plt.plot(sigmav_bb_2204[:, 0], sigmav_bb_2204[:, 1], '-.',
          c='silver', lw=2, zorder=0)
@@ -1206,7 +1727,7 @@ legend_elements = [mpatches.Patch(color='limegreen', alpha=0.8),
                    mpatches.Patch(color='k', alpha=0.8),
                    Line2D([0], [0], color='#6CCAFF',
                           linestyle='--', lw=2)]
-leg = plt.legend(legend_elements, ['MHD', 'DMO', 'CB+22'], loc=2)
+leg = plt.legend(legend_elements, ['MHD', 'DMO', 'CB22'], loc=2)
 
 bapad = plt.rcParams['legend.borderaxespad']
 fontsize = plt.rcParams['font.size']
@@ -1362,7 +1883,7 @@ plt.savefig(path_name_res + '/Vmax_hist_geom' + end_str + '.png',
 bbox_inches='tight')
 plt.savefig(path_name_res + '/Vmax_hist_geom' + end_str + '.pdf',
  bbox_inches='tight')
-plt.show()
+# plt.show()
 # ----------------------- Vmax - J (z==DistEarth) 2x4 -----------------
 
 fig, axes = plt.subplots(nrows=2, ncols=4, sharey=True,
@@ -1747,14 +2268,14 @@ c2.set_label(r'D$_\mathrm{Earth}$ [kpc]', fontsize=20)
 yticks = c2.get_ticks()
 print(yticks)
 # c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
-c2.set_ticks(np.log10([0.5, 1., 2, 5., 10., 30]),
-             labels=['0.5', '1', '2', '5', '10', '30'])
+c2.set_ticks(np.log10([0.5, 1., 2, 5., 10., 25]),
+             labels=['0.5', '1', '2', '5', '10', '25'])
 
 plt.savefig(path_name_res + '/VmaxJs_full' + end_str + '.png',
             bbox_inches='tight')
 plt.savefig(path_name_res + '/VmaxJs_full' + end_str + '.pdf',
             bbox_inches='tight')
-# plt.show()
+plt.show()
 # ------------------------ DgcJs ----------------------------------------------
 
 fig, axes = plt.subplots(nrows=2, ncols=2, sharey=True,  # sharey=True,
@@ -1882,7 +2403,7 @@ plt.savefig(path_name_res + '/DgcJs' + end_str + '.pdf',
             bbox_inches='tight')
 
 plt.show()
-
+'''
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
@@ -1890,13 +2411,13 @@ plt.show()
 # ----------------------------------------------------------------------
 try:
     path_name = ('/home/porrassa/Desktop/WIMPS_project/'
-                 'Physnet_outputs_repops/2024/'
-                 '2024_resilient_const_to120_rint'
+                 'Physnet_outputs_repops/2025/'
+                 '/2025_to120_angles'
                  )
 
     path_name_res = ('/home/porrassa/Desktop/WIMPS_project/'
-                     'Physnet_outputs_repops/2024/'
-                     '2024_resilient_const_to120_rint_SHVFnorm')
+                 'Physnet_outputs_repops/2025/'
+                 '/2025_to120_angles')
 except FileNotFoundError:
     path_name = ('/home/saraporras/Desktop/WIMPSproject/'
                  'compiled_results'
@@ -1905,6 +2426,9 @@ except FileNotFoundError:
     path_name_res = ('/home/saraporras/Desktop/WIMPSproject/'
                      'compiled_results/'
                      '2024_resilient_const_to120_rint_SHVFnorm')
+
+
+
 print(os.getcwd())
 print(os.listdir(path_name))
 final_size = (500, 1, 6)
@@ -1980,32 +2504,37 @@ datos_Js_frag_dmo = datos_Js_frag_dmo[1:, :]
 datos_J03_frag_hyd = datos_J03_frag_hyd[1:, :]
 datos_J03_frag_dmo = datos_J03_frag_dmo[1:, :]
 
+print('datos_Js_frag_dmo')
 rr_ss = funct_repop.R_s(
     V=datos_Js_frag_dmo[:, 3], C=datos_Js_frag_dmo[:, 5], cosmo_H_0=67.7)
 print(sum(rr_ss > datos_Js_frag_dmo[:, 2]))
 aaa = rr_ss > datos_Js_frag_dmo[:, 2]
 datos_Js_frag_dmo = datos_Js_frag_dmo [~aaa, :]
+print(sum(datos_Js_frag_dmo[:, 3]<=1.), np.shape(datos_Js_frag_dmo))
 
-
+print('datos_Js_frag_hyd')
 rr_ss = funct_repop.R_s(
     V=datos_Js_frag_hyd[:, 3], C=datos_Js_frag_hyd[:, 5], cosmo_H_0=67.7)
 print(sum(rr_ss > datos_Js_frag_hyd[:, 2]))
 aaa = rr_ss > datos_Js_frag_hyd[:, 2]
 datos_Js_frag_hyd = datos_Js_frag_hyd [~aaa, :]
+print(sum(datos_Js_frag_hyd[:, 3]<=1.), np.shape(datos_Js_frag_hyd))
 
-
+print('datos_Js_resi_dmo')
 rr_ss = funct_repop.R_s(
     V=datos_Js_resi_dmo[:, 3], C=datos_Js_resi_dmo[:, 5], cosmo_H_0=67.7)
 print(sum(rr_ss > datos_Js_resi_dmo[:, 2]))
 aaa = rr_ss > datos_Js_resi_dmo[:, 2]
 datos_Js_resi_dmo = datos_Js_resi_dmo [~aaa, :]
+print(sum(datos_Js_resi_dmo[:, 3]<=1.), np.shape(datos_Js_resi_dmo))
 
-
+print('datos_Js_resi_hyd')
 rr_ss = funct_repop.R_s(
     V=datos_Js_resi_hyd[:, 3], C=datos_Js_resi_hyd[:, 5], cosmo_H_0=67.7)
 print(sum(rr_ss > datos_Js_resi_hyd[:, 2]))
 aaa = rr_ss > datos_Js_resi_hyd[:, 2]
 datos_Js_resi_hyd = datos_Js_resi_hyd [~aaa, :]
+print(sum(datos_Js_resi_hyd[:, 3]<=1.), np.shape(datos_Js_resi_hyd))
 
 
 
@@ -2015,6 +2544,7 @@ rr_ss = funct_repop.R_s(
 print(sum(rr_ss > datos_J03_frag_dmo[:, 2]))
 aaa = rr_ss > datos_J03_frag_dmo[:, 2]
 datos_J03_frag_dmo = datos_J03_frag_dmo [~aaa, :]
+print(sum(datos_J03_frag_dmo[:, 3]<=1.), np.shape(datos_J03_frag_dmo))
 
 
 rr_ss = funct_repop.R_s(
@@ -2022,12 +2552,14 @@ rr_ss = funct_repop.R_s(
 print(sum(rr_ss > datos_J03_frag_hyd[:, 2]))
 aaa = rr_ss > datos_J03_frag_hyd[:, 2]
 datos_J03_frag_hyd = datos_J03_frag_hyd [~aaa, :]
+print(sum(datos_J03_frag_hyd[:, 3]<=1.), np.shape(datos_J03_frag_hyd))
 
 rr_ss = funct_repop.R_s(
     V=datos_J03_resi_dmo[:, 3], C=datos_J03_resi_dmo[:, 5], cosmo_H_0=67.7)
 print(sum(rr_ss > datos_J03_resi_dmo[:, 2]))
 aaa = rr_ss > datos_J03_resi_dmo[:, 2]
 datos_J03_resi_dmo = datos_J03_resi_dmo [~aaa, :]
+print(sum(datos_J03_resi_dmo[:, 3]<=1.), np.shape(datos_J03_resi_dmo))
 
 
 rr_ss = funct_repop.R_s(
@@ -2035,11 +2567,212 @@ rr_ss = funct_repop.R_s(
 print(sum(rr_ss > datos_J03_resi_hyd[:, 2]))
 aaa = rr_ss > datos_J03_resi_hyd[:, 2]
 datos_J03_resi_hyd = datos_J03_resi_hyd [~aaa, :]
-
+print(sum(datos_J03_resi_hyd[:, 3]<=1.), np.shape(datos_J03_resi_hyd))
 
 path_name_res = path_name_res + '/figures'
+if not os.path.exists(path_name_res):
+    os.makedirs(path_name_res)
 
-print(sum(datos_Js_resi_hyd[:, 3]<1.), np.shape(datos_Js_resi_hyd))
+# ----------------------- Ang size - J (z==Vmax) 2x2 -----------------
+def Cv_Mol2021_redshift0(V, c0):
+    # Median subhalo concentration depending on its Vmax
+    # and its redshift (here z=0)
+    # Moline et al. 2110.02097
+    #
+    # V - max radial velocity of a bound particle in the subhalo [km/s]
+    c1 = -0.90368
+    c2 = 0.2749
+    c3 = -0.028
+    ci = [c0, c1, c2, c3]
+    return ci[0] * (1 + (sum([ci[i + 1] * np.log10(V) ** (i + 1)
+                              for i in range(3)])))
+
+
+
+'''
+fig, axes = plt.subplots(nrows=2, ncols=2, sharey=True,  # sharey=True,
+                         figsize=(7, 9))
+
+xx_plot = np.geomspace(0.1, 120)
+plt.subplots_adjust(wspace=0, hspace=0)
+
+legend_elements = [
+    Line2D([0], [0], marker='o', color='k', label='Frag',
+           markerfacecolor='w', ls='',
+           markersize=8, mew=2.5),
+    Line2D([0], [0], marker='P', color='w', label='Res',
+           markerfacecolor='k', markersize=12)]
+
+x_col = 3
+y_col = 5
+z_col = 0
+
+x_label = r'$V_\mathrm{max}$ [km/s]'
+# y1_label = r'log$_{10}$ (J$_\mathrm{S}$ [GeV$^2$ cm$^{-5}$])'
+# y2_label = r'log$_{10}$ (J$_{03}$ [GeV$^2$ cm$^{-5}$])'
+
+plt.text(-0.25, 0., r'log$_{10}$ ($c_\mathrm{V}$)',
+         horizontalalignment='center',
+         verticalalignment='center', transform=axes[0, 0].transAxes,
+         rotation=90)
+plt.text(1., 0.95, r'Fragile',
+         horizontalalignment='center',
+         verticalalignment='top', transform=axes[0, 0].transAxes,
+         backgroundcolor='w')
+plt.text(1., 0.95, r'Resilient',
+         horizontalalignment='center',
+         verticalalignment='top', transform=axes[1, 0].transAxes,
+         backgroundcolor='w')
+
+# vminn = 1e-3
+# vmaxx = np.log10(150)  # 10 ** 1.5
+vminn = np.log10(perc_total(z_col, 5))
+vmaxx = np.log10(perc_total(z_col, 95))
+print(vminn, vmaxx, 10 ** vminn, 10 ** vmaxx)
+norm = mcb.Normalize(vminn, vmaxx)
+
+minns, maxxs = minnmaxxS(y_col)
+# minns = 18.2
+# maxxs = 23.
+
+minnx = 0.1  # perc_total(x_col, 0) * 0.99
+maxxx = 120  # perc_total(x_col, 100) * 1.3
+
+plt.subplot(221)
+plt.title('DMO', fontsize=20)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.tick_params('x', labelbottom=False)
+
+aaa, aaa_cov = curve_fit(
+        Cv_Mol2021_redshift0,
+        xdata=datos_Js_frag_hyd[:, x_col],
+        ydata=datos_Js_frag_hyd[:, y_col],
+        p0=[10**4],
+    )
+print(aaa)
+print(aaa_cov)
+plt.plot(xx_plot, np.log10(Cv_Mol2021_redshift0(xx_plot, aaa[0])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+plt.plot(xx_plot, np.log10(Cv_Mol2021_redshift0(xx_plot, 283862 )),
+         zorder=0, ls='--', c='red', alpha=0.5)
+
+plt.scatter(datos_Js_frag_dmo[:, x_col],
+            np.log10(datos_Js_frag_dmo[:, y_col]),
+            c='none', lw=1, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_Js_frag_dmo[:, z_col]))))
+
+plt.subplot(223)
+
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_Js_resi_dmo[:, x_col],
+            np.log10(datos_Js_resi_dmo[:, y_col]),
+            c=np.log10(datos_Js_resi_dmo[:, z_col]),
+            marker='+', s=100, linewidths=1,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+aaa, aaa_cov = curve_fit(
+        Cv_Mol2021_redshift0,
+        xdata=datos_Js_resi_dmo[:, x_col],
+        ydata=datos_Js_resi_dmo[:, y_col],
+        p0=[10**4],
+        # sigma=yerr_dmo[xx_pos:]
+    )
+print(aaa)
+print(aaa_cov)
+plt.plot(xx_plot, np.log10(Cv_Mol2021_redshift0(xx_plot, aaa[0])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+plt.plot(xx_plot, np.log10(Cv_Mol2021_redshift0(xx_plot, 283862 )),
+         zorder=0, ls='--', c='red', alpha=0.5)
+
+plt.subplot(222)
+
+plt.title('MHD', fontsize=20)
+
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.tick_params('y', labelleft=False)
+plt.tick_params('x', labelbottom=False)
+
+plt.scatter(datos_Js_frag_hyd[:, x_col],
+            np.log10(datos_Js_frag_hyd[:, y_col]),
+            c='none', lw=1, marker='o',
+            edgecolors=cmap(norm(np.log10(datos_Js_frag_hyd[:, z_col]))))
+
+aaa, aaa_cov = curve_fit(
+        Cv_Mol2021_redshift0,
+        xdata=datos_Js_frag_hyd[:, x_col],
+        ydata=datos_Js_frag_hyd[:, y_col],
+        p0=[10**4],
+    )
+print(aaa)
+print(aaa_cov)
+plt.plot(xx_plot, np.log10(Cv_Mol2021_redshift0(xx_plot, aaa[0])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+plt.plot(xx_plot, np.log10(Cv_Mol2021_redshift0(xx_plot, 192879)),
+         zorder=0, ls='--', c='red', alpha=0.5)
+
+
+
+plt.subplot(224)
+
+plt.tick_params('y', labelleft=False)
+plt.ylim(minns, maxxs)
+plt.xlim(minnx, maxxx)
+plt.xscale('log')
+plt.xlabel(x_label, size=20)
+
+plt.scatter(datos_Js_resi_hyd[:, x_col],
+            np.log10(datos_Js_resi_hyd[:, y_col]),
+            c=np.log10(datos_Js_resi_hyd[:, z_col]),
+            marker='+', s=100, linewidths=1,
+            cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+aaa, aaa_cov = curve_fit(
+        Cv_Mol2021_redshift0,
+        xdata=datos_Js_resi_hyd[:, x_col],
+        ydata=datos_Js_resi_hyd[:, y_col],
+        p0=[10**4],
+    )
+print(aaa)
+print(aaa_cov)
+plt.plot(xx_plot, np.log10(Cv_Mol2021_redshift0(xx_plot, aaa[0])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+plt.plot(xx_plot, np.log10(Cv_Mol2021_redshift0(xx_plot, 192879)),
+         zorder=0, ls='--', c='red', alpha=0.5)
+
+
+# plt.yticks((19, 20, 21, 22, 23), labels=('19', '', '21', '', '23'))
+
+aa = plt.subplot(2, 2, 3)
+aa.set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', ''))
+
+aa = plt.subplot(2, 2, 4)
+aa.set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', '100'))
+
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+c2 = plt.colorbar(sm, ax=axes,
+                  extend='both', spacing='proportional',
+                  location='bottom'
+                  )
+c2.set_label(r'log10(J-factor)', fontsize=20)
+yticks = c2.get_ticks()
+print(yticks)
+c2.ax.tick_params(axis='x', direction='out')
+# c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
+# c2.set_ticks(np.log10([5., 10., 20, 50, 80.]),
+#              labels=['5', '10', '20', '50', '80'])
+
+plt.savefig(path_name_res + '/VmaxCv' + end_str + '.png',
+            bbox_inches='tight')
+plt.savefig(path_name_res + '/VmaxCv' + end_str + '.pdf',
+            bbox_inches='tight')
 
 # ----------------------- DistEarth - Jss (z==Vmax) 2x2 ----------------
 
@@ -2309,9 +3042,9 @@ plt.savefig(path_name_res + '/VmaxJs_Js' + end_str + '.png',
             bbox_inches='tight')
 plt.savefig(path_name_res + '/VmaxJs_Js' + end_str + '.pdf',
             bbox_inches='tight')
-
+'''
 # ----------------------- Ang size - J (z==Vmax) 2x2 -----------------
-
+xx_plot = np.geomspace(0.1, 120)
 fig, axes = plt.subplots(nrows=2, ncols=2, sharey=True,  # sharey=True,
                          figsize=(7, 9))
 
@@ -2354,7 +3087,7 @@ norm = mcb.Normalize(vminn, vmaxx)
 
 minns, maxxs = minnmaxxS(y_col)
 minns = 18.2
-maxxs = 23.
+maxxs = 23.35
 
 minnx = 0.1  # perc_total(x_col, 0) * 0.99
 maxxx = 100  # perc_total(x_col, 100) * 1.3
@@ -2366,69 +3099,85 @@ plt.xlim(minnx, maxxx)
 plt.xscale('log')
 plt.tick_params('x', labelbottom=False)
 
-# for i in range(len(datos_Js_frag_dmo[:, 0])):
-#     rrss = funct_repop.R_s(
-#                     V=datos_Js_frag_dmo[i, 3],
-#                     C=datos_Js_frag_dmo[i, 5],
-#                     cosmo_H_0=67.7
-#                 )
-#     if datos_Js_frag_dmo[i, 4] > 20.:
-#         print(datos_Js_frag_dmo[i, :])
-#         print(rrss)
-# print(180 / np.pi * np.nanmin((np.pi/2., np.arcsin(funct_repop.R_s(
-#                     V=datos_Js_frag_dmo[32, 3],
-#                     C=datos_Js_frag_dmo[32, 5],
-#                     cosmo_H_0=67.7
-#                                )/datos_Js_frag_dmo[32, 2]))))
-# print(datos_Js_frag_dmo[32, :])
-# print(funct_repop.R_s(
-#                     V=datos_Js_frag_dmo[32, 3],
-#                     C=datos_Js_frag_dmo[32, 5],
-#                     cosmo_H_0=67.7
-#                 ))
-# print(np.shape(np.ones_like(datos_Js_frag_dmo[:, 0])))
-# print(np.shape(np.arcsin(funct_repop.R_s(
-#                     V=datos_Js_frag_dmo[:, 3],
-#                     C=datos_Js_frag_dmo[:, 5],
-#                     cosmo_H_0=67.7
-#                 )/datos_Js_frag_dmo[:, 2])))
-# print(np.nanmin((
-#     np.pi/2. * np.ones_like(datos_Js_frag_dmo[:, 0]),
-#     np.arcsin(funct_repop.R_s(
-#                     V=datos_Js_frag_dmo[:, 3],
-#                     C=datos_Js_frag_dmo[:, 5],
-#                     cosmo_H_0=67.7
-#                 )/datos_Js_frag_dmo[:, 2])), axis=0))
-# plt.scatter(180 / np.pi *
-#             # np.nanmin((
-#     # np.pi/2. * np.ones_like(datos_Js_frag_dmo[:, 0]),
-#     np.arcsin(funct_repop.R_s(
-#                     V=datos_Js_frag_dmo[:, 3],
-#                     C=datos_Js_frag_dmo[:, 5],
-#                     cosmo_H_0=67.7
-#                 )/datos_Js_frag_dmo[:, 2])
-# # ), axis=0)
-# ,
-#             np.log10(datos_Js_frag_dmo[:, y_col]),
-#             marker='+')
+xx_bins = np.geomspace(0.1, 100, num=15)
+xx_bins_mean = np.sqrt(xx_bins[1:] * xx_bins[:-1])
+
+nn_bins = []
+std_bins = []
+number_bins = []
+for ii in range(len(xx_bins_mean)):
+    aaa_range = ((datos_Js_frag_dmo[:, x_col] > xx_bins[ii])
+                 * (datos_Js_frag_dmo[:, x_col] <= xx_bins[ii+1]))
+    nn_bins.append(np.mean(np.log10(datos_Js_frag_dmo[aaa_range, y_col])))
+    std_bins.append(np.std(np.log10(datos_Js_frag_dmo[aaa_range, y_col])))
+    number_bins.append(sum(aaa_range))
+    plt.text(x=xx_bins_mean[ii]*0.9, y=22.5 + 0.3*(-1)**(ii%2),
+             s=sum(aaa_range), fontsize=10)
+nn_bins = np.array(nn_bins)
+std_bins = np.array(std_bins)
+number_bins = np.array(number_bins)
+plt.errorbar(xx_bins_mean, nn_bins,
+            yerr=std_bins,
+             ls='',
+            c='k', zorder=100)
+print(nn_bins)
+aaa_range = np.isnan(nn_bins)
+aaa, cov = curve_fit(pow_law,
+                     xdata=xx_bins_mean[~aaa_range],
+                     ydata=nn_bins[~aaa_range],
+                     sigma=std_bins[~aaa_range],
+                     p0=(18, 0.6)
+)
+print('datos_Js_frag_dmo')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=1000, ls=':', c='r', alpha=1)
+
+aaa, cov = curve_fit(pow_law,
+                     xdata=xx_bins_mean[~aaa_range],
+                     ydata=nn_bins[~aaa_range],
+                     p0=(18, 0.6)
+)
+print('datos_Js_frag_dmo')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=1000, ls=':', c='fuchsia', alpha=1)
+
+aaa, cov = curve_fit(pow_law,
+                     xdata=xx_bins_mean[~aaa_range],
+                     ydata=nn_bins[~aaa_range],
+                     sigma=1/np.sqrt(number_bins)[~aaa_range],
+                     p0=(18, 0.6)
+)
+print('datos_Js_frag_dmo')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=1000, ls=':', c='black', alpha=1)
+
+aaa, cov = curve_fit(pow_law,
+                     xdata=datos_Js_frag_dmo[:, x_col],
+                     ydata=np.log10(datos_Js_frag_dmo[:, y_col]),
+                     p0=(18, 0.6)
+)
+print('datos_Js_frag_dmo')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=1000, ls=':', c='gray', alpha=1)
+
 
 plt.scatter(datos_Js_frag_dmo[:, x_col],
             np.log10(datos_Js_frag_dmo[:, y_col]),
             c='none', lw=1, marker='o',
             edgecolors=cmap(norm(np.log10(datos_Js_frag_dmo[:, z_col]))))
 
-print(np.polyfit(x=np.log10(datos_Js_frag_dmo[:, x_col]),
-                 y=np.log10(datos_Js_frag_dmo[:, y_col]),
-                 deg=1))
-print(np.polyfit(x=np.log10(datos_Js_frag_hyd[:, x_col]),
-                 y=np.log10(datos_Js_frag_hyd[:, y_col]),
-                 deg=1))
-print(np.polyfit(x=np.log10(datos_Js_resi_dmo[:, x_col]),
-                 y=np.log10(datos_Js_resi_dmo[:, y_col]),
-                 deg=1))
-print(np.polyfit(x=np.log10(datos_Js_resi_hyd[:, x_col]),
-                 y=np.log10(datos_Js_resi_hyd[:, y_col]),
-                 deg=1))
 
 plt.subplot(223)
 
@@ -2442,6 +3191,23 @@ plt.scatter(datos_Js_resi_dmo[:, x_col],
             c=np.log10(datos_Js_resi_dmo[:, z_col]),
             marker='+', s=100, linewidths=1,
             cmap=colormapp, vmin=vminn, vmax=vmaxx)
+
+ddd = np.argsort(datos_Js_resi_dmo[:, y_col])
+datos_Js_resi_dmo = datos_Js_resi_dmo[ddd, :]
+
+aaa, cov = curve_fit(pow_law,
+                     xdata=datos_Js_resi_dmo[:-1, x_col],
+                     ydata=np.log10(datos_Js_resi_dmo[:-1, y_col]),
+                     p0=(20.12, 1.06),
+                     # bounds=[[19., 0.1], [21., 1.2]]
+)
+print('datos_Js_resi_dmo')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
 
 plt.subplot(222)
 
@@ -2458,6 +3224,19 @@ plt.scatter(datos_Js_frag_hyd[:, x_col],
             c='none', lw=1, marker='o',
             edgecolors=cmap(norm(np.log10(datos_Js_frag_hyd[:, z_col]))))
 
+aaa, cov = curve_fit(pow_law,
+                     xdata=datos_Js_frag_hyd[:, x_col],
+                     ydata=np.log10(datos_Js_frag_hyd[:, y_col]),
+                     p0=(18, 0.6)
+)
+print('datos_Js_frag_hyd')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
+
 plt.subplot(224)
 
 plt.tick_params('y', labelleft=False)
@@ -2472,6 +3251,19 @@ plt.scatter(datos_Js_resi_hyd[:, x_col],
             marker='+', s=100, linewidths=1,
             cmap=colormapp, vmin=vminn, vmax=vmaxx)
 
+aaa, cov = curve_fit(pow_law,
+                     xdata=datos_Js_resi_hyd[:, x_col],
+                     ydata=np.log10(datos_Js_resi_hyd[:, y_col]),
+                     p0=(18, 0.6)
+)
+print('datos_Js_resi_hyd')
+for i in range(len(aaa)):
+    print(aaa[i], np.sqrt(np.diag(cov))[i])
+
+plt.plot(xx_plot, (pow_law(xx_plot, j0=aaa[0], m=aaa[1])),
+         zorder=0, ls=':', c='gray', alpha=0.5)
+
+
 plt.yticks((19, 20, 21, 22, 23), labels=('19', '', '21', '', '23'))
 
 aa = plt.subplot(2, 2, 3)
@@ -2483,20 +3275,21 @@ aa.set_xticks([0.1, 1, 10, 100], labels=('0.1', '1', '10', '100'))
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 c2 = plt.colorbar(sm, ax=axes,
                   extend='both', spacing='proportional',
-                  # location='bottom'
+                  location='bottom'
                   )
 c2.set_label(r'$V_\mathrm{max}$ [km s$^{-1}$]', fontsize=20)
 yticks = c2.get_ticks()
 print(yticks)
 c2.ax.tick_params(axis='x', direction='out')
 c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
-c2.set_ticks(np.log10([5., 10., 20, 50, 90.]),
-             labels=['5', '10', '20', '50', '90'])
+c2.set_ticks(np.log10([5., 10., 20, 50, 80.]),
+             labels=['5', '10', '20', '50', '80'])
 
 plt.savefig(path_name_res + '/AngJss_full' + end_str + '.png',
             bbox_inches='tight')
 plt.savefig(path_name_res + '/AngJss_full' + end_str + '.pdf',
             bbox_inches='tight')
+plt.show()
 
 # ----------------------- Ang size - J (z==Vmax) 2x2 -----------------
 
@@ -2822,8 +3615,8 @@ c2.ax.tick_params(axis='x', direction='out')
 c2.set_label(r'$V_\mathrm{max}$ [km/s]', fontsize=20)
 yticks = c2.get_ticks()
 # c2.set_ticklabels([str(10 ** i)[:4] for i in yticks])
-c2.set_ticks(np.log10([5., 10., 20, 50, 90.]),
-             labels=['5', '10', '20', '50', '90'])
+c2.set_ticks(np.log10([5., 10., 20, 50, 80.]),
+             labels=['5', '10', '20', '50', '80'])
 
 plt.savefig(path_name_res + '/DgcJs' + end_str + '.png',
             bbox_inches='tight')
@@ -2863,15 +3656,16 @@ plt.axvline(Js95_resi_dmo, color='k', lw=1.5, ls='--')  # , alpha=0.5)
 
 # plt.ylabel('Number of repopulations', size=20)
 plt.xlim(minS, maxS)
-plt.ylim(bottom=0., top=85)
+plt.ylim(bottom=0., top=100)
 
+plt.xticks((19, 20, 21, 22, 23), labels=('19', '20', '21', '22', ''))
 # plt.yscale('log')
 
 plt.legend(handlelength=0.9, title='DMO', title_fontsize=18,
            handletextpad=0.5, fontsize=16,
            loc=1)
 
-ax2 = plt.subplot(212, sharex=ax1, sharey=ax1)
+ax2 = plt.subplot(212)
 
 aaa = plt.hist(np.log10(datos_Js_frag_hyd[:, 0]), log=False,
                color='yellowgreen', alpha=0.6,
@@ -2891,7 +3685,8 @@ print(Js95_resi_hyd, Js95_frag_hyd, Js95_resi_hyd - Js95_frag_hyd)
 plt.axvline(Js95_frag_hyd, color='#006E0B', lw=1.5, ls='--')  # , alpha=0.6)
 plt.axvline(Js95_resi_hyd, color='k', lw=1.5, ls='--')  # , alpha=0.6)
 
-# ax2.tick_params(labelleft=False)
+plt.xlim(minS, maxS)
+plt.ylim(bottom=0., top=100)
 
 plt.xlabel(r'log$_{10}$ (J$_\mathrm{S}$ [GeV$^2$ cm$^{-5}$])',
            fontsize=20)
@@ -2907,21 +3702,23 @@ fig.text(0.001, 0.5, 'Number of repopulations',
          ha='center',
          va='center', rotation='vertical')
 
-plt.xticks((19, 20, 21, 22))
+plt.xticks((19, 20, 21, 22, 23))
+plt.yticks((0, 25, 50, 75, 100), labels=('0', '25', '50', '75', ''))
 
-dx = 4 / 72.
-offset = trans.ScaledTranslation(0, dx, fig.dpi_scale_trans)
-for nn, label in enumerate(ax1.yaxis.get_majorticklabels()):
-    if nn == 0:
-        label.set_transform(label.get_transform() + offset)
-for nn, label in enumerate(ax2.yaxis.get_majorticklabels()):
-    if nn == 4:
-        label.set_transform(label.get_transform() - offset)
+# dx = 10 / 72.
+# offset = trans.ScaledTranslation(0, dx, fig.dpi_scale_trans)
+# for nn, label in enumerate(ax1.yaxis.get_majorticklabels()):
+#     if nn == 0:
+#         label.set_transform(label.get_transform() + offset)
+# for nn, label in enumerate(ax2.yaxis.get_majorticklabels()):
+#     if nn == 4:
+#         label.set_transform(label.get_transform() - offset)
 
 plt.savefig(path_name_res + '/J_hist_vert' + end_str + '.png',
             bbox_inches='tight')
 plt.savefig(path_name_res + '/J_hist_vert' + end_str + '.pdf',
             bbox_inches='tight')
+plt.show()
 # -------------------- J_hist -------------------------------------------------
 fig, axes = plt.subplots(1, 2, figsize=(8.5, 4))
 plt.subplots_adjust(wspace=0, hspace=0)
@@ -4783,7 +5580,6 @@ plt.savefig(path_name_res + '/Dgc_hist.png', bbox_inches='tight')
 plt.savefig(path_name_res + '/Dgc_hist.pdf', bbox_inches='tight')
 
 import Calculations.Repopulation.attemp_at_functions2 as funct_repop
-from scipy.optimize import newton
 
 SHVF_cts_RangeMax = 120.0
 SHVF_cts_RangeMin = 0.1

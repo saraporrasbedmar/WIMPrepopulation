@@ -46,8 +46,8 @@ def read_config_file(ConfigFile):
 
 
 path_outputs = 'outputs/' \
-               'test_srds_and_Cv'
-path_outputs = 'outputs/test1repop_resilient_newVcuts_8min'
+               'test_2025_angles_res'
+path_outputs = 'outputs/test_2025_angles_res'
 
 # rerun_sims = True
 rerun_sims = False
@@ -76,6 +76,9 @@ if rerun_sims:
     print(funct_repop.SHVF_Grand2012_int(
         input_data['SHVF']['RangeMin'], input_data['SHVF']['RangeMax'],
         input_data['SHVF']['dmo']['bb'], input_data['SHVF']['dmo']['mm']))
+    print(funct_repop.SHVF_Grand2012_int(
+        input_data['SHVF']['RangeMin'], input_data['SHVF']['RangeMax'],
+        input_data['SHVF']['hydro']['bb'], input_data['SHVF']['hydro']['mm']))
 
     input_data['repopulations']['num_brightest'] = \
         funct_repop.SHVF_Grand2012_int(
@@ -87,7 +90,7 @@ if rerun_sims:
     with open(path_input, 'w') as f:
         yaml.dump(input_data, f)
 
-    funct_repop.main(['dmo', 'resilient', path_input, path_outputs])
+    # funct_repop.main(['dmo', 'resilient', path_input, path_outputs])
     funct_repop.main(['dmo', 'fragile', path_input, path_outputs])
 
     input_data['repopulations']['num_brightest'] = \
@@ -100,20 +103,30 @@ if rerun_sims:
     with open(path_input, 'w') as f:
         yaml.dump(input_data, f)
 
-    funct_repop.main(['hydro', 'resilient', path_input, path_outputs])
+    # funct_repop.main(['hydro', 'resilient', path_input, path_outputs])
     funct_repop.main(['hydro', 'fragile', path_input, path_outputs])
 
 # path_outputs = 'outputs/test1repop_resilient_highNormSHVF'
-datos_resi_dmo = np.loadtxt(path_outputs + '/Js_dmo_resilient_results.txt')
-datos_resi_hyd = np.loadtxt(path_outputs + '/Js_hydro_resilient_results.txt')
+# datos_resi_dmo = np.loadtxt(path_outputs + '/Js_dmo_resilient_results.txt')
+# datos_resi_hyd = np.loadtxt(path_outputs + '/Js_hydro_resilient_results.txt')
 
-datos_frag_hyd = np.loadtxt(path_outputs + '/Js_hydro_fragile_results.txt')
-datos_frag_dmo = np.loadtxt(path_outputs + '/Js_dmo_fragile_results.txt')
+datos_frag_hyd = np.loadtxt(path_outputs + '/Js_hydro_resilient_results.txt')
+datos_frag_dmo = np.loadtxt(path_outputs + '/Js_dmo_resilient_results.txt')
 
 input_data = read_config_file(path_outputs + '/input_data.yml')
 num_its = input_data['repopulations']['its']
 # path_outputs = 'outputs/test1repop_resilient_highNormSHVF'
 
+data_release_dmo = np.loadtxt(
+    '../Data_subhalo_simulations/dmo_table.txt', skiprows=3)
+data_release_hydro = np.loadtxt(
+    '../Data_subhalo_simulations/hydro_table.txt', skiprows=3)
+data_release_dmo = data_release_dmo[
+                   data_release_dmo[:, 0] > 0.184, :]
+data_release_hydro = data_release_hydro[
+                     data_release_hydro[:, 0] > 0.184, :]
+data_release_dmo = data_release_dmo[np.argsort(data_release_dmo[:, 1])]
+data_release_hydro = data_release_hydro[np.argsort(data_release_hydro[:, 1])]
 # SHVF -----------------------------------------------------------------
 x_cumul = np.geomspace(input_data['SHVF']['RangeMin'],
                        input_data['SHVF']['RangeMax'],
@@ -149,9 +162,9 @@ def find_PowerLaw(xx, yy, lim_inf, lim_sup):
     return fits[0], fits[1], perr[0], perr[1]
 
 
-Vmax_cumul_dmo_res = calcular_dNdV(datos_resi_dmo[:, 3]) / num_its
+# Vmax_cumul_dmo_res = calcular_dNdV(datos_resi_dmo[:, 3]) / num_its
 Vmax_cumul_dmo_frag = calcular_dNdV(datos_frag_dmo[:, 3]) / num_its
-Vmax_cumul_hydro_res = calcular_dNdV(datos_resi_hyd[:, 3]) / num_its
+# Vmax_cumul_hydro_res = calcular_dNdV(datos_resi_hyd[:, 3]) / num_its
 Vmax_cumul_hydro_frag = calcular_dNdV(datos_frag_hyd[:, 3]) / num_its
 
 x_cumul = (x_cumul[:-1] + x_cumul[1:]) / 2.
@@ -160,10 +173,44 @@ plt.figure(figsize=(10, 10))
 
 xx_plot = np.logspace(np.log10(2), np.log10(120), 100)
 
-plt.scatter(x_cumul, Vmax_cumul_dmo_res, c='k', marker='+', s=12**2)
-plt.scatter(x_cumul, Vmax_cumul_dmo_frag, c='k')
-plt.scatter(x_cumul, Vmax_cumul_hydro_res, c='g', marker='+', s=12**2)
-plt.scatter(x_cumul, Vmax_cumul_hydro_frag, c='g')
+# plt.scatter(x_cumul, Vmax_cumul_dmo_res, c='k', marker='+', s=12**2)
+plt.scatter(x_cumul, Vmax_cumul_dmo_frag, c='k', marker='+', s=12**2)
+# plt.scatter(x_cumul, Vmax_cumul_hydro_res, c='g', marker='+', s=12**2)
+plt.scatter(x_cumul, Vmax_cumul_hydro_frag, c='g', marker='+', s=12**2)
+
+
+# Auriga data
+def calcular_dNdV(Vmax):
+    Vmax_cumul = np.zeros(len(x_cumul) - 1)
+    num_cumul = np.zeros(len(x_cumul) - 1)
+
+    Vmax = Vmax[:, 1]
+
+    for radius in range(len(Vmax_cumul)):
+        aa = Vmax >= x_cumul[radius]
+        bb = Vmax < x_cumul[radius + 1]
+
+        Vmax_cumul[radius] = sum(aa * bb) / (
+                x_cumul[radius + 1] - x_cumul[radius])
+        num_cumul[radius] = sum(aa * bb)
+        print(x_cumul[radius + 1] - x_cumul[radius])
+
+    return Vmax_cumul/6., num_cumul
+x_cumul = np.geomspace(1., 120., num=25)
+# x_mean = (x_cumul[:-1] + x_cumul[1:]) / 2.
+x_mean = np.sqrt(x_cumul[:-1] * x_cumul[1:])
+
+Vmax_cumul_dmo_release, num_dmo = calcular_dNdV(data_release_dmo)
+Vmax_cumul_hydro_release, num_hydro = calcular_dNdV(data_release_hydro)
+
+plt.plot(x_mean, Vmax_cumul_dmo_release,
+         linestyle='', ms=10, marker='.', markeredgewidth=2,
+         color='k', zorder=10, label='Auriga')
+
+plt.plot(x_mean, Vmax_cumul_hydro_release,
+         linestyle='',
+         ms=10, marker='.', markeredgewidth=2,
+         color='#00CC00', zorder=10)
 '''
 fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(
     x_cumul, Vmax_cumul_dmo_res, lim_inf=1.5, lim_sup=10.)
@@ -190,21 +237,176 @@ print(fitsM_hydro, fitsB_hydro)
 plt.plot(xx_plot, 10 ** fitsB_hydro * xx_plot ** fitsM_hydro,
          color='g', alpha=0.7, linestyle='--', lw=2, label='Hydro fragile')
 '''
+
+fig, ax = plt.subplots()
+xx_plot = np.geomspace(0.1, 120, 50)
+
+hist_dmo, bins_dmo = np.histogram(datos_frag_dmo[:, 3], bins=xx_plot)
+plt.stairs(hist_dmo, edges=bins_dmo, color='grey', alpha=0.5,
+           fill=True, label='Repopulation')
+
+hist_dmo, bins_dmo = np.histogram(datos_frag_hyd[:, 3], bins=xx_plot)
+plt.stairs(hist_dmo, edges=bins_dmo, color='limegreen', alpha=0.5,
+           fill=True,)
+
+hist_dmo, bins_dmo = np.histogram(data_release_dmo[:, 1], bins=xx_plot)
+plt.stairs(hist_dmo/6., edges=bins_dmo, color='k',
+           lw=2,
+           label='Auriga level 3')
+
+hist_dmo, bins_dmo = np.histogram(data_release_hydro[:, 1], bins=xx_plot)
+plt.stairs(hist_dmo/6., edges=bins_dmo, color='g',
+           lw=2,)
+
+plt.axvline(7.4, c='k', label=r'$V_\mathrm{cut}$', ls=':', lw=2)
+plt.axvline(5., c='forestgreen', ls=':', lw=2)
+
 plt.xscale('log')
 plt.yscale('log')
 
-plt.legend()
+plt.xlim(1., 120.)
+
+handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
+           mpatches.Patch(color='limegreen', label='MHD', alpha=0.8)
+           )
+
+legend11 = plt.legend(handles=handles, handlelength=0.9,
+                      loc=7, framealpha=1,
+                      bbox_to_anchor=(0.999, 0.5))
+
+legend22 = plt.legend(loc=1, framealpha=1)
+
+ax.add_artist(legend11)
+ax.add_artist(legend22)
+
+plt.xticks([1., 10, 100],
+              labels=('1', '10', '100')
+              )
 
 plt.xlabel(r'$V_{\mathrm{max}}$ [km s$^{-1}$]', size=24)
-plt.ylabel(r'$\frac{dN(V_{\mathrm{max}})}{dV_{\mathrm{max}}}$', size=27)
+plt.ylabel(r'Number of subhalos', size=24)
 
-plt.savefig(path_outputs + '/SHVF.png', bbox_inches='tight')
-plt.savefig(path_outputs + '/SHVF.pdf', bbox_inches='tight')
+plt.savefig(path_outputs + '/SHVF_compar.png', bbox_inches='tight')
+plt.savefig(path_outputs + '/SHVF_compar.pdf', bbox_inches='tight')
 
-
-# plt.show()
 
 # SRD ------------------------------------------------------------------
+
+fig, ax = plt.subplots(figsize=(7, 5))
+
+R_vir = input_data['host']['R_vir']
+num_bins = 15
+xx_plot = np.linspace(0, 1, num_bins)
+
+hist_dmo, bins_dmo = np.histogram(datos_frag_dmo[:, 1]/R_vir,
+                                  bins=xx_plot, density=False)
+plt.stairs(hist_dmo/sum(hist_dmo), edges=bins_dmo, color='grey', alpha=0.5,
+           fill=True, label='Repopulation')
+
+hist_dmo, bins_dmo = np.histogram(datos_frag_hyd[:, 1]/R_vir,
+                                  bins=xx_plot, density=False)
+plt.stairs(hist_dmo/sum(hist_dmo), edges=bins_dmo, color='limegreen',
+           alpha=0.5,
+           fill=True,)
+print(hist_dmo)
+def encontrar_SRD_sinVol(data, bins):
+    n_final = []
+    std_fin = []
+
+    for delta in range(len(bins) - 1):
+        aaa = []
+        for halo in unique_halos:
+            data_ind = data[data[:, 6] == halo, :]
+            interval = ((data_ind[:, 2] / data_ind[:, 5] >= bins[delta])
+                        * (data_ind[:, 2] / data_ind[:, 5] <= bins[delta + 1]))
+            aaa.append(sum(interval))
+
+        n_final.append(np.nanmean(aaa))
+        std_fin.append(np.std(aaa))
+
+    return np.array(n_final), np.array(std_fin)
+
+unique_halos = np.unique(data_release_hydro[:, 6])
+release_dmo_over = data_release_dmo[data_release_dmo[:, 1] >= 8., :]
+release_hydro_over = data_release_hydro[data_release_hydro[:, 1] >= 8., :]
+# minnDgc = np.argmin(release_dmo_over[:, 2])
+bins_dmo = np.linspace(
+            0.,
+            1., num=num_bins)
+bins_mean_dmo = (bins_dmo[:-1] + bins_dmo[1:]) / 2.
+bins_hydro = np.linspace(
+            0.,
+            1., num=num_bins)
+bins_mean_hydro = (bins_hydro[:-1] + bins_hydro[1:]) / 2.
+srd_dmo_over_release, std_dmo_num = (np.array(encontrar_SRD_sinVol(
+            release_dmo_over, bins_dmo))
+            # / len(release_dmo_over)
+        )
+srd_hydro_over_release, std_hydro_num = (np.array(encontrar_SRD_sinVol(
+            release_hydro_over, bins_hydro))
+            / len(release_hydro_over)
+        )
+
+# plt.errorbar(bins_mean_dmo, srd_dmo_over_release/sum(srd_dmo_over_release),
+#                      yerr=std_dmo_num/sum(srd_dmo_over_release),
+#                      ls='',
+#                      c='k',
+#                      ms=15, marker='.', markeredgewidth=2,
+#                      alpha=1, zorder=15,
+#                      capsize=5,
+#            label='Auriga level 3'
+#                      )
+#
+# plt.errorbar(bins_mean_hydro, srd_hydro_over_release/sum(srd_hydro_over_release),
+#                      yerr=std_hydro_num/sum(srd_hydro_over_release),
+#                      ls='',
+#                      c='g',
+#                      ms=15, marker='.', markeredgewidth=2,
+#                      alpha=1, zorder=15,
+#                      capsize=5)
+hist_dmo, bins_dmo = np.histogram(
+    release_dmo_over[:, 2] / release_dmo_over[:, 5], bins=xx_plot)
+plt.stairs(hist_dmo/len(release_dmo_over), edges=bins_dmo, color='k',
+           lw=2,
+           label=r'Auriga, $V_\mathrm{max} > V_\mathrm{uni}$')
+
+hist_dmo, bins_dmo = np.histogram(
+    release_hydro_over[:, 2]/release_hydro_over[:, 5], bins=xx_plot)
+plt.stairs(hist_dmo/len(release_hydro_over), edges=bins_dmo, color='g',
+           lw=2,)
+
+
+# plt.xscale('log')
+# plt.yscale('log')
+
+plt.xlim(0., 1.)
+plt.ylim(0., 0.12)
+
+handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
+           mpatches.Patch(color='limegreen', label='MHD', alpha=0.8)
+           )
+
+legend11 = plt.legend(handles=handles, handlelength=0.9,
+                      loc=2, framealpha=1,
+                      # bbox_to_anchor=(0.001, 0.64)
+                      )
+
+legend22 = plt.legend(loc=4, framealpha=1)
+
+ax.add_artist(legend11)
+ax.add_artist(legend22)
+
+# plt.xticks([1., 10, 100],
+#               labels=('1', '10', '100')
+#               )
+
+plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=24)
+plt.ylabel(r'Number of subhalos', size=24)
+
+plt.savefig(path_outputs + '/srd_compar.png', bbox_inches='tight')
+plt.savefig(path_outputs + '/srd_compar.pdf', bbox_inches='tight')
+
+plt.show()
 
 R_vir = input_data['host']['R_vir']
 

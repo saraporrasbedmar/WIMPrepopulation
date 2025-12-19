@@ -65,38 +65,11 @@ def calcular_dNdV(Vmax):
 
     for radius in range(len(Vmax_cumul)):
         aa = Vmax >= x_cumul[radius]
-        # bb = Vmax < x_cumul[radius + 1]
 
-        Vmax_cumul[radius] = sum(aa)  #\
-                             # / (
-                # x_cumul[radius + 1] - x_cumul[radius])
+        Vmax_cumul[radius] = sum(aa)
         num_cumul[radius] = sum(aa)
 
     return Vmax_cumul/6., num_cumul
-
-# def calcular_dNdV_individual(data):
-#     Vmax_cumul = np.zeros(len(x_cumul) - 1)
-#     std_fin = np.zeros(len(x_cumul) - 1)
-#
-#     for delta in range(len(x_mean)):
-#         aaa = []
-#         for halo in unique_halos:
-#             data_ind = data[data[:, 6] == halo, :]
-#             interval = ((data_ind[:, 1] /  >= bins[delta])
-#                         * (data_ind[:, 2] / data_ind[:, 5] <= bins[delta + 1]))
-#             aaa.append(sum(interval))
-#
-#         # if delta == 0 or delta == 1 or delta == 2:
-#         #     print(aaa, np.nanmean(aaa), np.std(aaa))
-#         Vmax_cumul.append(np.nanmean(aaa))
-#         std_fin.append(np.std(aaa))
-#     return np.array(Vmax_cumul), np.array(std_fin)
-#     ###
-#     Vmax = Vmax[:, 1]
-#
-#     for radius in range(len(Vmax_cumul)):
-#         aa = Vmax >= x_cumul[radius]
-#         Vmax_cumul[radius] = sum(aa)
 
 
 Vmax_cumul_dmo_original, num_dmo = calcular_dNdV(data_release_dmo)
@@ -146,13 +119,6 @@ if repop:
         true_values = ((x_mean > limit_inf_dmo) * (x_mean < limit_sup_dmo))
         true_values = (true_values * (Vmax_cumul_dmo_release > 0.))
         true_values = (true_values * num_dmo >= 10)
-        # try:
-        fits = curve_fit(powerlaw,
-                xdata=(x_mean[true_values]),
-                ydata=(Vmax_cumul_dmo_release[true_values]),
-                p0=[5., -4.])
-
-        # print(fits[0], np.sqrt(np.diag(fits[1])))
 
 
         combined_likelihood = LeastSquares(
@@ -164,34 +130,10 @@ if repop:
         m_best_fit.migrad()
         m_best_fit.hesse()
 
-        # print(m_best_fit.params)
-        # print(m_best_fit.values)
 
-        fits = curve_fit(linear_funct,
-                xdata=np.log10(x_mean[true_values]),
-                ydata=np.log10(Vmax_cumul_dmo_release[true_values]),
-                p0=[m_best_fit.values[0], m_best_fit.values[1]])
-
-        # print(fits[0], np.sqrt(np.diag(fits[1])))
-
-        fits = np.polyfit(
-                x=np.log10(x_mean[true_values]),
-                y=np.log10(Vmax_cumul_dmo_release[true_values]),
-                deg=1)
-
-        # print(fits[1], fits[0])
-        # print()
 
         mm_dmo.append(m_best_fit.values[1])
         bb_dmo.append(m_best_fit.values[0])
-        # except np.linalg.LinAlgError:
-        #     plt.figure()
-        #     plt.plot(x_mean, Vmax_cumul_hydro_release,
-        #              marker='.', c='k')
-        #     plt.axvline(limit_inf_dmo)
-        #     plt.axvline(limit_sup_dmo)
-        #     mm_dmo.append(np.nan)
-        #     bb_dmo.append(np.nan)
 
 
         limit_inf_hyd = rng.random(1) * 3. + 5.
@@ -200,13 +142,6 @@ if repop:
         true_values = ((x_mean > limit_inf_hyd) * (x_mean < limit_sup_hyd))
         true_values = (true_values * (Vmax_cumul_hydro_release > 0.))
         true_values = (true_values * (num_hydro >= 10))
-
-        # fits, cov_matrix = np.polyfit(
-        #         np.log10(x_mean[true_values]),
-        #         np.log10(Vmax_cumul_hydro_release[true_values]),
-        #         deg=1, cov=True, full=False)
-        # mm_hyd.append(fits[0])
-        # bb_hyd.append(fits[1])
 
         combined_likelihood = LeastSquares(
             x_mean[true_values], Vmax_cumul_hydro_release[true_values],
@@ -217,53 +152,14 @@ if repop:
         m_best_fit.migrad()
         m_best_fit.hesse()
 
-        # print(m_best_fit.params)
-        # print(m_best_fit.values)
-
         mm_hyd.append(m_best_fit.values[1])
         bb_hyd.append(m_best_fit.values[0])
 
-        # if mm_dmo[-1] < -4.6 or mm_hyd[-1] < -4.6\
-        #         or mm_dmo[-1] > -3.5 or mm_hyd[-1] > -3.5:
-        #     plt.figure()
-        #     plt.title('%i  %.2f  %.2f' % (i, mm_dmo[-1], mm_hyd[-1]))
-        #     xx_plot = np.geomspace(0.5, 120)
-        #
-        #     if mm_dmo[-1] < -4.6 or mm_dmo[-1] > -3.5:
-        #         plt.errorbar(x_mean, Vmax_cumul_dmo_release,
-        #                      yerr=0.001*Vmax_cumul_dmo_release,
-        #                  marker='.', c='k')
-        #         plt.plot(xx_plot,
-        #                  powerlaw(xx_plot, bb_dmo[-1], mm_dmo[-1]),
-        #                  c='k')
-        #         plt.plot(x_mean, Vmax_cumul_dmo_original,
-        #                  marker='x',  c='k')
-        #         plt.axvline(limit_inf_dmo, c='k')
-        #         plt.axvline(limit_sup_dmo, c='k')
-        #
-        #     if mm_hyd[-1] < -4.6 or mm_hyd[-1] > -3.5:
-        #         plt.errorbar(x_mean, Vmax_cumul_hydro_release,
-        #                      yerr=Vmax_cumul_hydro_release*0.001,
-        #                  marker='.', c='g')
-        #         plt.plot(x_mean, Vmax_cumul_hydro_original,
-        #                  marker='x',  c='g')
-        #         plt.plot(xx_plot, 10**bb_hyd[-1] * xx_plot**mm_hyd[-1],
-        #                  c='g')
-        #         plt.axvline(limit_inf_hyd, c='g')
-        #         plt.axvline(limit_sup_hyd, c='g')
-        #
-        #     plt.xscale('log')
-        #     plt.yscale('log')
-        #
-        #     plt.show()
-
-
-
-    np.savetxt('outputs/data_shvf.txt',
+    np.savetxt('outputs/data_shvf_cumulative.txt',
                np.column_stack((mm_dmo, bb_dmo, mm_hyd, bb_hyd)),
                header='mm_dmo, bb_dmo, mm_hyd, bb_hyd')
 
-data = np.loadtxt('outputs/data_shvf.txt')
+data = np.loadtxt('outputs/data_shvf_cumulative.txt')
 mm_dmo = data[:, 0]
 bb_dmo = data[:, 1]
 mm_hyd = data[:, 2]
@@ -339,7 +235,8 @@ print(np.nanmean(bb_hyd), np.nanstd(bb_hyd))
 
 plt.xlabel(r'$V_0$')
 
-plt.savefig('outputs/SHVF_bootstrap_hist.png', bbox_inches='tight')
+plt.savefig('outputs/SHVF_bootstrap_hist_cumulative.png',
+            bbox_inches='tight')
 
 
 # -- SHVF figure -----------------------------------------------
@@ -386,6 +283,10 @@ plt.plot(xxx, 10 ** np.nanmean(bb_hyd) * xxx ** np.nanmean(mm_hyd),
 
 plt.plot(xxx, 0.038*(xxx/201.)**-2.97, c='b', label='VLII paper Ale')
 
+print(np.log10(0.038*201.**2.97))
+print(np.log10((0.038 + 0.006)*201.**2.97)-np.log10(0.038*201.**2.97))
+
+
 data_grand21_shvf = np.loadtxt(
     '../Data_subhalo_simulations/grand21_level3_shvf.txt')
 plt.scatter(data_grand21_shvf[:, 0], data_grand21_shvf[:, 1],
@@ -423,7 +324,7 @@ ax.set_xticks([1., 10, 100],
               labels=('1', '10', '100')
               )
 
-plt.savefig('outputs/shvf.pdf', bbox_inches='tight')
-plt.savefig('outputs/shvf.png', bbox_inches='tight')
+plt.savefig('outputs/shvf_cumulative.pdf', bbox_inches='tight')
+plt.savefig('outputs/shvf_cumulative.png', bbox_inches='tight')
 
 plt.show()

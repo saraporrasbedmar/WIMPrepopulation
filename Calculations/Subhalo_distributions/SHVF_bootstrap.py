@@ -318,8 +318,8 @@ plt.savefig('outputs/SHVF_bootstrap_hist.png', bbox_inches='tight')
 
 
 # -- SHVF figure -----------------------------------------------
-# fig, ax = plt.subplots(figsize=(8, 7))
-fig, ax = plt.subplots(figsize=(6., 6.))  # icrc
+fig, ax = plt.subplots(figsize=(8, 7))
+# fig, ax = plt.subplots(figsize=(6., 6.))  # icrc
 
 Vmax_cumul_dmo_release, num_dmo = calcular_dNdV(data_release_dmo)
 Vmax_cumul_hydro_release, num_hydro = calcular_dNdV(data_release_hydro)
@@ -390,7 +390,7 @@ handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
 legend11 = plt.legend(handles=handles, handlelength=0.9,
                       loc=1, framealpha=1)
 
-legend22 = plt.legend(loc=3, framealpha=1)
+legend22 = plt.legend(loc=3, framealpha=1, bbox_to_anchor=(0.01, 0.1))
 
 ax.add_artist(legend11)
 ax.add_artist(legend22)

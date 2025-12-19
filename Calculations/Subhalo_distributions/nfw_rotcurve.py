@@ -117,7 +117,8 @@ plt.savefig('curve11.png', bbox_inches='tight')
 plt.savefig('curve11.pdf', bbox_inches='tight')
 
 
-plt.text(x=0.265, y=123, s=r'$c_\mathrm{V, 1}=3.5 \times 10^4$', c='b')
+plt.text(x=0.265, y=123, s=r'$c_\mathrm{V, 1'
+                           r'}=3.5 \times 10^4$', c='b')
 
 rmax2 = rmax_from_cv(V200, c_v/10., h_0=H_0)
 

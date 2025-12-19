@@ -408,7 +408,7 @@ ax0.errorbar(vv_medians_hydro_release,
 
 plt.xscale('log')
 # plt.yscale('log')
-plt.ylabel(r'log$_{10}($c$_\mathrm{V}$)', labelpad=10)
+plt.ylabel(r'log$_{10}$ ($c_\mathrm{V}$)', labelpad=10)
 
 plt.xlabel(r'$V_\mathrm{max}$ [km s$^{-1}$]', size=28)
 
@@ -486,7 +486,7 @@ for i in range(len(vcut_array)):
                 color='k', alpha=0.5, ls='--')
 
 ax0.plot(xx_plot, np.log10(Cv_Mol2021_redshift0(xx_plot)),
-         c='r', zorder=15, ls='dotted', label='Moliné+ \'21', lw=2.5)
+         c='r', zorder=15, ls='dotted', label='M21', lw=2.5)
 
 
 plt.figure(fig2)
@@ -515,18 +515,94 @@ n_dmo, bins_dmo, _ = plt.hist(
     data_dmo,
     # bins=np.geomspace(0.01, 10, num=40),
     # density=True,
-    color='grey', alpha=0.7,
+    color='grey', alpha=0.4,
     bins=20,
          histtype='stepfilled'
 )
+
+args_new_dmo = np.where((np.mean(data_dmo) - np.std(data_dmo) < bins_dmo)
+                * (np.mean(data_dmo) + np.std(data_dmo) > bins_dmo))
+new_bins_dmo = bins_dmo[args_new_dmo]
+print(new_bins_dmo)
+new_bins_dmo = np.insert(new_bins_dmo, [0],
+                         [np.mean(data_dmo) - np.std(data_dmo)])
+new_bins_dmo = np.append(new_bins_dmo, np.mean(data_dmo) + np.std(data_dmo))
+print(new_bins_dmo)
+
+print(np.shape(n_dmo), np.shape(bins_dmo))
+
+new_n_dmo = n_dmo[args_new_dmo]
+new_n_dmo = np.insert(new_n_dmo, 0,
+                      n_dmo[args_new_dmo[0][0]-1])
+
+plt.stairs(edges=new_bins_dmo, values=new_n_dmo,
+           color='grey', fill=True,
+           alpha=1, hatch='/')
+
+
+plt.axvline(np.mean(data_dmo)
+            , color='k', ls='-', lw=3, label='Mean')
+# plt.axvline(np.mean(data_dmo) + np.std(data_dmo)
+#             , color='k', ls='--', lw=2, label=r'$1\sigma$')
+# plt.axvline(np.mean(data_dmo) - np.std(data_dmo)
+#             , color='k', ls='--', lw=2)
+print(np.mean(data_dmo), np.std(data_dmo),
+      10**np.mean(data_dmo) * (10**np.std(data_dmo) - 1.))
+print([np.mean(data_dmo) - np.std(data_dmo),
+                          np.mean(data_dmo) + np.std(data_dmo)])
+
 n_hydro, bins_hydro, _ = plt.hist(
     data_hydro,
     # bins=np.geomspace(0.01, 10, num=40),
     # density=True,
-    color='limegreen', alpha=0.7,
+    color='limegreen', alpha=0.4,
     bins=20,
          histtype='stepfilled'
 )
+
+plt.axvline(np.mean(data_hydro)
+            , color='g', ls='-', lw=3)
+# plt.axvline(np.mean(data_hydro) + np.std(data_hydro)
+#             , color='g', ls='--', lw=2)
+# plt.axvline(np.mean(data_hydro) - np.std(data_hydro)
+#             , color='g', ls='--', lw=2)
+print(np.mean(data_hydro), np.std(data_hydro),
+      10**np.mean(data_hydro) * (10**np.std(data_hydro) - 1.))
+
+args_new_hydro = np.where((np.mean(data_hydro) - np.std(data_hydro) < bins_hydro)
+                * (np.mean(data_hydro) + np.std(data_hydro) > bins_hydro))
+new_bins_dmo = bins_hydro[args_new_hydro]
+print(new_bins_dmo)
+new_bins_dmo = np.insert(new_bins_dmo, [0],
+                         [np.mean(data_hydro) - np.std(data_hydro)])
+new_bins_dmo = np.append(new_bins_dmo, np.mean(data_hydro) + np.std(data_hydro))
+print(new_bins_dmo)
+
+print(np.shape(n_hydro), np.shape(bins_hydro))
+
+new_n_dmo = n_hydro[args_new_hydro]
+new_n_dmo = np.insert(new_n_dmo, 0,
+                      n_hydro[args_new_hydro[0][0]-1])
+
+plt.stairs(edges=new_bins_dmo, values=new_n_dmo,
+           color='limegreen', fill=True,
+           alpha=0.6, hatch='\\')
+
+from pylab import Rectangle
+
+p1 = Rectangle((0, 0), 1, 1, fc="lightgrey")
+p2 = Rectangle((0, 0), 1, 1, fc="grey", hatch='//')
+p4 = plt.Line2D([], [], linewidth=3, linestyle='-', color='k')
+
+handles = ((p4), (p2, p1))
+labels = ['Mean', r'$1\sigma$ | Full distribution']
+leg1 = plt.legend(handles, labels,
+           handler_map={tuple: HandlerTuple(ndivide=2, pad=0.)},
+           loc=2, fontsize=20)
+# leg1 = plt.legend(handles, labels,
+#            handler_map={tuple: HandlerTuple(ndivide=2, pad=0.)},
+#            loc=2, fontsize=20)
+
 def loglikelihood(xx, mean, sigma10, aa):
     return aa / (xx * sigma10) * np.exp(
         -(np.log10(xx) - mean) ** 2. / 2. / sigma10 ** 2.)
@@ -546,23 +622,6 @@ aaa = curve_fit(f=gaussian,
     p0=(5.,0.5, 200))[0]
 print(aaa)
 
-plt.axvline(np.mean(data_dmo)
-            , color='k', ls='-', lw=3, label='Mean')
-plt.axvline(np.mean(data_dmo) + np.std(data_dmo)
-            , color='k', ls='--', lw=2, label=r'$1\sigma$')
-plt.axvline(np.mean(data_dmo) - np.std(data_dmo)
-            , color='k', ls='--', lw=2)
-print(np.mean(data_dmo), np.std(data_dmo),
-      10**np.mean(data_dmo) * (10**np.std(data_dmo) - 1.))
-
-plt.axvline(np.mean(data_hydro)
-            , color='g', ls='-', lw=3)
-plt.axvline(np.mean(data_hydro) + np.std(data_hydro)
-            , color='g', ls='--', lw=2)
-plt.axvline(np.mean(data_hydro) - np.std(data_hydro)
-            , color='g', ls='--', lw=2)
-print(np.mean(data_hydro), np.std(data_hydro),
-      10**np.mean(data_hydro) * (10**np.std(data_hydro) - 1.))
 
 xx_plotaa = np.geomspace(0.5, 120)
 ax0.fill_between(
@@ -580,8 +639,8 @@ ax0.fill_between(
 # ax0.text(x=10.5, y=5.65, s=r'$V_\mathrm{Cut}$', c='k')
 ax0.text(x=10.5, y=5.7, s=r'$V_\mathrm{res}$', c='k', fontsize=22)
 
-leg1 = plt.legend(loc=2, #bbox_to_anchor=(0.05, 0.98),
-                  fontsize=20)
+# leg1 = plt.legend(loc=2, #bbox_to_anchor=(0.05, 0.98),
+#                   fontsize=20)
 
 handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
            mpatches.Patch(color='limegreen', label='MHD', alpha=0.8)
@@ -592,7 +651,7 @@ legend_colors = plt.legend(handles=handles, loc=1,
 
 ax1.add_artist(legend_colors)
 ax1.add_artist(leg1)
-plt.xlabel(r'log$_{10}(\mathrm{c}_V)$')
+plt.xlabel(r'log$_{10}(c_\mathrm{V})$')
 # plt.text(x=3.08, y=130, s=r'$V_\mathrm{max} > 10\,$km s$^{-1}$',
 #          fontsize=22)
 # plt.text(x=3.23, y=130, s=r'$V_\mathrm{max} > V_\mathrm{Cut}$',
@@ -685,7 +744,7 @@ ax0.set_xticks([1., 10, 100],
 
 plt.savefig('outputs/cv_hist.pdf', bbox_inches='tight')
 plt.savefig('outputs/cv_hist.png', bbox_inches='tight')
-plt.show()
+# plt.show()
 
 plt.subplots(1, 3)
 plt.subplot(131)

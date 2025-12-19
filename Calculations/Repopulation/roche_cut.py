@@ -44,7 +44,7 @@ cosmo_rho_crit = data_dict['cosmo_constants']['rho_crit']
 
 host_R_vir = data_dict['host']['R_vir']
 host_rho_0 = float(data_dict['host']['rho_0'])
-host_r_s = data_dict['host']['r_s']
+host_r_s = 12. #data_dict['host']['r_s']
 
 def find_roche(dist, vmax, c0=1.75e5):
     c_mean = funct_repop.Cv_Mol2021_redshift0(vmax, c0=c0)

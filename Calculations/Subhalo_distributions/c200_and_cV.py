@@ -159,13 +159,14 @@ aaa = curve_fit(gaussiannorm,
                 p0=[1.5, 1., 3.])
 print(aaa[0])
 plt.plot(xxx, gaussiannorm(xxx, aaa[0][0], aaa[0][1], aaa[0][2]),
-         label='Our fit, Eq.$\,$A.2', lw=2)
-
-plt.text(x=1.42, y=0.5, s=r'$\mu$'
-                         ' = %.2f\n'
-                         r'$\sigma$'
-                         ' = %.2f'
-                         % (aaa[0][0], aaa[0][1]),
+         label='Our fit, Eq.$\,$(B.2)', lw=2)
+errors = np.sqrt(np.diag(aaa[1]))
+print(aaa[1])
+plt.text(x=1.36, y=0.5,
+         s=r'$\mu$' ' = %.2f' r' $\pm$ ' '%.2f'
+           '\n'
+           r'$\sigma$' ' = %.2f' r' $\pm$ ' '%.2f'
+           % (aaa[0][0], errors[0], aaa[0][1], errors[1]),
          fontsize=24)
 
 
@@ -186,25 +187,27 @@ cv[:, 0] = np.log10(cv_fromc200(10**cv[:, 0]))
 meandatax = np.log10(cv_fromc200(10**np.array(meandatax)))
 
 plt.plot(cv[:, 0], cv[:, 1], lw=2,
-         label=r'c$_\mathrm{V}$(c$_{200}$), Eq.$\,$A.1')
+         label=r'c$_\mathrm{V}$(c$_{200}$), Eq.$\,$(B.1)')
 
 xxx = np.linspace(4., 6.5, num=1000)
 
 aaa = curve_fit(gaussiannorm,
                 xdata=meandatax, ydata=meandatay,
                 p0=[1.5, 1., 3.])
+errors = np.sqrt(np.diag(aaa[1]))
+print(aaa[1], errors)
 print(aaa[0])
 plt.plot(xxx, gaussiannorm(xxx, aaa[0][0], aaa[0][1], aaa[0][2]),
-         label='Our fit, Eq.$\,$A.2', lw=2)
+         label='Our fit, Eq.$\,$(B.2)', lw=2)
 
 
 plt.legend(loc=1)
 
-plt.text(x=4.85, y=0.5, s=r'$\mu$'
-                         ' = %.2f\n'
-                         r'$\sigma$'
-                         ' = %.2f'
-                         % (aaa[0][0], aaa[0][1]),
+plt.text(x=4.7, y=0.5,
+         s=r'$\mu$' ' = %.2f' r' $\pm$ ' '%.2f'
+           '\n'
+           r'$\sigma$' ' = %.2f' r' $\pm$ ' '%.2f'
+           % (aaa[0][0], errors[0], aaa[0][1], errors[1]),
          fontsize=24)
 
 plt.ylim(0., 2.8)
@@ -217,4 +220,4 @@ plt.savefig('c200cv.png',
 plt.savefig('c200cv.pdf',
             bbox_inches='tight')
 
-# plt.show()
+plt.show()

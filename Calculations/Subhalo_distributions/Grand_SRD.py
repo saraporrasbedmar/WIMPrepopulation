@@ -12,7 +12,7 @@ import matplotlib.patches as mpatches
 from matplotlib.lines import Line2D
 
 import scipy.optimize as opt
-from scipy import integrate
+from scipy.integrate import simpson
 from scipy.interpolate import UnivariateSpline
 
 all_size = 26
@@ -259,6 +259,7 @@ for aa in vv_array:
         )
 
         print('dmo')
+        print(bins_dmo)
         srddensity_dmo_over_release, std_dmo_den = (encontrar_SRD(
             release_dmo_over, bins_dmo))
 
@@ -273,6 +274,7 @@ for aa in vv_array:
         )
 
         print('\nhydro')
+        print(bins_hydro)
         srddensity_hydro_over_release, std_hydro_den = (encontrar_SRD(
             release_hydro_over, bins_hydro))
 
@@ -331,6 +333,21 @@ for aa in vv_array:
     alpha_dmo.append([cts_dmo[0][0], bbb[0]])
     beta_dmo.append([cts_dmo[0][1], bbb[1]])
 
+    top_kpc_cdf = 10./220.
+    # top_kpc_cdf = bins_dmo[1]
+    print(top_kpc_cdf*220.)
+    xxx_over = np.linspace(0., top_kpc_cdf, num=1500)
+    xxx_tot = np.linspace(0., 1., num=2000)
+    probab_frag = (
+        simpson(y=funct_ale(xxx_over, cts_dmo[0][0], cts_dmo[0][1]),
+                x=xxx_over)
+        / simpson(y=funct_ale(xxx_tot, cts_dmo[0][0], cts_dmo[0][1]),
+                  x=xxx_tot))
+    probab_res = top_kpc_cdf
+    print(probab_frag, probab_res,
+          probab_res/probab_frag, probab_res/probab_frag*10**0.1)
+    print()
+
     cts_hydro = opt.curve_fit(funct_ale, xdata=bins_mean_hydro,
                               ydata=srd_hydro_over_release,
                               sigma=std_hydro_num,
@@ -339,6 +356,19 @@ for aa in vv_array:
     bbb = np.diag(cts_hydro[1]) ** 0.5
     alpha_hydro.append([cts_hydro[0][0], bbb[0]])
     beta_hydro.append([cts_hydro[0][1], bbb[1]])
+
+    # top_kpc_cdf = bins_hydro[1]
+    print(top_kpc_cdf*220.)
+    xxx_over = np.linspace(0., top_kpc_cdf, num=1500)
+    probab_frag = (
+        simpson(y=funct_ale(xxx_over, cts_hydro[0][0], cts_hydro[0][1]),
+                x=xxx_over)
+        / simpson(y=funct_ale(xxx_tot, cts_hydro[0][0], cts_hydro[0][1]),
+                  x=xxx_tot))
+    probab_res = top_kpc_cdf
+    print(probab_frag, probab_res,
+          probab_res/probab_frag, probab_res/probab_frag*10**0.21)
+
 
     plt.plot(xxx, funct_ale(xxx, cts_dmo[0][0], cts_dmo[0][1]),
              'dimgray', linestyle='--', lw=3, alpha=0.7,

@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colorbar as colorbarr
 import matplotlib.patches as mpatches
+from matplotlib.lines import Line2D
 
 
 all_size = 26
@@ -49,7 +50,7 @@ plt.scatter(data_release_hydro[:, 1], data_release_hydro[:, 0],
 plt.axhline(0.184, linestyle='-.', color='k', alpha=0.6,
             linewidth=2, zorder=0)
 plt.text(x=22, y=0.20, s='softening length', color='k', alpha=0.8,
-         fontsize=20)
+         fontsize=18)
 
 
 # Arrows and text
@@ -70,8 +71,11 @@ plt.text(x=8.9, y=15, s='Dwarfs\n(DM + baryons)', fontsize=20,
 plt.xscale('log')
 plt.yscale('log')
 
-handles = (mpatches.Patch(color='k', label='DMO', alpha=0.8),
-           mpatches.Patch(color='limegreen', label='MHD', alpha=0.8)
+handles = (
+    Line2D([], [], marker='o', color='k', label='DMO', alpha=1,
+           markersize=13, lw=0),
+    Line2D([], [], marker='o', color='limegreen', label='MHD', alpha=1,
+           markersize=13, lw=0)
            )
 
 legend11 = plt.legend(handles=handles, handlelength=0.9,
@@ -89,7 +93,7 @@ ax.set_xticks([1, 10, 100], labels=('1', '10', '100'))
 ax.set_yticks([0.1, 1, 10], labels=('0.1', '1', '10'))
 
 fig.savefig('outputs/raw.pdf', bbox_inches='tight')
-fig.savefig('outputs/raw.png', bbox_inches='tight')
+fig.savefig('outputs/raw.png', bbox_inches='tight', dpi=300)
 plt.show()
 
 # ----------------------------------------------------------------------
