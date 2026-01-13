@@ -5,8 +5,8 @@ import matplotlib.patches as mpatches
 import scipy.optimize as sciopt
 import scipy.stats as stats
 from scipy.optimize import root
-from iminuit import Minuit
-from iminuit.cost import LeastSquares
+# from iminuit import Minuit
+# from iminuit.cost import LeastSquares
 
 from scipy.integrate import simpson
 all_size = 26
@@ -75,19 +75,19 @@ import matplotlib.patheffects as pe
 plt.subplot(number_params, 1, 1)
 plt.loglog(dgc_kpc / r_200_numerical,
            nfw_rho_profile(xx=dgc_kpc, rs=r_s, rho0=rho_0),
-           lw=2,
-           # path_effects=[pe.Stroke(linewidth=6, foreground='k'),
-           #               pe.Normal()]
+           lw=3, c='lime',
+           path_effects=[pe.Stroke(linewidth=4, foreground='k'),
+                         pe.Normal()]
            )
 
-plt.axvline(r_s / r_200_numerical, ls='--', c='grey', lw=2)
-plt.text(x=r_s / r_200_numerical, y=2e9,
+plt.axvline(r_s / r_200_numerical, ls='--', c='grey', lw=3)
+plt.text(x=r_s / r_200_numerical, y=3e9,
          s=r'$r_\mathrm{s}$', ha='center')
 
-plt.axvline(r_200_numerical / r_200_numerical, ls='-', c='k', lw=2)
+plt.axvline(r_200_numerical / r_200_numerical, ls='-', c='k', lw=3)
 plt.axvspan(1, 2, color=(235/255, 235/255, 235/255))
 
-plt.text(x=r_200_numerical / r_200_numerical, y=2e9,
+plt.text(x=r_200_numerical / r_200_numerical, y=3e9,
          s=r'$R_\mathrm{200}$', ha='center')
 
 plt.text(x=0.0033, y=1e7, s=r'$\log_{10} \rho \propto -1$', fontsize=18)
@@ -100,11 +100,11 @@ plt.tick_params('x', labelbottom=False)
 
 xx = np.geomspace(1e-3, 0.17*r_200_numerical)
 yy = rho_0 / (xx/r_s)
-plt.plot(xx / r_200_numerical, yy, c='k', ls=':', lw=2)
+plt.plot(xx / r_200_numerical, yy, c='k', ls=':', lw=3)
 
 xx = np.geomspace(0.045*r_200_numerical, 300)
 yy = rho_0 / (xx/r_s)**3.
-plt.plot(xx / r_200_numerical, yy, c='k', ls=':', lw=2)
+plt.plot(xx / r_200_numerical, yy, c='k', ls=':', lw=3)
 
 
 plt.ylim(1e3, 1e9)
@@ -119,17 +119,21 @@ print('how much bigger rs', 1/np.tan(0.15*np.pi/180.))
 plt.subplot(number_params, 1, 2)
 plt.loglog(dgc_kpc / r_200_numerical,
            mass_inside(xx=dgc_kpc, rs=r_s, rho0=rho_0),
-           lw=2)
+           lw=3,c='lime',
+           path_effects=[pe.Stroke(linewidth=4, foreground='k'),
+                         pe.Normal()])
 plt.ylabel('M(<r) ($\mathrm{M}_\odot$)')
 
-plt.axvline(r_s/ r_200_numerical, ls='--', c='grey', lw=2)
+plt.axvline(r_s/ r_200_numerical, ls='--', c='grey', lw=3)
 # plt.text(x=14, y=1e9, s=r'$r_\mathrm{s}$')
 plt.axvspan(1, 2, color=(235/255, 235/255, 235/255))
 
-plt.axvline(r_200_numerical/ r_200_numerical, ls='-', c='k', lw=2)
+plt.axvline(r_200_numerical/ r_200_numerical, ls='-', c='k', lw=3)
 
 plt.axhline(mass_inside(xx=r_200_numerical, rs=r_s, rho0=rho_0),
-            ls='-.', c='fuchsia', lw=2)
+            ls='-.', c='fuchsia', lw=3,
+           path_effects=[pe.Stroke(linewidth=4, foreground='k'),
+                         pe.Normal()])
 plt.text(x=4e-3, y=2e11, s=r'$M_\mathrm{200}$', color='fuchsia')
 
 plt.tick_params('x', labelbottom=False)
@@ -146,26 +150,32 @@ plt.ylim(bottom=5e7)
 plt.subplot(number_params, 1, 3)
 aaa = vcirc(xx=dgc_kpc, rs=r_s, rho0=rho_0, G=4.297e-6)
 plt.plot(dgc_kpc / r_200_numerical,
-           aaa, lw=2)
+           aaa, lw=3, c='lime',
+           path_effects=[pe.Stroke(linewidth=4, foreground='k'),
+                         pe.Normal()])
 plt.ylabel(r'$V_\mathrm{circ}$ (km$\,/\,$s)')
 
 plt.xlabel(r'r / $R_\mathrm{200}$')
 
-plt.axvline(r_s/ r_200_numerical, ls='--', c='grey', lw=2)
+plt.axvline(r_s/ r_200_numerical, ls='--', c='grey', lw=3)
 # plt.text(x=14, y=35., s=r'$r_\mathrm{s}$')
 
-plt.axvline(r_200_numerical/ r_200_numerical, ls='-', c='k', lw=2)
+plt.axvline(r_200_numerical/ r_200_numerical, ls='-', c='k', lw=3)
 plt.axvspan(1, 2, color=(235/255, 235/255, 235/255))
 
 array_max = np.argmax(aaa)
 vmax = np.max(aaa)
 rmax = dgc_kpc[np.argmax(aaa)]
 
-plt.axvline(rmax/ r_200_numerical, ls='--', c='red', lw=2)
-plt.text(x=0.2, y=80., s=r'$R_\mathrm{max}$', color='red')
+plt.axvline(rmax/ r_200_numerical, ls='--', c='orange', lw=3,
+           path_effects=[pe.Stroke(linewidth=4, foreground='k'),
+                         pe.Normal()])
+plt.text(x=0.2, y=80., s=r'$R_\mathrm{max}$', color='darkorange')
 
-plt.axhline(vmax, ls='--', c='orange', lw=2)
-plt.text(x=4e-3, y=140, s=r'$V_\mathrm{max}$', color='darkorange')
+plt.axhline(vmax, ls='--', c='coral', lw=3,
+           path_effects=[pe.Stroke(linewidth=4, foreground='k'),
+                         pe.Normal()])
+plt.text(x=4e-3, y=140, s=r'$V_\mathrm{max}$', color='red')
 
 print(rmax, vmax)
 print(rmax/r_s)

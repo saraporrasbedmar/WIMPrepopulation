@@ -41,22 +41,22 @@ to8 = True
 #                      '/compiled_results_allRoche/'
 #                      'final_2024_8max')
 
-path_name = ('/home/porrassa/Desktop/WIMPS_project/'
-                 'Physnet_outputs_repops/2025'
-                 '/2025_to8_angles'
-                 )
-path_name_res = ('/home/porrassa/Desktop/WIMPS_project/'
-                 'Physnet_outputs_repops/2025'
-                 '/2025_to8_angles')
+# path_name = ('/home/porrassa/Desktop/WIMPS_project/'
+#                  'Physnet_outputs_repops/2025'
+#                  '/2025_to8_angles'
+#                  )
+# path_name_res = ('/home/porrassa/Desktop/WIMPS_project/'
+#                  'Physnet_outputs_repops/2025'
+#                  '/2025_to8_angles')
 
 print(os.getcwd())
-print(os.listdir(path_name))
+# print(os.listdir(path_name))
 final_size = (500, 1, 6)
 plot_res = True
 plot_frag = True
 
 end_str = '_to8'
-
+'''
 final_size = (500, 100, 6)
 
 datos_Js_resi_hyd = np.ones((1, 6))
@@ -193,7 +193,7 @@ datos_J03_resi_hyd = datos_J03_resi_hyd [~aaa, :]
 print('datos_J03_resi_hyd')
 print(sum(datos_J03_resi_hyd[:, 3]<1.), np.shape(datos_J03_resi_hyd))
 
-
+'''
 constraints_bb_2204 = np.loadtxt('../Constraints_2204/Limit_bb.txt')
 constraints_tau_2204 = np.loadtxt('../Constraints_2204/Limit_tau.txt')
 sigmav_bb_2204 = np.loadtxt('../Constraints_2204/sigmav_bb.txt')
@@ -205,6 +205,12 @@ sigmav_tau_2204 = sigmav_tau_2204[sigmav_tau_2204[:, 0].argsort()[::], :]
 J03_min95_2204 = 18.9208  # From digitalizing
 Js_min95_2204 = 19.4642  # From digitalizing
 
+
+darkgreen = (0.024, 0.278, 0.047)
+cmap = cm.viridis
+colormapp = 'viridis'
+
+'''
 path_name_res = path_name_res + '/figures'
 if not os.path.exists(path_name_res):
     os.makedirs(path_name_res)
@@ -255,16 +261,12 @@ def perc_total(i, number):
     return np.percentile(data, number)
 
 
-darkgreen = (0.024, 0.278, 0.047)
-cmap = cm.viridis
-colormapp = 'viridis'
-
 def pow_law_old(x, j0, m):
     return 10**j0 * x**m
 def pow_law(x, j0, m):
     yy = j0 + m * np.log10(x)
     return yy
-'''
+
 # ------------------------ Vmax ang size -----------------------------
 
 fig, axes = plt.subplots(nrows=2, ncols=2,  # sharey=True,  # sharey=True,
@@ -1675,6 +1677,149 @@ plt.savefig(path_name_res + '/Cross.png', bbox_inches='tight')
 plt.savefig(path_name_res + '/Cross.pdf', bbox_inches='tight')
 
 # plt.show()
+'''
+# ------------------- Cross sections vertical -------------------------------
+fig, axes = plt.subplots(2, 1, figsize=(6, 9))
+J0395_frag_dmo = 18.696 #np.log10(np.percentile(datos_J03_frag_dmo[:, 0], 5))
+J0395_resi_dmo = 19.346 #np.log10(np.percentile(datos_J03_resi_dmo[:, 0], 5))
+print('Numbers for cross sections')
+print('J03, DMO')
+print(J0395_frag_dmo, J0395_resi_dmo, J0395_frag_dmo - J0395_resi_dmo)
+J0395_frag_hyd = 18.1513 #np.log10(np.percentile(datos_J03_frag_hyd[:, 0], 5))
+J0395_resi_hyd = 19.1586 #np.log10(np.percentile(datos_J03_resi_hyd[:, 0], 5))
+print('J03, MHD')
+print(J0395_resi_hyd, J0395_frag_hyd, J0395_resi_hyd - J0395_frag_hyd)
+
+plt.subplots_adjust(wspace=0, hspace=0)
+
+fig.text(-0.07, 0.5, r'$\langle\sigma\nu\rangle$ [cm$^3$ s$^{-1}$]',
+         size=24,
+         ha='center',
+         va='center', rotation='vertical')
+
+ax1 = plt.subplot(211)
+
+plt.plot(constraints_bb_2204[:, 0],
+         constraints_bb_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_hyd),
+         '-', label='MHD', color='limegreen', lw=2.5)
+plt.plot(constraints_bb_2204[:, 0],
+         constraints_bb_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_dmo),
+         '-', c='k', label='DMO', alpha=1, lw=2.5)
+plt.plot(constraints_bb_2204[:, 0],
+         constraints_bb_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_resi_dmo),
+         ':', c='k', alpha=1, lw=2.5)
+plt.plot(constraints_bb_2204[:, 0],
+         constraints_bb_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_resi_hyd),
+         ':', color='limegreen', alpha=1, lw=2.5)
+
+plt.plot(constraints_bb_2204[:, 0], constraints_bb_2204[:, 1], '--',
+         label='CB22', alpha=1., color='dodgerblue', lw=1.)
+
+plt.plot(sigmav_bb_2204[:, 0], sigmav_bb_2204[:, 1], '-.',
+         c='silver', lw=2, zorder=0)
+
+plt.xlim(5., 1e4)
+plt.ylim(1e-26, 1e-20)
+
+plt.text(0.15, 0.47, r'$b\bar{b}$', transform=ax1.transAxes,
+         horizontalalignment='center', size=24)
+
+plt.annotate(r'$\langle\sigma\nu\rangle_\mathrm{th}$', (1000, 3.5e-26))
+plt.xscale('log')
+plt.yscale('log')
+
+# legend1 = plt.legend(legend_elements, ['Fragile', 'Resilient'], loc=2,
+#                      bbox_to_anchor=(0.1, 0.6))
+bapad = plt.rcParams['legend.borderaxespad']
+fontsize = plt.rcParams['font.size']
+axline = plt.rcParams['axes.linewidth']
+pad_pixels = (bapad*fontsize + axline) / 72. * fig.dpi
+inv = axes[0].transAxes.inverted()
+# Inverse transform two points on the display and find the relative distance
+pad_axes = inv.transform((pad_pixels, 0)) - inv.transform((0, 0))
+pad_xaxis = pad_axes[0]
+# Find how may pixels there are on the x-axis
+x_pixels = (axes[0].transAxes.transform((1, 0))
+            - axes[0].transAxes.transform((0, 0)))
+# Compute the ratio between the pixel offset and the total amount of pixels
+pad_xaxis = (pad_pixels - 2.5)/x_pixels[0]
+
+legend_elements = [Line2D([0], [0], color='k', label='Frag',
+                          linestyle='-', lw=2.5),
+                   Line2D([0], [0], color='k', label='Res',
+                          linestyle=':', lw=2.5)]
+legend1 = plt.legend(legend_elements, ['Fragile', 'Resilient'],
+                     # loc=(pad_xaxis, 0.37),
+                     loc=9
+                     )
+
+legend_elements = [mpatches.Patch(color='limegreen', alpha=0.8),
+                   mpatches.Patch(color='k', alpha=0.8),
+                   Line2D([0], [0], color='dodgerblue',
+                          linestyle='--', lw=1.)]
+
+leg = plt.legend(legend_elements, ['MHD', 'DMO', 'CB22'],
+                     loc=2, handlelength=0.95,)
+
+plt.gca().add_artist(leg)
+plt.gca().add_artist(legend1)
+t1, t2, t3 = leg.get_texts()
+# here we create the distinct instance
+t1._fontproperties = t2._fontproperties.copy()
+t3.set_size(16)
+ax1.tick_params(labelbottom=False)
+
+plt.yticks(10**np.array([-26., -25, -24, -23, -22, -21, -20]),
+               labels=(r'10$^{-26}$', r'10$^{-25}$',
+                       r'10$^{-24}$', r'10$^{-23}$',
+                       r'10$^{-22}$', r'10$^{-21}$',
+                       r'10$^{-20}$')
+           )
+
+ax2 = plt.subplot(212)
+
+plt.plot(constraints_tau_2204[:, 0],
+         constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_dmo),
+         '-', c='k', label='DMO', lw=2.5)
+plt.plot(constraints_tau_2204[:, 0],
+         constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_frag_hyd),
+         '-', label='MHD', color='limegreen', lw=2.5)
+plt.plot(constraints_tau_2204[:, 0],
+         constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_resi_dmo),
+         ':', c='k', lw=2.5)
+plt.plot(constraints_tau_2204[:, 0],
+         constraints_tau_2204[:, 1] * 10 ** (J03_min95_2204 - J0395_resi_hyd),
+         ':', color='limegreen', lw=2.5)
+
+plt.plot(sigmav_tau_2204[1:, 0], sigmav_tau_2204[1:, 1],
+         '-.', c='silver', lw=2, zorder=0)
+plt.plot(constraints_tau_2204[:, 0], constraints_tau_2204[:, 1], '--',
+         label='CB22', alpha=1., color='dodgerblue', lw=1)
+
+# plt.text(0.45, 0.85, r'$\tau^+\tau^-$', transform=ax2.transAxes, size=26,
+#          horizontalalignment='center',
+#          )
+plt.text(0.16, 0.7, r'$\tau^+\tau^-$', transform=ax2.transAxes, size=24,
+         horizontalalignment='center',
+         )
+plt.annotate(r'$\langle\sigma\nu\rangle_\mathrm{th}$', (1000, 3.5e-26))
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim(5., 1e4)
+plt.ylim(1e-26, 1e-20)
+# ax2.tick_params(labelleft=False)
+plt.xlabel('m$_{\chi}$ [GeV]', size=22)
+plt.yticks(10**np.array([-26., -25, -24, -23, -22, -21, -20]),
+               labels=(r'10$^{-26}$', r'10$^{-25}$',
+                       r'10$^{-24}$', r'10$^{-23}$',
+                       r'10$^{-22}$', r'10$^{-21}$',
+                       '')
+           )
+plt.savefig('Crossvertical.png', bbox_inches='tight')
+plt.savefig('Crossvertical.pdf', bbox_inches='tight')
+aaa
+plt.show()
+'''
 # ------------------- Cross sections ------------------------------------------
 fig, ax1 = plt.subplots(figsize=(6, 6))
 
@@ -2589,7 +2734,7 @@ def Cv_Mol2021_redshift0(V, c0):
 
 
 
-'''
+
 fig, axes = plt.subplots(nrows=2, ncols=2, sharey=True,  # sharey=True,
                          figsize=(7, 9))
 
@@ -5646,3 +5791,4 @@ plt.ylim(0.7, 1.3)
 plt.xscale('log')
 
 plt.show()
+'''
