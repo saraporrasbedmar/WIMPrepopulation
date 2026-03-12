@@ -49,8 +49,8 @@ path_outputs = 'outputs/' \
                'test_2025_angles_res'
 path_outputs = 'outputs/test_2025_angles_res'
 
-# rerun_sims = True
-rerun_sims = False
+rerun_sims = True
+# rerun_sims = False
 
 if rerun_sims:
 
@@ -91,7 +91,7 @@ if rerun_sims:
         yaml.dump(input_data, f)
 
     # funct_repop.main(['dmo', 'resilient', path_input, path_outputs])
-    funct_repop.main(['dmo', 'fragile', path_input, path_outputs])
+    # funct_repop.main(['dmo', 'fragile', path_input, path_outputs])
 
     input_data['repopulations']['num_brightest'] = \
         funct_repop.SHVF_Grand2012_int(
@@ -104,7 +104,7 @@ if rerun_sims:
         yaml.dump(input_data, f)
 
     # funct_repop.main(['hydro', 'resilient', path_input, path_outputs])
-    funct_repop.main(['hydro', 'fragile', path_input, path_outputs])
+    # funct_repop.main(['hydro', 'fragile', path_input, path_outputs])
 
 # path_outputs = 'outputs/test1repop_resilient_highNormSHVF'
 # datos_resi_dmo = np.loadtxt(path_outputs + '/Js_dmo_resilient_results.txt')

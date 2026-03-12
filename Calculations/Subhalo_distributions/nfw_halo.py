@@ -1,14 +1,10 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colorbar as colorbarr
-import matplotlib.patches as mpatches
-import scipy.optimize as sciopt
-import scipy.stats as stats
-from scipy.optimize import root
-# from iminuit import Minuit
-# from iminuit.cost import LeastSquares
 
-from scipy.integrate import simpson
+import matplotlib.pyplot as plt
+import matplotlib.patheffects as pe
+
+from scipy.optimize import root
+
 all_size = 26
 plt.rcParams['mathtext.fontset'] = 'stix'
 plt.rcParams['font.family'] = 'STIXGeneral'
@@ -70,7 +66,6 @@ plt.subplots_adjust(wspace=0, hspace=0)
 x_min = 1e-3
 x_max = 1.3
 # -----------------------------------------------------------------
-import matplotlib.patheffects as pe
 
 plt.subplot(number_params, 1, 1)
 plt.loglog(dgc_kpc / r_200_numerical,
