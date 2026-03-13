@@ -12,7 +12,7 @@ Cv:
 SHVF:
   model: 'SHVF_Grand2012'
   RangeMax: 120.0
-  RangeMin: 1
+  RangeMin: 20
   dmo:
     bb: 5.68
     mm: -3.92
@@ -52,12 +52,13 @@ host:
   r_s: 20.0
   rho_0: 9.04e6
   use_Roche: True
+  position_Earth: [8.5, 0., 0.]
 repopulations:
-  inc_factor: 1.5
+  inc_factor: 5
   its: 1
   num_brightest: 126313359
 
-  num_subs_max: 5e5
+  num_subs_max: 1e5
   print_freq: 1
 
   rng_seed: 0

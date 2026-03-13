@@ -14,6 +14,7 @@ from scipy.integrate import simpson
 
 
 from shvf_functions import SHVF_model, SHVF_model_integral
+from srd_functions import srd_model
 
 
 def memory_usage_psutil():
@@ -38,6 +39,9 @@ def ff(c):
 
 class repop_algorithm:
     def __init__(self, sim_type, res_string, path_input):
+
+        self.str_out = str(sim_type) + '_' + str(res_string)
+
         self.input_dict = read_config_file(path_input)
 
         if self.input_dict['repopulations']['rng_seed'] < 0:
@@ -52,6 +56,8 @@ class repop_algorithm:
         self.SHVF_cts = self.input_dict['SHVF']
 
         repopulations = self.input_dict['repopulations']
+
+        self.rho_0 = float(self.input_dict['host']['rho_0'])
 
         self.repop_its = repopulations['its']
         self.num_subs_max = int(float(repopulations['num_subs_max']))
@@ -153,11 +159,11 @@ class repop_algorithm:
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
         if cosmo_G is None:
-            cosmo_G = self.input_dict['cosmo_constants']['cosmo_G']
+            cosmo_G = self.input_dict['cosmo_constants']['G']
         if host_rho_0 is None:
-            host_rho_0 = self.input_dict['cosmo_constants']['host_rho_0']
+            host_rho_0 = self.rho_0
         if host_r_s is None:
-            host_r_s = self.input_dict['cosmo_constants']['host_r_s']
+            host_r_s = self.input_dict['host']['r_s']
 
         Rmax = self.R_max(V, C, cosmo_H_0)
 
@@ -184,9 +190,9 @@ class repop_algorithm:
             Host mass encapsulated up to R.
         """
         if host_rho_0 is None:
-            host_rho_0 = self.input_dict['cosmo_constants']['host_rho_0']
+            host_rho_0 = self.rho_0
         if host_r_s is None:
-            host_r_s = self.input_dict['cosmo_constants']['host_r_s']
+            host_r_s = self.input_dict['host']['r_s']
 
         return (4 * np.pi * host_rho_0
                 * host_r_s ** 3
@@ -215,7 +221,7 @@ class repop_algorithm:
             Mass from the subhalo assuming a NFW profile.
         """
         if cosmo_G is None:
-            cosmo_G = self.input_dict['cosmo_constants']['cosmo_G']
+            cosmo_G = self.input_dict['cosmo_constants']['G']
 
         return (Vmax ** 2 * Rmax / float(cosmo_G)
                 * ff(c200) / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)))
@@ -267,9 +273,11 @@ class repop_algorithm:
         :return: float or array-like
             c200 of subhalo (concentration definition)
         """
-        C200_med = []
-        for i in Cv:
-            C200_med.append(newton2(self.def_Cv, 40.0, i))
+        C200_med = [newton(self.def_Cv, 10.0, args=[i])
+                    for i in Cv]
+        # for i in Cv:
+        #     C200_med.append(newton2(self.def_Cv, 40.0, i))newton(self.xx, m_min,
+        #                        args=[m_min, self.num_subs_max])
 
         return np.array(C200_med)
 
@@ -283,7 +291,7 @@ class repop_algorithm:
         :return: float or array-like
             c200 of subhalo (concentration definition)
         """
-        C200_med = newton2(self.def_Cv, 40.0, Cv)
+        C200_med = newton(self.def_Cv, 40.0, args=[Cv])
 
         return C200_med
 
@@ -360,7 +368,7 @@ class repop_algorithm:
             data = self.paramstosave['concentration']
         else:
             # Generate some default data for illustration
-            data = np.ones(3)
+            data = np.ones(np.shape(self.paramstosave['Vmax']))*1e5
         # Attach units if known, or set defaults
         # if 'concentration' not in self.units:
         #     self.units['concentration'] = u.cm3
@@ -386,28 +394,45 @@ class repop_algorithm:
         return J
 
 
-    def calculate_characteristics_subhalo(self):
+    def calculate_characteristics_subhalo(self, Vmax=None, Distgc=None,
+                                          position_Earth=None):
+        if Vmax is None:
+            Vmax = self.paramstosave['Vmax']
+        if Distgc is None:
+            Distgc = self.paramstosave['Distgc']
+        if position_Earth is None:
+            position_Earth = self.input_dict['host']['position_Earth']
 
         # Random distribution of subhalos around the celestial sphere
-        num_subs = len(self.Vmax)
-        gal_theta = self.rng.uniform(0, 2 * np.pi, num_subs)
-        gal_phi = np.arccos(2 * self.rng.uniform(0, 1, num_subs) - 1)
+        num_subs = len(Vmax)
+        self.paramstosave['gal_theta'] = self.rng.uniform(0, 2 * np.pi, num_subs)
+        self.paramstosave['gal_phi'] = np.arccos(2 * self.rng.uniform(0, 1, num_subs) - 1)
 
         # Positions of the subhalos
-        repop_Xs = self.Distgc * np.cos(gal_theta) * np.sin(gal_phi)
-        repop_Ys = self.Distgc * np.sin(gal_theta) * np.sin(gal_phi)
-        repop_Zs = self.Distgc * np.cos(gal_phi)
+        self.paramstosave['repop_Xs'] = Distgc * np.cos(self.paramstosave['gal_theta']) * np.sin(self.paramstosave['gal_phi'])
+        self.paramstosave['repop_Ys'] = Distgc * np.sin(self.paramstosave['gal_theta']) * np.sin(self.paramstosave['gal_phi'])
+        self.paramstosave['repop_Zs'] = Distgc * np.cos(self.paramstosave['gal_phi'])
 
-        repop_DistEarth = ((repop_Xs - 8.5) ** 2
-                           + repop_Ys ** 2
-                           + repop_Zs ** 2) ** 0.5
+        self.paramstosave['repop_DistEarth'] = ((
+            self.paramstosave['repop_Xs'] - position_Earth[0]) ** 2
+            + (self.paramstosave['repop_Ys'] - position_Earth[1]) ** 2
+            + (self.paramstosave['repop_Zs'] - position_Earth[2]) ** 2
+                                                ) ** 0.5
 
-        print("beware position of Earth ;D")
 
         for param in self.input_dict['repopulations']['columns_to_save']:
-            print(param)
             self.get_parameter(param)
-        print(self.paramstosave)
+
+        if self.input_dict['host']['use_Roche']:
+            self.paramstosave['use_Roche'] = (
+                    self.R_t(
+                        self.paramstosave['Vmax'],
+                        self.paramstosave['concentration'],
+                        self.paramstosave['Distgc'],
+                        singular_case=False)
+                    > self.R_s(self.paramstosave['Vmax'],
+                               self.paramstosave['concentration']))
+
         # repop_C = Cv_Grand2012(Vmax, Cv_bb, Cv_mm)
         # repop_C = Moline21_normalization(Vmax, c0=Cv_bb)
         # repop_C = C_Scatt(repop_C, Cv_sigma)
@@ -418,22 +443,16 @@ class repop_algorithm:
         # Angular size of subhalos (up to R_s)
         # repop_Theta = 180 / np.pi * np.arctan(
         #     self.R_s(Vmax, repop_C) / repop_DistEarth)
-        aa = np.column_stack((
-            self.Vmax, self.Distgc, repop_DistEarth,
-            gal_theta, gal_phi,
-            repop_Xs, repop_Ys, repop_Zs))
 
-        for i in self.paramstosave.keys():
-            aa = np.column_stack((aa, self.paramstosave[i]))
-        return aa
+        return
 
     def interior_loop_brightest(self):
         # We have 6 variables we want to save in our files,
         # change this number if necessary
         # (output from 'calculate_characteristics_subhalo()')
 
-        brightest_Js = np.zeros((2 * repop_num_brightest, 6))
-        brightest_J03 = np.zeros((2 * repop_num_brightest, 6))
+        brightest_Js = np.zeros((2 * self.repop_num_brightest, 6))
+        brightest_J03 = np.zeros((2 * self.repop_num_brightest, 6))
 
 
         # We calculate our subhalo population in bins to save memory
@@ -484,7 +503,7 @@ class repop_algorithm:
             new_data = self.calculate_characteristics_subhalo(
                 repop_Vmax, repop_DistGC)
 
-            for new_sub in range(repop_num_brightest):
+            for new_sub in range(self.repop_num_brightest):
 
                 bright_Js = np.argmax(new_data[:, 0])
 
@@ -505,11 +524,11 @@ class repop_algorithm:
                     bright_Js = np.argmax(new_data[:, 0])
 
                 brightest_Js[
-                repop_num_brightest + new_sub, :] = new_data[
+                self.repop_num_brightest + new_sub, :] = new_data[
                     bright_Js, [0, 2, 3, 4, 5, 6]]
                 new_data[bright_Js, 0] = 0.
 
-            for new_sub in range(repop_num_brightest):
+            for new_sub in range(self.repop_num_brightest):
 
                 bright_J03 = np.argmax(new_data[:, 1])
 
@@ -530,19 +549,19 @@ class repop_algorithm:
                     bright_J03 = np.argmax(new_data[:, 1])
 
                 brightest_J03[
-                repop_num_brightest + new_sub, :] = new_data[bright_J03,
+                self.repop_num_brightest + new_sub, :] = new_data[bright_J03,
                                                     1:]
                 new_data[bright_J03, 1] = 0.
 
             # if sum(new_data[:, 0]) > 1.:
-            #     for new_sub in range(repop_num_brightest):
+            #     for new_sub in range(self.repop_num_brightest):
             #
             #         while sum(new_data[:, 0]) > 1.:
             #
             #             bright_Js = np.argmax(new_data[:, 0])
             #
             #             brightest_Js[
-            #             repop_num_brightest + new_sub, :] = new_data[
+            #             self.repop_num_brightest + new_sub, :] = new_data[
             #                 bright_Js, [0, 2, 3, 4, 5, 6]]
             #             new_data[bright_Js, 0] = 0.
 
@@ -580,12 +599,12 @@ class repop_algorithm:
             # progress.close()
 
             # if sum(new_data[:, 1]) > 1.:
-            #     for new_sub in range(repop_num_brightest):
+            #     for new_sub in range(self.repop_num_brightest):
             #         while sum(new_data[:, 1]) > 1.:
             #             bright_J03 = np.argmax(new_data[:, 1])
             #
             #             brightest_J03[
-            #             repop_num_brightest + new_sub, :] = new_data[bright_J03, 1:]
+            #             self.repop_num_brightest + new_sub, :] = new_data[bright_J03, 1:]
             #             new_data[bright_J03, 1] = 0.
 
             # while (R_t(new_data[bright_J03, 4],
@@ -630,13 +649,24 @@ class repop_algorithm:
 
             m_min = new_mmin
 
-        return (brightest_Js[:repop_num_brightest, :],
-                    brightest_J03[:repop_num_brightest, :])
+        return (brightest_Js[:self.repop_num_brightest, :],
+                    brightest_J03[:self.repop_num_brightest, :])
 
+
+    def xx(self, mmax, mmin, root):
+        return (SHVF_model_integral(
+                  Vmax_min=mmin,
+                  Vmax_max=mmax,
+                  SHVF_model_int=self.SHVF_model,
+                  SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
+                  verbose_int=False) - root)
 
     def interior_full_repop(self):
 
-        brightest_Js = np.zeros((self.total_number_subs, 6))
+        # brightest_Js = np.zeros((
+        #     self.total_number_subs,
+        #     9 + len(self.input_dict['repopulations']['columns_to_save'])))
+
         nn = 0
 
         # We calculate our subhalo population in bins to save memory
@@ -644,75 +674,107 @@ class repop_algorithm:
 
         while m_min < self.SHVF_RangeMax:
 
+            self.paramstosave = {}
+
             if SHVF_model_integral(
                   Vmax_min=m_min,
-                  Vmax_max=m_min * repop_inc_factor,
+                  Vmax_max=m_min * self.repop_inc_factor,
                   SHVF_model_int=self.SHVF_model,
                   SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
-                  verbose_int=False) > num_subs_max:
+                  verbose_int=False) > self.num_subs_max:
 
-                m_max = newton(xx, m_min,
-                               args=[m_min, SHVF_bb, SHVF_mm, num_subs_max])
+                m_max = newton(self.xx, m_min,
+                               args=[m_min, self.num_subs_max])
                 new_mmin = m_max
 
             else:
-                m_max = np.minimum(m_min * repop_inc_factor,
-                                   SHVF_RangeMax)
-                new_mmin = m_min * repop_inc_factor
+                m_max = np.minimum(m_min * self.repop_inc_factor,
+                                   self.SHVF_RangeMax)
+                new_mmin = m_min * self.repop_inc_factor
 
-                if (SHVF_Grand2012_int(
-                        m_max, np.minimum(
-                            m_max * repop_inc_factor,
+                if (SHVF_model_integral(
+                  Vmax_min=m_max,
+                  Vmax_max=np.minimum(
+                            m_max * self.repop_inc_factor,
                             self.SHVF_RangeMax),
-                        SHVF_bb, SHVF_mm) < 1.) and (
+                  SHVF_model_int=self.SHVF_model,
+                  SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
+                  verbose_int=False) < 1.) and (
                         m_max < self.SHVF_RangeMax
                 ):
                     m_max = self.SHVF_RangeMax
                     new_mmin = self.SHVF_RangeMax
 
-            min_distGC = 1e-3
 
-            repop_Vmax = self.montecarlo_algorithm(
-                m_min, m_max,
-                SHVF_Grand2012,
-                num_subhalos=SHVF_Grand2012_int(
-                    m_min, m_max, SHVF_bb, SHVF_mm),
-                )
+            num_subhalos = SHVF_model_integral(
+                  Vmax_min=m_min, Vmax_max=m_max,
+                  SHVF_model_int=self.SHVF_model,
+                  SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
+                  verbose_int=False)
+            print(m_min, m_max, num_subhalos)
 
-            repop_DistGC = self.montecarlo_algorithm(
-                min_distGC, host_R_vir,
-                Nr_Ntot_repop,
-                num_subhalos=SHVF_Grand2012_int(
-                    m_min, m_max, SHVF_bb, SHVF_mm))
+            # Montecarlo algorithm for creating the Vmax of subhalos
+            x = np.geomspace(m_min, m_max, num=2000)
+            y = SHVF_model(
+                Vmax_array=x, SHVF_model=self.SHVF_model,
+                SHVF_params=[self.SHVF_bb, self.SHVF_mm],
+                verbose=False)
+            cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
+            cumul /= cumul[-1]
+            x_mean = (x[1:] + x[:-1]) / 2.
+            x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
+            spline = UnivariateSpline(
+                cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
 
-            new_data = self.calculate_characteristics_subhalo(
-                repop_Vmax, repop_DistGC)
+            self.paramstosave['Vmax'] = spline(self.rng.random(num_subhalos))
 
+            # Montecarlo algorithm for creating the Distgc of subhalos
+            x = np.linspace(0., self.input_dict['host']['R_vir'], num=2000)
+            y = srd_model(
+                Vmax_array=x, SHVF_model=self.SHVF_model,
+                SHVF_params=[self.SHVF_bb, self.SHVF_mm],
+                verbose=False)
+            cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
+            cumul /= cumul[-1]
+            x_mean = (x[1:] + x[:-1]) / 2.
+            x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
+            spline = UnivariateSpline(
+                cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
+            self.paramstosave['Distgc'] = spline(self.rng.random(num_subhalos))
 
-            aa = SHVF_Grand2012_int(m_min, m_max, SHVF_bb, SHVF_mm)
-            brightest_Js[nn:nn + aa, :] = new_data
-            nn += aa
+            self.calculate_characteristics_subhalo()
+
+            aa = np.column_stack([self.paramstosave[label]
+                             for label in self.paramstosave.keys()])
+
+            headerS = (('#\n# Vmin: [         Cv \n#\n'))
+
+            file_Js = open(self.path_output + 'full_repop_'
+                           + self.str_out + '_results_' + str(nn)
+                           + '.txt', 'w')
+
+            file_Js.write(headerS)
+            np.savetxt(file_Js, aa)
+            file_Js.close()
+
 
             m_min = new_mmin
+            nn += 1
 
-        # if self.input_dict['host']['use_Roche']:
-        #     brightest_Js[:, 0] *= (
-        #             self.R_t(brightest_Js[:, 3], brightest_Js[:, 5],
-        #                 brightest_Js[:, 1],
-        #                 singular_case=False)
-        #             > self.R_s(brightest_Js[:, 3],
-        #                   brightest_Js[:, 5],
-        #                   ))
 
-        return brightest_Js[:nn, :]
+
+        return
 
     def run(self, path_output):
         print(time.strftime("%d-%m-%Y %H:%M:%S", time.gmtime()))
 
-        self.Vmax = np.array([1., 5., 10.])
-        self.Distgc = np.array([10., 15., 50.])
+        if not os.path.exists(path_output):
+            os.makedirs(path_output)
 
-        print(self.calculate_characteristics_subhalo())
+        self.path_output = path_output
+
+        self.interior_full_repop()
+
 
         print(self.paramstosave)
 
@@ -815,7 +877,7 @@ class repop_algorithm:
 print(os.getcwd())
 model = repop_algorithm('dmo', 'resilient',
                         '../input_files/input_paper2024.yml')
-model.run('outputs')
+model.run('../outputs/test_2026/new_code/')
 '''
 
 """
@@ -998,7 +1060,7 @@ def C_Scatt(C, Cv_sigma):
     :return: float or array-like
         Subhalos with scattered concentrations.
     """
-    scatter = np.random.normal(loc=0, scale=Cv_sigma, size=C.size)
+    scatter = self.rng.normal(loc=0, scale=Cv_sigma, size=C.size)
     return C * 10 ** scatter
 
 
@@ -1092,12 +1154,5 @@ def J03_vel(V, D_earth, C,
                       change_units=change_units)
             * (1 - 1 / (1 + 2.163 * D_earth * np.tan(0.15 * np.pi / 180.)
                         / R_max(V, C, cosmo_H_0)) ** 3))
-
-
-# ----------- REPOPULATION ----------------
-
-def xx(mmax, mmin, SHVF_bb, SHVF_mm, root):
-    return SHVF_Grand2012_int(mmin, mmax, SHVF_bb, SHVF_mm) - root
-
 
 '''
