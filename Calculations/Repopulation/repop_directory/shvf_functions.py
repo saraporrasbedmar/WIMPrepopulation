@@ -62,7 +62,7 @@ def _SHVF_custom(Vmax_array, SHVF_model, params=None, verbose=True):
         #     + 'and parameters be an array or list called \'ci\'.' + '\n'
         #     + 'Inputs given:' + '\n'
         #     + '\'metall_model\': ' + str(SHVF_model) + '\n'
-        #     + '\'ci\': ' + str(params)
+        #     + '\'ci\': ' + str(paramstosave)
         # )
 
 
@@ -109,7 +109,7 @@ def SHVF_model_integral(
         SHVF_model_int=None, SHVF_params_int=None, verbose_int=True):
 
     if SHVF_model_int in model_list.keys():
-        vmax_array = np.geomspace(Vmax_min, Vmax_max, num=5000)
+        vmax_array = np.geomspace(Vmax_min, Vmax_max, num=150)
 
         yy = SHVF_model(vmax_array, SHVF_model=SHVF_model_int,
                         SHVF_params=SHVF_params_int, verbose=verbose_int)
@@ -131,9 +131,15 @@ SHVF_Grand2012_int(0.01, 120, 5.68, -3.92))
 print((SHVF_model_integral(0.01, 120, SHVF_model_int='SHVF_Grand2012',
                           SHVF_params_int=[5.68, -3.92]) -
 SHVF_Grand2012_int(0.01, 120, 5.68, -3.92))/SHVF_Grand2012_int(0.01, 120, 5.68, -3.92))
+
 print((SHVF_model_integral(0.1, 120, SHVF_model_int='SHVF_Grand2012',
                           SHVF_params_int=[5.68, -3.92]) -
 SHVF_Grand2012_int(0.1, 120, 5.68, -3.92))/SHVF_Grand2012_int(0.1, 120, 5.68, -3.92))
+
 print((SHVF_model_integral(1, 120, SHVF_model_int='SHVF_Grand2012',
                           SHVF_params_int=[5.68, -3.92]) -
 SHVF_Grand2012_int(1, 120, 5.68, -3.92))/SHVF_Grand2012_int(1, 120, 5.68, -3.92))
+
+print(SHVF_model_integral(1, 120, SHVF_model_int='SHVF_Grand2012',
+                          SHVF_params_int=[7.78, -3.92]) ,
+SHVF_Grand2012_int(1, 120, 7.78, -3.92))

@@ -10,9 +10,9 @@ Cv:
     sigma:
     - 0.374942
 SHVF:
+  model: 'SHVF_Grand2012'
   RangeMax: 120.0
-  RangeMin: 0.1
-  Vmax_completion: 8.0
+  RangeMin: 1
   dmo:
     bb: 5.68
     mm: -3.92
@@ -51,9 +51,19 @@ host:
   R_vir: 220
   r_s: 20.0
   rho_0: 9.04e6
+  use_Roche: True
 repopulations:
   inc_factor: 1.5
   its: 1
   num_brightest: 126313359
+
   num_subs_max: 5e5
   print_freq: 1
+
+  rng_seed: 0
+
+  columns_to_save:
+    - Jfactor2
+    - concentration
+    - Jfactor
+#    - repop_Theta
