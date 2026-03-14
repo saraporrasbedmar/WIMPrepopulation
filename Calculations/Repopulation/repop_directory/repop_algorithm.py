@@ -5,6 +5,7 @@ import psutil
 import inspect
 import numpy as np
 import time
+import h5py
 
 from scipy.optimize import newton
 from scipy.interpolate import UnivariateSpline
@@ -87,13 +88,13 @@ class repop_algorithm:
                   SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
                   verbose_int=False)
 
-        self.paramstosave = {}
+        self.subhalo_data = {}
         self.units = {}  # store units info for each parameter
 
         # if config:
         #     for key, value in config.items():
         #         # Assume raw data are numpy arrays
-        #         self.paramstosave[key] = value
+        #         self.subhalo_data[key] = value
         # # To be filled with raw data (e.g., concentrations)
 
         print(self.SHVF_RangeMin, self.SHVF_RangeMax)
@@ -167,16 +168,18 @@ class repop_algorithm:
 
         Rmax = self.R_max(V, C, cosmo_H_0)
 
-        if singular_case:
-            c200 = self.C200_from_Cv_float(C)
+        if type(C) == float:
+            c200 = newton(self.C200_from_Cv, 10.0, args=[C])
         else:
-            c200 = self.C200_from_Cv_array(C)
+            c200 = np.array([
+                newton(self.C200_from_Cv, 10.0, args=[i]) for i in C])
 
         M = self.mass_from_Vmax(V, Rmax, c200, cosmo_G)
 
-        return (((M / (3 * self.Mhost_encapsulated(
-            DistGC, host_rho_0, host_r_s))) ** (1. / 3))
-                * DistGC)
+        return (DistGC
+                * ((M / (3 * self.Mhost_encapsulated(
+                    DistGC, host_rho_0, host_r_s))) ** (1. / 3))
+                )
 
     def Mhost_encapsulated(self, R, host_rho_0=None, host_r_s=None):
         """
@@ -226,7 +229,7 @@ class repop_algorithm:
         return (Vmax ** 2 * Rmax / float(cosmo_G)
                 * ff(c200) / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)))
 
-    def def_Cv(self, c200, Cv):
+    def C200_from_Cv(self, c200, Cv):
         """
         Formula to find c200 knowing Cv to input in the Newton
         root-finding method.
@@ -243,96 +246,10 @@ class repop_algorithm:
         return (200 * (np.log(1. + 2.163) - 2.163 / (1. + 2.163))
                 / ff(c200) * (c200 / 2.163) ** 3 - Cv)
 
-    def newton2(self, fun, x0, args):
-        """
-        Newton method to find the root of a function.
-
-        :param fun: function
-            Function that you want the root of.
-        :param x0: float
-            Initial guess for the root.
-        :param args: float or array-like
-            Additional parameters that the function might need.
-
-        :return: float
-            Root of the function.
-        """
-        x = x0
-        for i in range(100):
-            x = x - fun(x, args) * 0.02 / (fun(x + 0.01, args)
-                                           - fun(x - 0.01, args))
-        return x
-
-    def C200_from_Cv_array(self, Cv):
-        """
-        Function to find c200 knowing Cv.
-
-        :param Cv: float or array-like
-            Cv of subhalo (concentration definition)
-
-        :return: float or array-like
-            c200 of subhalo (concentration definition)
-        """
-        C200_med = [newton(self.def_Cv, 10.0, args=[i])
-                    for i in Cv]
-        # for i in Cv:
-        #     C200_med.append(newton2(self.def_Cv, 40.0, i))newton(self.xx, m_min,
-        #                        args=[m_min, self.num_subs_max])
-
-        return np.array(C200_med)
-
-    def C200_from_Cv_float(self, Cv):
-        """
-        Function to find c200 knowing Cv.
-
-        :param Cv: float or array-like
-            Cv of subhalo (concentration definition)
-
-        :return: float or array-like
-            c200 of subhalo (concentration definition)
-        """
-        C200_med = newton(self.def_Cv, 40.0, args=[Cv])
-
-        return C200_med
-
-    def montecarlo_algorithm(self, x_min, x_max, pdf, num_subhalos):
-        """
-        Montecarlo sample algorithm. It populates a number of objects
-        with a probability distribution defined by the pdf function.
-        Calculates the cdf and relates it to the distribution of
-        parameters.
-
-        :param x_min: float
-            Minimum value the function can intake.
-        :param x_max: float
-            Maximum value the function can intake.
-        :param pdf: function
-            Function that we use a probability distribution.
-        :param num_subhalos: int
-            Number of objects we want.
-
-        :return: float or array-like
-            Population following the probability distribution.
-        """
-        x = np.geomspace(x_min, x_max, num=2000)
-        y = pdf(x)
-
-        cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
-        cumul /= cumul[-1]
-
-        x_mean = (x[1:] + x[:-1]) / 2.
-
-        x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
-
-        spline = UnivariateSpline(cumul[x_min:], x_mean[x_min:],
-                                  s=0, k=1, ext=0)
-
-        return spline(np.random.random(num_subhalos))
-
 
     def set_parameter(self, name, array, unit=None):
         """Set raw parameter data with optional unit."""
-        self.paramstosave[name] = array
+        self.subhalo_data[name] = array
         if unit:
             self.units[name] = unit
 
@@ -342,19 +259,19 @@ class repop_algorithm:
         Retrieve parameter, computing if necessary.
         Uses values to avoid recomputation.
         """
-        if name in self.paramstosave:
+        if name in self.subhalo_data:
             # Raw parameter, no computation needed
-            param_data = self.paramstosave[name]
+            param_data = self.subhalo_data[name]
             # Attach unit if known
-            if name in self.units:
-                param_data = param_data * self.units[name]
+            # if name in self.units:
+            #     param_data = param_data * self.units[name]
             return param_data
         else:
             # Need to compute parameter
             compute_func = getattr(self, f"compute_{name}", None)
             if compute_func:
                 data = compute_func()
-                self.paramstosave[name] = data
+                self.subhalo_data[name] = data
                 return data
             else:
                 raise ValueError(
@@ -364,11 +281,11 @@ class repop_algorithm:
     # Example: compute concentration if not provided
     def compute_concentration(self):
         # If raw data exists, process it; else, generate default
-        if 'concentration' in self.paramstosave:
-            data = self.paramstosave['concentration']
+        if 'concentration' in self.subhalo_data:
+            data = self.subhalo_data['concentration']
         else:
             # Generate some default data for illustration
-            data = np.ones(np.shape(self.paramstosave['Vmax']))*1e5
+            data = np.ones(np.shape(self.subhalo_data['Vmax'])) * 1e5
         # Attach units if known, or set defaults
         # if 'concentration' not in self.units:
         #     self.units['concentration'] = u.cm3
@@ -394,44 +311,48 @@ class repop_algorithm:
         return J
 
 
-    def calculate_characteristics_subhalo(self, Vmax=None, Distgc=None,
-                                          position_Earth=None):
+    def calculate_characteristics_subhalo(
+            self, Vmax=None, Distgc=None, position_Earth=None):
         if Vmax is None:
-            Vmax = self.paramstosave['Vmax']
+            Vmax = self.subhalo_data['Vmax']
         if Distgc is None:
-            Distgc = self.paramstosave['Distgc']
+            Distgc = self.subhalo_data['Distgc']
         if position_Earth is None:
             position_Earth = self.input_dict['host']['position_Earth']
 
         # Random distribution of subhalos around the celestial sphere
         num_subs = len(Vmax)
-        self.paramstosave['gal_theta'] = self.rng.uniform(0, 2 * np.pi, num_subs)
-        self.paramstosave['gal_phi'] = np.arccos(2 * self.rng.uniform(0, 1, num_subs) - 1)
+        self.subhalo_data['gal_theta'] = self.rng.uniform(0, 2 * np.pi, num_subs)
+        self.units['Vmax'] = 'kpc'
+        self.subhalo_data['gal_phi'] = np.arccos(2 * self.rng.uniform(0, 1, num_subs) - 1)
+        self.units['Vmax'] = 'kpc'
 
         # Positions of the subhalos
-        self.paramstosave['repop_Xs'] = Distgc * np.cos(self.paramstosave['gal_theta']) * np.sin(self.paramstosave['gal_phi'])
-        self.paramstosave['repop_Ys'] = Distgc * np.sin(self.paramstosave['gal_theta']) * np.sin(self.paramstosave['gal_phi'])
-        self.paramstosave['repop_Zs'] = Distgc * np.cos(self.paramstosave['gal_phi'])
+        self.subhalo_data['repop_Xs'] = Distgc * np.cos(self.subhalo_data['gal_theta']) * np.sin(self.subhalo_data['gal_phi'])
+        self.units['Vmax'] = 'kpc'
+        self.subhalo_data['repop_Ys'] = Distgc * np.sin(self.subhalo_data['gal_theta']) * np.sin(self.subhalo_data['gal_phi'])
+        self.units['Vmax'] = 'kpc'
+        self.subhalo_data['repop_Zs'] = Distgc * np.cos(self.subhalo_data['gal_phi'])
+        self.units['Vmax'] = 'kpc'
 
-        self.paramstosave['repop_DistEarth'] = ((
-            self.paramstosave['repop_Xs'] - position_Earth[0]) ** 2
-            + (self.paramstosave['repop_Ys'] - position_Earth[1]) ** 2
-            + (self.paramstosave['repop_Zs'] - position_Earth[2]) ** 2
+        self.subhalo_data['repop_DistEarth'] = ((
+                                                        self.subhalo_data['repop_Xs'] - position_Earth[0]) ** 2
+                                                + (self.subhalo_data['repop_Ys'] - position_Earth[1]) ** 2
+                                                + (self.subhalo_data['repop_Zs'] - position_Earth[2]) ** 2
                                                 ) ** 0.5
-
 
         for param in self.input_dict['repopulations']['columns_to_save']:
             self.get_parameter(param)
 
         if self.input_dict['host']['use_Roche']:
-            self.paramstosave['use_Roche'] = (
+            self.subhalo_data['survives_Roche'] = (
                     self.R_t(
-                        self.paramstosave['Vmax'],
-                        self.paramstosave['concentration'],
-                        self.paramstosave['Distgc'],
+                        self.subhalo_data['Vmax'],
+                        self.subhalo_data['concentration'],
+                        self.subhalo_data['Distgc'],
                         singular_case=False)
-                    > self.R_s(self.paramstosave['Vmax'],
-                               self.paramstosave['concentration']))
+                    > self.R_s(self.subhalo_data['Vmax'],
+                               self.subhalo_data['concentration']))
 
         # repop_C = Cv_Grand2012(Vmax, Cv_bb, Cv_mm)
         # repop_C = Moline21_normalization(Vmax, c0=Cv_bb)
@@ -456,52 +377,60 @@ class repop_algorithm:
 
 
         # We calculate our subhalo population in bins to save memory
-        m_min = SHVF_cts_RangeMin
+        m_min = self.SHVF_RangeMin
 
-        while m_min < SHVF_cts_RangeMax:
+        while m_min < self.SHVF_RangeMax:
 
-            if SHVF_Grand2012_int(m_min, m_min * repop_inc_factor,
-                                  SHVF_bb, SHVF_mm) > num_subs_max:
+            self.subhalo_data = {}
 
-                m_max = newton(xx, m_min,
-                               args=[m_min, SHVF_bb, SHVF_mm, num_subs_max])
-                new_mmin = m_max
+            try:
+                m_max = np.min((
+                    newton(self.xx, m_min, args=[m_min, self.num_subs_max]),
+                    self.SHVF_RangeMax
+                ))
+            except RuntimeError:
+                m_max = self.SHVF_RangeMax
 
-            else:
-                m_max = np.minimum(m_min * repop_inc_factor,
-                                   SHVF_cts_RangeMax)
-                new_mmin = m_min * repop_inc_factor
+            num_subhalos = SHVF_model_integral(
+                Vmax_min=m_min, Vmax_max=m_max,
+                SHVF_model_int=self.SHVF_model,
+                SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
+                verbose_int=False)
 
-                if (SHVF_Grand2012_int(
-                        m_max, np.minimum(
-                            m_max * repop_inc_factor,
-                            SHVF_cts_RangeMax),
-                        SHVF_bb, SHVF_mm) < 1.) and (
-                        m_max < SHVF_cts_RangeMax
-                ):
-                    m_max = SHVF_cts_RangeMax
-                    new_mmin = SHVF_cts_RangeMax
+            print(m_min, m_max, num_subhalos)
 
-            min_distGC = 1e-3
+            # Montecarlo algorithm for creating the Vmax of subhalos
+            x = np.geomspace(m_min, m_max, num=2000)
+            y = SHVF_model(
+                Vmax_array=x, SHVF_model=self.SHVF_model,
+                SHVF_params=[self.SHVF_bb, self.SHVF_mm],
+                verbose=False)
+            cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
+            cumul /= cumul[-1]
+            x_mean = (x[1:] + x[:-1]) / 2.
+            x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
+            spline = UnivariateSpline(
+                cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
 
-            repop_Vmax = self.montecarlo_algorithm(
-                m_min, m_max,
-                SHVF_Grand2012,
-                num_subhalos=SHVF_Grand2012_int(
-                    m_min, m_max, SHVF_bb, SHVF_mm),
-                )
+            self.subhalo_data['Vmax'] = spline(self.rng.random(num_subhalos))
+            self.units['Vmax'] = 'km/s'
 
-            repop_DistGC = self.montecarlo_algorithm(
-                min_distGC, host_R_vir,
-                Nr_Ntot_repop,
-                num_subhalos=SHVF_Grand2012_int(
-                    m_min, m_max, SHVF_bb, SHVF_mm),
-                srd_args_repop=srd_args_repop,
-                srd_args_visible=srd_args_visible,
-                srd_last_sub=srd_last_sub)
+            # Montecarlo algorithm for creating the Distgc of subhalos
+            x = np.linspace(0., self.input_dict['host']['R_vir'], num=2000)
+            y = srd_model(
+                Vmax_array=x, SHVF_model=self.SHVF_model,
+                SHVF_params=[self.SHVF_bb, self.SHVF_mm],
+                verbose=False)
+            cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
+            cumul /= cumul[-1]
+            x_mean = (x[1:] + x[:-1]) / 2.
+            x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
+            spline = UnivariateSpline(
+                cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
+            self.subhalo_data['Distgc'] = spline(self.rng.random(num_subhalos))
+            self.units['Vmax'] = 'kpc'
 
-            new_data = self.calculate_characteristics_subhalo(
-                repop_Vmax, repop_DistGC)
+            self.calculate_characteristics_subhalo()
 
             for new_sub in range(self.repop_num_brightest):
 
@@ -652,7 +581,6 @@ class repop_algorithm:
         return (brightest_Js[:self.repop_num_brightest, :],
                     brightest_J03[:self.repop_num_brightest, :])
 
-
     def xx(self, mmax, mmin, root):
         return (SHVF_model_integral(
                   Vmax_min=mmin,
@@ -663,105 +591,111 @@ class repop_algorithm:
 
     def interior_full_repop(self):
 
-        # brightest_Js = np.zeros((
-        #     self.total_number_subs,
-        #     9 + len(self.input_dict['repopulations']['columns_to_save'])))
+        with h5py.File('large_data.h5', 'a') as f:
+            datasets = {}
+            for iter_idx in range(self.repop_its):
+                # Create a group for each iteration (e.g., 'iteration_0', 'iteration_1', ...)
+                iter_group_name = f"iteration_{iter_idx}"
+                if iter_group_name not in f:
+                    iter_group = f.create_group(iter_group_name)
+                else:
+                    iter_group = f[iter_group_name]
 
-        nn = 0
+                # We calculate our subhalo population in bins to save memory
+                m_min = self.SHVF_RangeMin
+                nn = 0
 
-        # We calculate our subhalo population in bins to save memory
-        m_min = self.SHVF_RangeMin
+                while m_min < self.SHVF_RangeMax:
 
-        while m_min < self.SHVF_RangeMax:
+                    self.subhalo_data = {}
 
-            self.paramstosave = {}
+                    try:
+                        m_max = np.min((
+                            newton(self.xx, m_min, args=[m_min, self.num_subs_max]),
+                            self.SHVF_RangeMax
+                        ))
+                    except RuntimeError:
+                        m_max = self.SHVF_RangeMax
 
-            if SHVF_model_integral(
-                  Vmax_min=m_min,
-                  Vmax_max=m_min * self.repop_inc_factor,
-                  SHVF_model_int=self.SHVF_model,
-                  SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
-                  verbose_int=False) > self.num_subs_max:
+                    num_subhalos = SHVF_model_integral(
+                        Vmax_min=m_min, Vmax_max=m_max,
+                        SHVF_model_int=self.SHVF_model,
+                        SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
+                        verbose_int=False)
 
-                m_max = newton(self.xx, m_min,
-                               args=[m_min, self.num_subs_max])
-                new_mmin = m_max
-
-            else:
-                m_max = np.minimum(m_min * self.repop_inc_factor,
-                                   self.SHVF_RangeMax)
-                new_mmin = m_min * self.repop_inc_factor
-
-                if (SHVF_model_integral(
-                  Vmax_min=m_max,
-                  Vmax_max=np.minimum(
-                            m_max * self.repop_inc_factor,
-                            self.SHVF_RangeMax),
-                  SHVF_model_int=self.SHVF_model,
-                  SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
-                  verbose_int=False) < 1.) and (
-                        m_max < self.SHVF_RangeMax
-                ):
-                    m_max = self.SHVF_RangeMax
-                    new_mmin = self.SHVF_RangeMax
+                    print(m_min, m_max, num_subhalos)
 
 
-            num_subhalos = SHVF_model_integral(
-                  Vmax_min=m_min, Vmax_max=m_max,
-                  SHVF_model_int=self.SHVF_model,
-                  SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
-                  verbose_int=False)
-            print(m_min, m_max, num_subhalos)
+                    # Montecarlo algorithm for creating the Vmax of subhalos
+                    x = np.geomspace(m_min, m_max, num=2000)
+                    y = SHVF_model(
+                        Vmax_array=x, SHVF_model=self.SHVF_model,
+                        SHVF_params=[self.SHVF_bb, self.SHVF_mm],
+                        verbose=False)
+                    cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
+                    cumul /= cumul[-1]
+                    x_mean = (x[1:] + x[:-1]) / 2.
+                    x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
+                    spline = UnivariateSpline(
+                        cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
 
-            # Montecarlo algorithm for creating the Vmax of subhalos
-            x = np.geomspace(m_min, m_max, num=2000)
-            y = SHVF_model(
-                Vmax_array=x, SHVF_model=self.SHVF_model,
-                SHVF_params=[self.SHVF_bb, self.SHVF_mm],
-                verbose=False)
-            cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
-            cumul /= cumul[-1]
-            x_mean = (x[1:] + x[:-1]) / 2.
-            x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
-            spline = UnivariateSpline(
-                cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
+                    # self.subhalo_data['Vmax'] = {}
 
-            self.paramstosave['Vmax'] = spline(self.rng.random(num_subhalos))
+                    self.subhalo_data['Vmax'] = spline(self.rng.random(
+                        num_subhalos))
+                    # self.subhalo_data['Vmax']['units'] = 'km/s'
 
-            # Montecarlo algorithm for creating the Distgc of subhalos
-            x = np.linspace(0., self.input_dict['host']['R_vir'], num=2000)
-            y = srd_model(
-                Vmax_array=x, SHVF_model=self.SHVF_model,
-                SHVF_params=[self.SHVF_bb, self.SHVF_mm],
-                verbose=False)
-            cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
-            cumul /= cumul[-1]
-            x_mean = (x[1:] + x[:-1]) / 2.
-            x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
-            spline = UnivariateSpline(
-                cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
-            self.paramstosave['Distgc'] = spline(self.rng.random(num_subhalos))
+                    # Montecarlo algorithm for creating the Distgc of subhalos
+                    x = np.linspace(0., self.input_dict['host']['R_vir'], num=2000)
+                    y = srd_model(
+                        Vmax_array=x, SHVF_model=self.SHVF_model,
+                        SHVF_params=[self.SHVF_bb, self.SHVF_mm],
+                        verbose=False)
+                    cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
+                    cumul /= cumul[-1]
+                    x_mean = (x[1:] + x[:-1]) / 2.
+                    x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
+                    spline = UnivariateSpline(
+                        cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
 
-            self.calculate_characteristics_subhalo()
+                    # self.subhalo_data['Distgc'] = {}
+                    self.subhalo_data['Distgc'] = spline(self.rng.random(num_subhalos))
+                    # self.units['Vmax'] = 'kpc'
 
-            aa = np.column_stack([self.paramstosave[label]
-                             for label in self.paramstosave.keys()])
-
-            headerS = (('#\n# Vmin: [         Cv \n#\n'))
-
-            file_Js = open(self.path_output + 'full_repop_'
-                           + self.str_out + '_results_' + str(nn)
-                           + '.txt', 'w')
-
-            file_Js.write(headerS)
-            np.savetxt(file_Js, aa)
-            file_Js.close()
+                    self.calculate_characteristics_subhalo()
 
 
-            m_min = new_mmin
-            nn += 1
+                    if self.input_dict['repopulations']['saveall']:
+                        for key, array in self.subhalo_data.items():
+                            # If dataset already exists, get it
+                            if key in iter_group:
+                                dataset = iter_group[key]
+                            else:
+                                # Create dataset for new key
+                                datasets[key] = iter_group.create_dataset(
+                                    key,
+                                    shape=(0,),
+                                    maxshape=(None,),
+                                    dtype=array.dtype,
+                                    chunks=True,
+                                    compression='gzip'
+                                )
+                                # Save metadata for new key
+                                dataset.attrs['units'] = 'unknown'
+                                # datasets[key].attrs['units'] = units_dict.get(
+                                #     key, default_units)
+                                datasets[key].attrs['description'] = f'{key} data'
 
+                            # Append the new batch data to the dataset
+                            dataset = datasets[key]
+                            batch_size = array.shape[0]
+                            current_size = dataset.shape[0]
+                            new_size = current_size + batch_size
+                            dataset.resize((new_size,))
+                            dataset[current_size:new_size] = array
 
+                    m_min = m_max
+                    nn += 1
 
         return
 
@@ -774,9 +708,6 @@ class repop_algorithm:
         self.path_output = path_output
 
         self.interior_full_repop()
-
-
-        print(self.paramstosave)
 
         '''
 
@@ -874,9 +805,14 @@ class repop_algorithm:
         file_inputs.close()
         '''
 
+
+
 print(os.getcwd())
 model = repop_algorithm('dmo', 'resilient',
                         '../input_files/input_paper2024.yml')
+
+print(model.R_t(2., 5., 5.))
+print(model.R_t(2., np.array([5.]), 5.))
 model.run('../outputs/test_2026/new_code/')
 '''
 
@@ -887,19 +823,19 @@ model.run('../outputs/test_2026/new_code/')
         """
         self.N = N
         # Initialize raw parameters (e.g., raw concentration)
-        self.paramstosave = {}
+        self.subhalo_data = {}
         self.values = {}  # values for computed parameters
         self.units = {}  # store units info for each parameter
 
         if config:
             for key, value in config.items():
                 # Assume raw data are numpy arrays
-                self.paramstosave[key] = value
+                self.subhalo_data[key] = value
         # To be filled with raw data (e.g., concentrations)
 
     def set_parameter(self, name, array, unit=None):
         """Set raw parameter data with optional unit."""
-        self.paramstosave[name] = array
+        self.subhalo_data[name] = array
         if unit:
             self.units[name] = unit
 
@@ -910,9 +846,9 @@ model.run('../outputs/test_2026/new_code/')
         """
         if name in self.values:
             return self.values[name]
-        elif name in self.paramstosave:
+        elif name in self.subhalo_data:
             # Raw parameter, no computation needed
-            param_data = self.paramstosave[name]
+            param_data = self.subhalo_data[name]
             # Attach unit if known
             if name in self.units:
                 param_data = param_data * self.units[name]
@@ -932,8 +868,8 @@ model.run('../outputs/test_2026/new_code/')
     # Example: compute concentration if not provided
     def compute_concentration(self):
         # If raw data exists, process it; else, generate default
-        if 'concentration' in self.paramstosave:
-            data = self.paramstosave['concentration']
+        if 'concentration' in self.subhalo_data:
+            data = self.subhalo_data['concentration']
         else:
             # Generate some default data for illustration
             data = np.ones(self.N)
@@ -976,11 +912,11 @@ model.run('../outputs/test_2026/new_code/')
     def get_sorted_parameters(self, param_name):
         indices = self.sort_by_parameter(param_name)
         sorted_params = {}
-        for key in self.paramstosave:
+        for key in self.subhalo_data:
             sorted_params[key] = self.get_parameter(key)[indices]
         # Also include computed parameters if needed
         for key in self.values:
-            # values contains computed paramstosave
+            # values contains computed subhalo_data
             # retrieve and sort as well
             pass
         return sorted_params
