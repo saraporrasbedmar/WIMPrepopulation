@@ -589,21 +589,38 @@ class repop_algorithm:
                   SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
                   verbose_int=False) - root)
 
+    def store_dict_as_hdf(self, group, d):
+        for key, value in d.items():
+            if isinstance(value, dict):
+                # Create subgroup
+                subgroup = group.create_group(key)
+                self.store_dict_as_hdf(subgroup, value)
+            else:
+                # Assume value is a primitive or array
+                # Convert strings if needed
+                if isinstance(value, str):
+                    data = np.string_(value)
+                    dtype = h5py.string_dtype(encoding='utf-8')
+                else:
+                    data = value
+                    dtype = None
+                if key in group:
+                    del group[key]
+                group.create_dataset(key, data=data, dtype=dtype)
     def interior_full_repop(self):
 
-        with h5py.File('large_data.h5', 'a') as f:
+        with h5py.File(self.path_output + '.h5', 'a') as f:
+            input_group = f.create_group(f"inputs")
+            self.store_dict_as_hdf(input_group, self.input_dict)
+
             datasets = {}
+
             for iter_idx in range(self.repop_its):
-                # Create a group for each iteration (e.g., 'iteration_0', 'iteration_1', ...)
-                iter_group_name = f"iteration_{iter_idx}"
-                if iter_group_name not in f:
-                    iter_group = f.create_group(iter_group_name)
-                else:
-                    iter_group = f[iter_group_name]
+
+                iter_group = f.create_group(f"iteration_{iter_idx}")
 
                 # We calculate our subhalo population in bins to save memory
                 m_min = self.SHVF_RangeMin
-                nn = 0
 
                 while m_min < self.SHVF_RangeMax:
 
@@ -666,10 +683,11 @@ class repop_algorithm:
 
 
                     if self.input_dict['repopulations']['saveall']:
+
                         for key, array in self.subhalo_data.items():
                             # If dataset already exists, get it
                             if key in iter_group:
-                                dataset = iter_group[key]
+                                datasets = iter_group[key]
                             else:
                                 # Create dataset for new key
                                 datasets[key] = iter_group.create_dataset(
@@ -681,29 +699,24 @@ class repop_algorithm:
                                     compression='gzip'
                                 )
                                 # Save metadata for new key
-                                dataset.attrs['units'] = 'unknown'
+                                datasets[key].attrs['units'] = 'unknown'
                                 # datasets[key].attrs['units'] = units_dict.get(
                                 #     key, default_units)
                                 datasets[key].attrs['description'] = f'{key} data'
 
                             # Append the new batch data to the dataset
                             dataset = datasets[key]
-                            batch_size = array.shape[0]
                             current_size = dataset.shape[0]
-                            new_size = current_size + batch_size
+                            new_size = current_size + num_subhalos
                             dataset.resize((new_size,))
                             dataset[current_size:new_size] = array
 
                     m_min = m_max
-                    nn += 1
-
+            f.flush()
         return
 
     def run(self, path_output):
         print(time.strftime("%d-%m-%Y %H:%M:%S", time.gmtime()))
-
-        if not os.path.exists(path_output):
-            os.makedirs(path_output)
 
         self.path_output = path_output
 
@@ -813,7 +826,10 @@ model = repop_algorithm('dmo', 'resilient',
 
 print(model.R_t(2., 5., 5.))
 print(model.R_t(2., np.array([5.]), 5.))
-model.run('../outputs/test_2026/new_code/')
+model.run('../outputs/test_2026/new_code/test_'
+          + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+                  )
+
 '''
 
 """
