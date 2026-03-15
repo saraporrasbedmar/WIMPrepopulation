@@ -44,13 +44,13 @@ SRD:
       args: 1.0
       last_subhalo: 0.0
 cosmo_constants:
-  G: 4.297e-06
+  G: !!float 4.297e-06
   H_0: 67.7
   rho_crit: 135.73
 host:
   R_vir: 220
   r_s: 20.0
-  rho_0: 9.04e6
+  rho_0: !!float 9.04e6
   use_Roche: False
   position_Earth: [8.5, 0., 0.]
 repopulations:
@@ -58,13 +58,19 @@ repopulations:
   its: 2
   saveall: True
   num_brightest: 126313359
-  num_subs_max: 5e5
+  num_subs_max: !!float 5e5
   print_freq: 1
 
   rng_seed: 0
 
   columns_to_save:
-    - Jfactor2
-    - concentration
-    - Jfactor
+    Jfactor2:
+    concentration:
+      formula: '1e17 * params[0] * Vmax'
+      params:
+        - 0.5
+        - !!float 2e7
+      variables:
+        'Vmax'
+#    - Jfactor
 #    - repop_Theta

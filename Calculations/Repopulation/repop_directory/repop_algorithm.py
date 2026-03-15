@@ -2,10 +2,10 @@ import os
 import sys
 import yaml
 import psutil
-import inspect
-import numpy as np
 import time
 import h5py
+
+import numpy as np
 
 from scipy.optimize import newton
 from scipy.interpolate import UnivariateSpline
@@ -43,7 +43,10 @@ class repop_algorithm:
 
         self.str_out = str(sim_type) + '_' + str(res_string)
 
-        self.input_dict = read_config_file(path_input)
+        if type(path_input) == str:
+            self.input_dict = read_config_file(path_input)
+        else:
+            self.input_dict = path_input
 
         if self.input_dict['repopulations']['rng_seed'] < 0:
             self.rng = np.random.default_rng(seed=None)
@@ -81,6 +84,7 @@ class repop_algorithm:
         self.srd_last_sub = np.asarray(
             srd_cts[sim_type][res_string]['last_subhalo'])
 
+
         self.total_number_subs = SHVF_model_integral(
                   Vmax_min=self.SHVF_RangeMin,
                   Vmax_max=self.SHVF_RangeMax,
@@ -90,6 +94,12 @@ class repop_algorithm:
 
         self.subhalo_data = {}
         self.units = {}  # store units info for each parameter
+
+        self.model_list = {
+            'R_t': self.R_t,
+            'Jfactor': self.Jfactor,
+            'Jfactor2': self.Jfactor2
+        }
 
         # if config:
         #     for key, value in config.items():
@@ -102,7 +112,7 @@ class repop_algorithm:
               % self.total_number_subs)
 
     def R_max(self, V, C, cosmo_H_0=None):
-        """
+        '''
         Calculate Rmax of a subhalo.
 
         :param V: float or array-like [km/s]
@@ -112,14 +122,14 @@ class repop_algorithm:
 
         :return: float or array-like [kpc]
             Rmax of the subhalo given by the inputs.
-        """
+        '''
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
 
         return V / cosmo_H_0 * np.sqrt(2. / C) * 1e3
 
     def R_s(self, V, C, cosmo_H_0=None):
-        """
+        '''
         Calculate scale radius (R_s) of a subhalo following the NFW
         analytical expression for a subhalo density profile.
 
@@ -130,7 +140,7 @@ class repop_algorithm:
 
         :return: float or array-like [kpc]
             R_s of the subhalo given by the inputs.
-        """
+        '''
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
 
@@ -138,9 +148,8 @@ class repop_algorithm:
 
     def R_t(self, V, C, DistGC,
             cosmo_H_0=None, cosmo_G=None,
-            host_rho_0=None, host_r_s=None,
-            singular_case=True):
-        """
+            host_rho_0=None, host_r_s=None):
+        '''
         Calculation of tidal radius (R_t) of a subhalo, following the
         NFW analytical expression for a subhalo density profile.
 
@@ -156,7 +165,7 @@ class repop_algorithm:
 
         :return: float or array-like [kpc]
             Tidal radius of the subhalo given by the inputs.
-        """
+        '''
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
         if cosmo_G is None:
@@ -182,7 +191,7 @@ class repop_algorithm:
                 )
 
     def Mhost_encapsulated(self, R, host_rho_0=None, host_r_s=None):
-        """
+        '''
         Host mass encapsulated up to a certain radius. We are following
         a NFW density profile for the host.
 
@@ -191,7 +200,7 @@ class repop_algorithm:
 
         :return: float or array-like [Msun]
             Host mass encapsulated up to R.
-        """
+        '''
         if host_rho_0 is None:
             host_rho_0 = self.rho_0
         if host_r_s is None:
@@ -210,7 +219,7 @@ class repop_algorithm:
                 * (DistGC >= srd_last_sub))
 
     def mass_from_Vmax(self, Vmax, Rmax, c200, cosmo_G=None):
-        """
+        '''
         Mass from a subhalo assuming a NFW profile.
         Theoretical steps in Moline16.
 
@@ -222,7 +231,7 @@ class repop_algorithm:
             Concentration of the subhalo in terms of mass.
         :return: float or array-like [Msun]
             Mass from the subhalo assuming a NFW profile.
-        """
+        '''
         if cosmo_G is None:
             cosmo_G = self.input_dict['cosmo_constants']['G']
 
@@ -230,7 +239,7 @@ class repop_algorithm:
                 * ff(c200) / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)))
 
     def C200_from_Cv(self, c200, Cv):
-        """
+        '''
         Formula to find c200 knowing Cv to input in the Newton
         root-finding method.
 
@@ -242,70 +251,102 @@ class repop_algorithm:
         :return: float or array-like
             The output will be 0 when you find the c200 for a
             specific Cv.
-        """
+        '''
         return (200 * (np.log(1. + 2.163) - 2.163 / (1. + 2.163))
                 / ff(c200) * (c200 / 2.163) ** 3 - Cv)
 
 
     def set_parameter(self, name, array, unit=None):
-        """Set raw parameter data with optional unit."""
+        '''Set raw parameter data with optional unit.'''
         self.subhalo_data[name] = array
         if unit:
             self.units[name] = unit
 
 
-    def get_parameter(self, name):
-        """
+    def get_parameter(self, name, parametrization):
+        '''
         Retrieve parameter, computing if necessary.
         Uses values to avoid recomputation.
-        """
+        '''
         if name in self.subhalo_data:
             # Raw parameter, no computation needed
-            param_data = self.subhalo_data[name]
-            # Attach unit if known
-            # if name in self.units:
-            #     param_data = param_data * self.units[name]
-            return param_data
+            return self.subhalo_data[name]
+
+        elif name in self.model_list.keys():
+            self.subhalo_data[name] = self.model_list[name]()
+
         else:
             # Need to compute parameter
-            compute_func = getattr(self, f"compute_{name}", None)
-            if compute_func:
-                data = compute_func()
-                self.subhalo_data[name] = data
-                return data
-            else:
+            # compute_func = getattr(self, f'compute_{name}', None)
+            # compute_func = self.compute_concentration(name)
+            try:
+                # data = compute_func()
+                self.subhalo_data[name] = self.compute_concentration(parametrization)
+                # return data
+            except:
                 raise ValueError(
-                    f"Parameter '{name}' not found and no compute method defined.")
+                    f'Parameter "{name}" not found '
+                    f'and no compute method defined.')
 
 
-    # Example: compute concentration if not provided
-    def compute_concentration(self):
-        # If raw data exists, process it; else, generate default
-        if 'concentration' in self.subhalo_data:
-            data = self.subhalo_data['concentration']
-        else:
-            # Generate some default data for illustration
-            data = np.ones(np.shape(self.subhalo_data['Vmax'])) * 1e5
-        # Attach units if known, or set defaults
-        # if 'concentration' not in self.units:
-        #     self.units['concentration'] = u.cm3
-        return data
+    def compute_concentration(self, name):
+
+        if name['formula'] in self.model_list.keys():
+            return self.model_list[name['formula']]()
+
+        elif type(name['formula']) == str:
+
+            bb = {}
+
+            params = name.get('params', None)
+            if isinstance(params, float) or isinstance(params, int):
+                bb['params'] = params
+            elif isinstance(params, list):
+                bb['params'] = np.array(params, dtype=float)
+
+            variables = name.get('variables', None)
+            if isinstance(variables, str):
+                bb[variables] = self.get_parameter(variables, None)
+            elif isinstance(variables, list):
+                for var in variables:
+                    bb[var] = self.get_parameter(var, None)
+
+            # Evaluate formula
+            try:
+                aa = eval(name['formula'], {}, bb)
+            except Exception as e:
+                raise ValueError(
+                    f'Error evaluating formula' + name['formula']
+                    + f'with parameters {bb}: {e}')
+
+            # If result is a scalar, broadcast to all subhalos
+            if isinstance(aa, (float, int)):
+                n = len(self.subhalo_data['Vmax'])
+                return aa * np.ones(n)
+
+            return aa
+
+        elif callable(name['formula']):
+            if name['params'] is None:
+                return name['formula']
+            else:
+                return name['formula'](name['params'])
 
 
     # Example: custom parametrization dependent on concentration
-    def compute_Jfactor(self):
+    def Jfactor(self):
         # Depends on concentration
-        conc = self.get_parameter('concentration')
+        # conc = self.get_parameter('concentration', None)
         # Vectorized calculation
-        J = conc + 2 ** 2  # placeholder formula
+        J = 1e3 + 2 ** 2  # placeholder formula
         # if 'Jfactor' not in self.units:
         #     self.units['Jfactor'] = u.cm3 ** 2
         return J
-    def compute_Jfactor2(self):
+    def Jfactor2(self):
         # Depends on concentration
-        conc = self.get_parameter('concentration')
+        # conc = self.get_parameter('concentration', None)
         # Vectorized calculation
-        J = conc + 3 ** 3  # placeholder formula
+        J = 1e5 + self.subhalo_data['Vmax']  # placeholder formula
         # if 'Jfactor' not in self.units:
         #     self.units['Jfactor'] = u.cm3 ** 2
         return J
@@ -336,21 +377,22 @@ class repop_algorithm:
         self.units['Vmax'] = 'kpc'
 
         self.subhalo_data['repop_DistEarth'] = ((
-                                                        self.subhalo_data['repop_Xs'] - position_Earth[0]) ** 2
-                                                + (self.subhalo_data['repop_Ys'] - position_Earth[1]) ** 2
-                                                + (self.subhalo_data['repop_Zs'] - position_Earth[2]) ** 2
-                                                ) ** 0.5
+            self.subhalo_data['repop_Xs'] - position_Earth[0]) ** 2
+            + (self.subhalo_data['repop_Ys'] - position_Earth[1]) ** 2
+            + (self.subhalo_data['repop_Zs'] - position_Earth[2]) ** 2
+            ) ** 0.5
 
         for param in self.input_dict['repopulations']['columns_to_save']:
-            self.get_parameter(param)
+            self.get_parameter(
+                param,
+                self.input_dict['repopulations']['columns_to_save'][param])
 
         if self.input_dict['host']['use_Roche']:
             self.subhalo_data['survives_Roche'] = (
                     self.R_t(
                         self.subhalo_data['Vmax'],
                         self.subhalo_data['concentration'],
-                        self.subhalo_data['Distgc'],
-                        singular_case=False)
+                        self.subhalo_data['Distgc'])
                     > self.R_s(self.subhalo_data['Vmax'],
                                self.subhalo_data['concentration']))
 
@@ -440,8 +482,7 @@ class repop_algorithm:
                            new_data[bright_Js, 6],
                            new_data[bright_Js, 2],
                            cosmo_H_0, cosmo_G,
-                           host_rho_0, host_r_s,
-                           singular_case=True)
+                           host_rho_0, host_r_s)
                        < R_s(new_data[bright_Js, 4],
                              new_data[bright_Js, 6],
                              cosmo_H_0)) \
@@ -465,8 +506,7 @@ class repop_algorithm:
                            new_data[bright_J03, 6],
                            new_data[bright_J03, 2],
                            cosmo_H_0, cosmo_G,
-                           host_rho_0, host_r_s,
-                           singular_case=True)
+                           host_rho_0, host_r_s)
                        < R_s(new_data[bright_J03, 4],
                              new_data[bright_J03, 6],
                              cosmo_H_0)) \
@@ -498,8 +538,7 @@ class repop_algorithm:
             #                new_data[bright_Js, 6],
             #                new_data[bright_Js, 2],
             #                cosmo_H_0, cosmo_G,
-            #                host_rho_0, host_r_s,
-            #                singular_case=True)
+            #                host_rho_0, host_r_s)
             #            < R_s(new_data[bright_Js, 4],
             #                  new_data[bright_Js, 6],
             #                  cosmo_H_0)):
@@ -514,8 +553,7 @@ class repop_algorithm:
             #                          new_data[bright_Js, 6],
             #                          new_data[bright_Js, 2],
             #                          cosmo_H_0, cosmo_G,
-            #                          host_rho_0, host_r_s,
-            #                          singular_case=True))
+            #                          host_rho_0, host_r_s))
             #                + '  '
             #                + str(R_s(new_data[bright_Js, 4],
             #                          new_data[bright_Js, 6],
@@ -540,8 +578,7 @@ class repop_algorithm:
             #            new_data[bright_J03, 6],
             #            new_data[bright_J03, 2],
             #            cosmo_H_0, cosmo_G,
-            #            host_rho_0, host_r_s,
-            #            singular_case=True)
+            #            host_rho_0, host_r_s)
             #        < R_s(new_data[bright_J03, 4],
             #              new_data[bright_J03, 6],
             #              cosmo_H_0)):
@@ -556,8 +593,7 @@ class repop_algorithm:
             #                          new_data[bright_J03, 6],
             #                          new_data[bright_J03, 2],
             #                          cosmo_H_0, cosmo_G,
-            #                          host_rho_0, host_r_s,
-            #                          singular_case=True))
+            #                          host_rho_0, host_r_s))
             #                + '  '
             #                + str(R_s(new_data[bright_J03, 4],
             #                          new_data[bright_J03, 6],
@@ -591,6 +627,9 @@ class repop_algorithm:
 
     def store_dict_as_hdf(self, group, d):
         for key, value in d.items():
+            if value is None:
+                group.create_group(key)
+                continue
             if isinstance(value, dict):
                 # Create subgroup
                 subgroup = group.create_group(key)
@@ -607,17 +646,35 @@ class repop_algorithm:
                 if key in group:
                     del group[key]
                 group.create_dataset(key, data=data, dtype=dtype)
+
     def interior_full_repop(self):
 
-        with h5py.File(self.path_output + '.h5', 'a') as f:
-            input_group = f.create_group(f"inputs")
+        with h5py.File(self.path_output + 'fullrepop_' + self.str_out
+                       + '.h5', 'a') as f:
+            input_group = f.create_group(f'inputs')
             self.store_dict_as_hdf(input_group, self.input_dict)
 
             datasets = {}
 
             for iter_idx in range(self.repop_its):
 
-                iter_group = f.create_group(f"iteration_{iter_idx}")
+                if (iter_idx % self.input_dict['repopulations']['print_freq']
+                        == 0):
+                    print('    %s %s: it %d' % (
+                        time.strftime(' %Y-%m-%d %H:%M:%S', time.gmtime()),
+                        self.str_out, iter_idx))
+                    progress = open(self.path_output + 'progress_'
+                                    + self.str_out + '.txt'
+                                    , 'a')
+                    progress.write(
+                        self.str_out + ', iteration ' + str(iter_idx))
+                    progress.write(
+                        '        %.3f  %s\n' %
+                        (memory_usage_psutil(),
+                         time.strftime(' %Y-%m-%d %H:%M:%S', time.gmtime())))
+                    progress.close()
+
+                iter_group = f.create_group(f'iteration_{iter_idx}')
 
                 # We calculate our subhalo population in bins to save memory
                 m_min = self.SHVF_RangeMin
@@ -681,246 +738,69 @@ class repop_algorithm:
 
                     self.calculate_characteristics_subhalo()
 
+                    # if self.input_dict['repopulations']['saveall']:
 
-                    if self.input_dict['repopulations']['saveall']:
+                    for key, array in self.subhalo_data.items():
+                        # If dataset already exists, get it
+                        if key in iter_group:
+                            datasets = iter_group[key]
+                        else:
+                            # Create dataset for new key
+                            datasets[key] = iter_group.create_dataset(
+                                key,
+                                shape=(0,),
+                                maxshape=(None,),
+                                dtype=array.dtype,
+                                chunks=True,
+                                compression='gzip'
+                            )
 
-                        for key, array in self.subhalo_data.items():
-                            # If dataset already exists, get it
-                            if key in iter_group:
-                                datasets = iter_group[key]
-                            else:
-                                # Create dataset for new key
-                                datasets[key] = iter_group.create_dataset(
-                                    key,
-                                    shape=(0,),
-                                    maxshape=(None,),
-                                    dtype=array.dtype,
-                                    chunks=True,
-                                    compression='gzip'
-                                )
-                                # Save metadata for new key
-                                datasets[key].attrs['units'] = 'unknown'
-                                # datasets[key].attrs['units'] = units_dict.get(
-                                #     key, default_units)
-                                datasets[key].attrs['description'] = f'{key} data'
+                            # Save metadata for new key
+                            datasets[key].attrs['units'] = 'unknown'
+                            # datasets[key].attrs['units'] = units_dict.get(
+                            #     key, default_units)
+                            datasets[key].attrs['description'] = f'{key} data'
 
-                            # Append the new batch data to the dataset
-                            dataset = datasets[key]
-                            current_size = dataset.shape[0]
-                            new_size = current_size + num_subhalos
-                            dataset.resize((new_size,))
-                            dataset[current_size:new_size] = array
+                        # Append the new batch data to the dataset
+                        dataset = datasets[key]
+                        current_size = dataset.shape[0]
+                        new_size = current_size + num_subhalos
+                        dataset.resize((new_size,))
+                        dataset[current_size:new_size] = array
 
                     m_min = m_max
             f.flush()
         return
 
     def run(self, path_output):
-        print(time.strftime("%d-%m-%Y %H:%M:%S", time.gmtime()))
+        # print(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime()))
 
-        self.path_output = path_output
+        self.path_output = path_output + '/'
+
+        if not os.path.exists(path_output + '/'):
+            os.makedirs(path_output + '/')
 
         self.interior_full_repop()
 
-        '''
-
-        self.headerS = (('#\n# Vmin: [' + str(SHVF_cts_RangeMin) + ', '
-                    + str(SHVF_cts_RangeMax) + '], '
-                    + str(res_string) + '; '
-                    + str(repop_its)
-                    + ' iterations, ' + str(repop_num_brightest)
-                    + ' brightest\n# Read the individual iterations with: '
-                      'np.loadtxt().reshape('
-                    + str(repop_its) + ', '
-                    + str(repop_num_brightest) + ', '
-                    + str(6) + ')\n'
-                               '# Js (<r_s) (GeV^2 cm^-5)'
-                               '       Dgc (kpc)'
-                               '           D_Earth (kpc)'
-                               '               Vmax (km/s)'
-                               '                ang size (deg)'
-                               '               Cv \n#\n'))
-
-        self.header03 = (('#\n# Vmin: [' + str(SHVF_cts_RangeMin) + ', '
-                     + str(SHVF_cts_RangeMax) + '], resilient: '
-                     + str(res_string) + '; '
-                     + str(repop_its) +
-                     ' iterations, ' + str(repop_num_brightest)
-                     + ' brightest\n# Read the individual iterations with: '
-                       'np.loadtxt().reshape('
-                     + str(repop_its) + ', '
-                     + str(repop_num_brightest) + ', '
-                     + str(6) + ')\n'
-                                '# J03 (<0.3deg) (GeV^2 cm^-5)'
-                                '       Dgc (kpc)'
-                                '           D_Earth (kpc)'
-                                '               Vmax (km/s)'
-                                '               ang size (deg)'
-                                '               Cv \n#\n'))
-
-        file_Js = open(pathname + '/Js_' + sim_type + '_'
-                       + str(res_string) + '_results.txt', 'w')
-        file_J03 = open(pathname + '/J03_' + sim_type + '_'
-                        + str(res_string) + '_results.txt', 'w')
-
-        file_Js.write(headerS)
-        file_J03.write(header03)
-
-        for it in range(repop_its):
-
-            if it % repop_print_freq == 0:
-                print('    %s %s %s: it %d \n' % (
-                    time.strftime(" %Y-%m-%d %H:%M:%S", time.gmtime()),
-                    sim_type, res_string, it))
-                progress = open(pathname + '/progress_' +
-                                sim_type + '_'
-                                + str(res_string)
-                                + '_results.txt', 'a')
-                progress.write(str(sim_type)
-                               + ', res: ' + str(res_string)
-                               + ', iteration ' + str(it))
-                progress.write('        %.3f  %s\n' %
-                               (memory_usage_psutil(),
-                                time.strftime(" %Y-%m-%d %H:%M:%S",
-                                              time.gmtime())))
-                progress.close()
-
-            # if repop_num_brightest < 100:
-            if full_repop:
-                brightest_Js, brightest_J03 = self.interior_full_repop()
-            else:
-                brightest_Js, brightest_J03 = \
-                    self.interior_loop_singularbrightest()
-
-            np.savetxt(file_Js, brightest_Js)
-            np.savetxt(file_J03, brightest_J03)
-
-        print('End of repop loop: %.3f  %s\n' %
-              (memory_usage_psutil(),
-               time.strftime(" %Y-%m-%d %H:%M:%S",
-                             time.gmtime())))
-        file_Js.close()
-        file_J03.close()
-
-        self.repopulation_bin_by_bin(pathname=path_output)
-
-        yaml.dump(data_dict, file_inputs,
-                  default_flow_style=False, allow_unicode=True)
+        # if full_repop:
+        #     self.interior_full_repop()
+        # else:
+        #     elf.interior_loop_singularbrightest()
 
         # Save input data in a file in the outputs directory
-        file_inputs = open(path_output + '/input_data.yml', 'w')
-        input_dict['SRD']['formula']['resilient'] = inspect.getsource(
-            N_subs_resilient)
-        input_dict['SRD']['formula']['fragile'] = inspect.getsource(
-            N_subs_fragile)
-        yaml.dump(input_dict, file_inputs,
+        file_inputs = open(self.path_output + 'input_data.yml', 'w')
+        yaml.dump(self.input_dict, file_inputs,
                   default_flow_style=False, allow_unicode=True)
         file_inputs.close()
-        '''
 
 
 
-print(os.getcwd())
-model = repop_algorithm('dmo', 'resilient',
-                        '../input_files/input_paper2024.yml')
-
-print(model.R_t(2., 5., 5.))
-print(model.R_t(2., np.array([5.]), 5.))
-model.run('../outputs/test_2026/new_code/test_'
-          + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-                  )
-
-'''
 
 """
-        Initialize dataset for N objects.
-        :param N: Number of objects
-        :param config: Optional dict with raw data or parameters
-        """
-        self.N = N
-        # Initialize raw parameters (e.g., raw concentration)
-        self.subhalo_data = {}
-        self.values = {}  # values for computed parameters
-        self.units = {}  # store units info for each parameter
-
-        if config:
-            for key, value in config.items():
-                # Assume raw data are numpy arrays
-                self.subhalo_data[key] = value
-        # To be filled with raw data (e.g., concentrations)
-
-    def set_parameter(self, name, array, unit=None):
-        """Set raw parameter data with optional unit."""
-        self.subhalo_data[name] = array
-        if unit:
-            self.units[name] = unit
-
-    def get_parameter(self, name):
-        """
-        Retrieve parameter, computing if necessary.
-        Uses values to avoid recomputation.
-        """
-        if name in self.values:
-            return self.values[name]
-        elif name in self.subhalo_data:
-            # Raw parameter, no computation needed
-            param_data = self.subhalo_data[name]
-            # Attach unit if known
-            if name in self.units:
-                param_data = param_data * self.units[name]
-            self.values[name] = param_data
-            return param_data
-        else:
-            # Need to compute parameter
-            compute_func = getattr(self, f"compute_{name}", None)
-            if compute_func:
-                data = compute_func()
-                self.values[name] = data
-                return data
-            else:
-                raise ValueError(
-                    f"Parameter '{name}' not found and no compute method defined.")
-
-    # Example: compute concentration if not provided
-    def compute_concentration(self):
-        # If raw data exists, process it; else, generate default
-        if 'concentration' in self.subhalo_data:
-            data = self.subhalo_data['concentration']
-        else:
-            # Generate some default data for illustration
-            data = np.ones(self.N)
-        # Attach units if known, or set defaults
-        if 'concentration' not in self.units:
-            self.units['concentration'] = u.cm3
-        return data
-
-    # Example: custom parametrization dependent on concentration
-    def compute_Jfactor(self):
-        # Depends on concentration
-        conc = self.get_parameter('concentration')
-        # Vectorized calculation
-        J = conc ** 2  # placeholder formula
-        if 'Jfactor' not in self.units:
-            self.units['Jfactor'] = u.cm3 ** 2
-        return J
-
-    # You can add more compute functions here
-
-    def calculate_all(self):
-        """
-        Compute all parameters that depend on the raw data.
-        """
-        for param in self.get_all_required_params():
-            self.get_parameter(param)
-
-    def get_all_required_params(self):
-        """Return list of all parameters needing calculation."""
-        return ['concentration', 'Jfactor']
-
     def sort_by_parameter(self, param_name):
-        """
+        '''
         Return indices to sort objects based on a parameter.
-        """
+        '''
         param_data = self.get_parameter(
             param_name).value  # get raw numpy array
         return np.argsort(param_data)
@@ -938,38 +818,10 @@ model.run('../outputs/test_2026/new_code/test_'
         return sorted_params
 
 
-# Usage example:
-
-# Initialize dataset for 10 million objects
-N_objects = 10_000_000
-dataset = LargeObjectDataset(N_objects)
-
-# Set raw parameter with units
-raw_conc = np.random.rand(N_objects) * 1e-3  # example raw data
-dataset.set_parameter('concentration', raw_conc, unit=u.cm ** 3)
-
-# Calculate derived parameters
-dataset.calculate_all()
-
-# Retrieve a parameter
-J = dataset.get_parameter('Jfactor')
-
-# Sort objects by Jfactor
-indices = dataset.sort_by_parameter('Jfactor')
-
-# Get sorted data for all parameters
-sorted_params = dataset.get_sorted_parameters('Jfactor')
-
-
-
-
-
-
-
 
 # ----------- CONCENTRATIONS ----------------------
 def Cv_Grand2012(Vmax, Cv_bb, Cv_mm):
-    """
+    '''
     Calculate the concentration of a subhalo population.
     Based on Grand 2012.07846.
 
@@ -978,7 +830,7 @@ def Cv_Grand2012(Vmax, Cv_bb, Cv_mm):
 
     :return: float or array-like
         Concentrations of a subhalo population.
-    """
+    '''
     # Concentration based on Grand 2012.07846.
     return (10 ** Cv_bb
             * Vmax ** Cv_mm)
@@ -1001,7 +853,7 @@ def Moline21_normalization(V, c0):
 
 
 def C_Scatt(C, Cv_sigma):
-    """
+    '''
     Create a scatter in the concentration parameter of the
     repopulated population.
     Scatter in logarithmic scale, following a Gaussian distribution.
@@ -1011,7 +863,7 @@ def C_Scatt(C, Cv_sigma):
         law).
     :return: float or array-like
         Subhalos with scattered concentrations.
-    """
+    '''
     scatter = self.rng.normal(loc=0, scale=Cv_sigma, size=C.size)
     return C * 10 ** scatter
 
@@ -1021,7 +873,7 @@ def J_abs_vel(V, D_earth, C,
               cosmo_G=input_dict['cosmo_constants']['G'],
               cosmo_H_0=input_dict['cosmo_constants']['H_0'],
               change_units=True):
-    """
+    '''
     J-factor enclosing whole subhalo as a function of the
     subhalo Vmax.
 
@@ -1039,7 +891,7 @@ def J_abs_vel(V, D_earth, C,
         Units in which it can be returned:
         -> [Msun**2 / kpc**5] with change_units=False
         -> [GeV**2 / cm**5] with change_units=True
-    """
+    '''
     yy = (2.163 ** 3. / D_earth ** 2.
           / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)) ** 2
           * cosmo_H_0 / 12 / np.pi / float(cosmo_G) ** 2
@@ -1054,7 +906,7 @@ def J_abs_vel(V, D_earth, C,
 def Js_vel(V, D_earth, C,
            cosmo_G,
            cosmo_H_0, change_units=True):
-    """
+    '''
     Jfactor enclosing the subhalo up to rs as a function of Vmax.
 
     :param V: float or array-like  [km/s]
@@ -1071,7 +923,7 @@ def Js_vel(V, D_earth, C,
         Units in which it can be returned:
         -> [Msun**2 / kpc**5] with change_units=False
         -> [GeV**2 / cm**5] with change_units=True
-    """
+    '''
     return J_abs_vel(V, D_earth, C,
                      cosmo_G=cosmo_G,
                      cosmo_H_0=cosmo_H_0,
@@ -1081,7 +933,7 @@ def Js_vel(V, D_earth, C,
 def J03_vel(V, D_earth, C,
             cosmo_G,
             cosmo_H_0, change_units=True):
-    """
+    '''
     Jfactor enclosing the subhalo up to 0.3 degrees as a
     function of Vmax.
 
@@ -1099,7 +951,7 @@ def J03_vel(V, D_earth, C,
         Units in which it can be returned:
         -> [Msun**2 / kpc**5] with change_units=False
         -> [GeV**2 / cm**5] with change_units=True
-    """
+    '''
     return (J_abs_vel(V, D_earth, C,
                       cosmo_G=cosmo_G,
                       cosmo_H_0=cosmo_H_0,
@@ -1107,4 +959,4 @@ def J03_vel(V, D_earth, C,
             * (1 - 1 / (1 + 2.163 * D_earth * np.tan(0.15 * np.pi / 180.)
                         / R_max(V, C, cosmo_H_0)) ** 3))
 
-'''
+"""
