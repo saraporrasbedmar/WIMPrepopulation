@@ -14,8 +14,7 @@ from scipy.integrate import simpson
 
 # from astropy import units as u
 
-
-from shvf_functions import SHVF_model, SHVF_model_integral
+from shvf_functions import power_law
 from srd_functions import *
 
 
@@ -39,7 +38,7 @@ def ff(c):
     return np.log(1. + c) - c / (1. + c)
 
 
-class repop_algorithm:
+class RepopAlgorithm:
     def __init__(self, sim_type, res_string, path_input):
 
         self.str_out = str(sim_type) + '_' + str(res_string)
@@ -56,38 +55,25 @@ class repop_algorithm:
             print('Warning: seed for np.random has been explicitly set'
                   ' to: seed='
                   + str(self.input_dict['repopulations']['rng_seed'])
-                  + '.\nOnly use this setting for testing purposes.')
-        except:
+                  + '. Only use this setting for testing purposes.')
+        except ValueError:
             self.rng = np.random.default_rng(seed=None)
-
-
-        cv_cts = self.input_dict['Cv']
-        self.SHVF_cts = self.input_dict['SHVF']
 
         self.input_dict['repopulations']['num_subs_max'] = int(float(
             self.input_dict['repopulations']['num_subs_max']))
         self.input_dict['repopulations']['num_brightest'] = int(
             self.input_dict['repopulations']['num_brightest'])
 
-        self.SHVF_RangeMin = self.SHVF_cts['RangeMin']
-        self.SHVF_RangeMax = self.SHVF_cts['RangeMax']
-        self.SHVF_model = self.SHVF_cts['model']
-
-        self.SHVF_bb = self.SHVF_cts[sim_type]['bb']
-        self.SHVF_mm = self.SHVF_cts[sim_type]['mm']
-
-        self.Cv_bb = cv_cts[sim_type]['bb']
-        self.Cv_sigma = cv_cts[sim_type]['sigma']
+        self.SHVF_RangeMin = self.input_dict['SHVF']['RangeMin']
+        self.SHVF_RangeMax = self.input_dict['SHVF']['RangeMax']
+        self.input_dict['SHVF']['params'] = self.input_dict['SHVF'][
+            'params'][sim_type][res_string]
 
         self.input_dict['SRD'] = self.input_dict['SRD'][
             sim_type][res_string]
 
-        # self.input_dict['SRD'] = self.input_dict['SRD'][
-        #     sim_type][res_string]
-        #
-        # self.input_dict['SRD'] = self.input_dict['SRD'][
-        #     sim_type][res_string]
-        print(self.input_dict['SRD'])
+        self.input_dict['Cv']['params'] = self.input_dict['Cv'][
+            'params'][sim_type][res_string]
 
         self.subhalo_data = {}
         self.units = {}  # store units info for each parameter
@@ -96,23 +82,30 @@ class repop_algorithm:
             'R_t': self.R_t,
             'Jfactor': self.Jfactor,
             'Jfactor2': self.Jfactor2,
-            'srd_lalalala': srd_lalalala,
+
+            'srd_constant': srd_constant,
+            'srd_exponential': srd_exponential,
+
+            'power_law': power_law,
+            # 'power_law': power_law,
+            # 'power_law': power_law,
+            # 'power_law': power_law,
         }
 
         print(self.SHVF_RangeMin, self.SHVF_RangeMax)
         print('    Max. number of repop subhalos: %i'
-              % SHVF_model_integral(
-                  Vmax_min=self.SHVF_RangeMin,
-                  Vmax_max=self.SHVF_RangeMax,
-                  SHVF_model_int=self.SHVF_model,
-                  SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
-                  verbose_int=False))
+              % self.SHVF_integral(
+            Vmax_min=self.SHVF_RangeMin,
+            Vmax_max=self.SHVF_RangeMax))
 
     def calculate_formula(self, xx, formula, params=None):
 
         if isinstance(formula, str):
 
             if formula in self.model_list.keys():
+                if isinstance(params, dict):
+                    return self.model_list[formula](xx, **params)
+
                 return self.model_list[formula](xx, params)
 
             bb = {}
@@ -143,9 +136,27 @@ class repop_algorithm:
         elif callable(formula):
 
             if params is not None:
+                if isinstance(params, dict):
+                    return formula(xx, **params)
+
                 return formula(xx, params)
             else:
                 return formula(xx)
+
+    def SHVF_integral(self, Vmax_min, Vmax_max,
+                      formula=None, params=None):
+        if formula is None:
+            formula = self.input_dict['SHVF']['formula']
+        if params is None:
+            params = self.input_dict['SHVF']['params']
+
+        vmax_array = np.geomspace(Vmax_min, Vmax_max, num=150)
+
+        yy = self.calculate_formula(
+            vmax_array, formula=formula, params=params)
+
+        return int(np.rint(simpson(
+            y=yy * np.log(10) * vmax_array, x=np.log10(vmax_array))))
 
     def R_max(self, V, C, cosmo_H_0=None):
         """
@@ -471,20 +482,17 @@ class repop_algorithm:
             except RuntimeError:
                 m_max = self.SHVF_RangeMax
 
-            num_subhalos = SHVF_model_integral(
-                Vmax_min=m_min, Vmax_max=m_max,
-                SHVF_model_int=self.SHVF_model,
-                SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
-                verbose_int=False)
+            num_subhalos = self.SHVF_integral(
+                Vmax_min=m_min, Vmax_max=m_max)
 
             print(m_min, m_max, num_subhalos)
 
             # Montecarlo algorithm for creating the Vmax of subhalos
             x = np.geomspace(m_min, m_max, num=2000)
-            y = SHVF_model(
-                Vmax_array=x, SHVF_model=self.SHVF_model,
-                SHVF_params=[self.SHVF_bb, self.SHVF_mm],
-                verbose=False)
+            y = self.calculate_formula(
+                x, self.input_dict['SHVF']['formula'],
+                self.input_dict['SHVF']['params']
+            )
             cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
             cumul /= cumul[-1]
             x_mean = (x[1:] + x[:-1]) / 2.
@@ -497,10 +505,10 @@ class repop_algorithm:
 
             # Montecarlo algorithm for creating the Distgc of subhalos
             x = np.linspace(0., self.input_dict['host']['R_vir'], num=2000)
-            y = srd_model(
-                Vmax_array=x, SHVF_model=self.SHVF_model,
-                SHVF_params=[self.SHVF_bb, self.SHVF_mm],
-                verbose=False)
+            y = self.calculate_formula(
+                x, self.input_dict['SRD']['formula'],
+                self.input_dict['SRD']['params']
+            )
             cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
             cumul /= cumul[-1]
             x_mean = (x[1:] + x[:-1]) / 2.
@@ -618,12 +626,7 @@ class repop_algorithm:
                     brightest_J03[:self.input_dict['repopulations']['num_brightest'], :])
 
     def xx(self, mmax, mmin, root):
-        return (SHVF_model_integral(
-                  Vmax_min=mmin,
-                  Vmax_max=mmax,
-                  SHVF_model_int=self.SHVF_model,
-                  SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
-                  verbose_int=False) - root)
+        return self.SHVF_integral(Vmax_min=mmin, Vmax_max=mmax) - root
 
     def store_dict_as_hdf(self, group, d):
 
@@ -729,21 +732,19 @@ class repop_algorithm:
                     except RuntimeError:
                         m_max = self.SHVF_RangeMax
 
-                    num_subhalos = SHVF_model_integral(
-                        Vmax_min=m_min, Vmax_max=m_max,
-                        SHVF_model_int=self.SHVF_model,
-                        SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
-                        verbose_int=False)
+                    num_subhalos = self.SHVF_integral(
+                        Vmax_min=m_min, Vmax_max=m_max)
 
                     print(m_min, m_max, num_subhalos)
 
 
                     # Montecarlo algorithm for creating the Vmax of subhalos
                     x = np.geomspace(m_min, m_max, num=2000)
-                    y = SHVF_model(
-                        Vmax_array=x, SHVF_model=self.SHVF_model,
-                        SHVF_params=[self.SHVF_bb, self.SHVF_mm],
-                        verbose=False)
+                    y = self.calculate_formula(
+                        x,
+                        self.input_dict['SHVF']['formula'],
+                        self.input_dict['SHVF']['params']
+                    )
                     cumul = [simpson(y=y[:i], x=x[:i])
                              for i in range(1, len(x))]
                     cumul /= cumul[-1]
@@ -762,7 +763,8 @@ class repop_algorithm:
                     x = np.linspace(
                         0., self.input_dict['host']['R_vir'], num=2000)
                     y = self.calculate_formula(
-                        x, self.input_dict['SRD']['formula'],
+                        x,
+                        self.input_dict['SRD']['formula'],
                         self.input_dict['SRD']['params']
                     )
                     cumul = [simpson(y=y[:i], x=x[:i])

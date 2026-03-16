@@ -1,63 +1,92 @@
 Cv:
-  dmo:
-    bb: 283862.7023
-    sigma: 0.297659
-  hydro:
-    bb: 192879.057
-    sigma: 0.374942
+  formula:
+  params:
+    dmo:
+      resilient:
+        bb: 283862.7023
+        sigma: 0.297659
+      fragile:
+        bb: 283862.7023
+        sigma: 0.297659
+    mhd:
+      resilient:
+        bb: 192879.057
+        sigma: 0.374942
+      fragile:
+        bb: 192879.057
+        sigma: 0.374942
+
 SHVF:
-  model: 'SHVF_Grand2012'
+  formula: 'power_law'
   RangeMax: 120.0
   RangeMin: 5.
-  dmo:
-    bb: 5.68
-    mm: -3.92
-  hydro:
-    bb: 5.51
-    mm: -4.08
+  params:
+    dmo:
+      resilient:
+        V0: 5.68
+        slope: -3.92
+      fragile:
+        V0: 5.68
+        slope: -3.92
+    mhd:
+      resilient:
+        V0: 5.51
+        slope: -4.08
+      fragile:
+        V0: 5.51
+        slope: -4.08
+
 SRD:
   dmo:
     resilient:
-      formula: 'srd_lalalala'
+      formula: 'srd_constant'
       params:
-        - 0.5
-        - 400.
-        - 50.57
+        args: 1.
+        last_subhalo: 0.
     fragile:
-      args: 1.0
-      last_subhalo: 0.0
-  formula:
-    fragile: ''
-    resilient: ''
-  hydro:
-    fragile:
-      args:
-      - -0.27
-      - 16.16391
-      - 220.0
-      last_subhalo: 15.71
+      formula: 'srd_exponential'
+      params:
+        exp_fit:
+          - -0.16
+          - 37.1
+          - 220.0
+        last_subhalo:
+          50.57
+  mhd:
     resilient:
-      args: 1.0
-      last_subhalo: 0.0
+      formula: 'srd_constant'
+      params:
+        args: 1.
+    fragile:
+      formula: 'srd_exponential'
+      params:
+        exp_fit:
+          - -0.16
+          - 37.1
+          - 220.0
+        last_subhalo:
+          15.71
+
 cosmo_constants:
   G: !!float 4.297e-06
   H_0: 67.7
   rho_crit: 135.73
+
 host:
   R_vir: 220
   r_s: 20.0
   rho_0: !!float 9.04e6
   use_Roche: False
   position_Earth: [8.5, 0., 0.]
+
 repopulations:
-  inc_factor: 5
   its: 2
-  saveall: True
+  save_all: True
   num_brightest: 1
-  num_subs_max: !!float 5e5
   print_freq: 1
 
-  rng_seed: None
+  num_subs_max: !!float 5e5
+  rng_seed:
 
   columns_to_save:
     Jfactor2:
