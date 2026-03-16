@@ -9,12 +9,12 @@ input_file = read_config_file('../input_files/input_paper2024.yml')
 
 outtime = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
-def JJcosas(Vmax, params):
-    return (0.5 + 0.01 * Vmax**params)*(Vmax > 150)
+def save_example_with_callable(Vmax, params):
+    return (0.5 + 0.01 * Vmax**params)
 
-
-input_file['repopulations']['columns_to_save']['JJcosas'] = {
-    'formula': JJcosas, 'params': 10, 'variables': 'Vmax'}
+input_file['repopulations']['columns_to_save']['ex_with_callable'] = {
+    'formula': save_example_with_callable,
+    'params': 10, 'variables': 'Vmax'}
 
 
 # Careful with this, because this technically works, but the SRD
@@ -22,8 +22,11 @@ input_file['repopulations']['columns_to_save']['JJcosas'] = {
 # necessary to calculate the probability distribution function of the
 # SRD. Similar to the SHVF inputs. The rest of the functions do
 # introduce the variables.
+def srd_example(Vmax, params):
+    return (0.5 + 0.01 * Vmax**params)*(Vmax > 150)
+
 input_file['SRD']['dmo']['resilient'] = {
-    'formula': JJcosas, 'params': 1e2}
+    'formula': srd_example, 'params': 1e2}
 
 # print(input_file['repopulations']['columns_to_save'])
 

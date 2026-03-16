@@ -1,20 +1,20 @@
 Cv:
-  formula:
+  formula: Moline21_normalization
   params:
     dmo:
       resilient:
-        bb: 283862.7023
-        sigma: 0.297659
+        c0: 283862.7023
+        sigma_scatter: 0.297659
       fragile:
-        bb: 283862.7023
-        sigma: 0.297659
+        c0: 283862.7023
+        sigma_scatter: 0.297659
     mhd:
       resilient:
-        bb: 192879.057
-        sigma: 0.374942
+        c0: 192879.057
+        sigma_scatter: 0.374942
       fragile:
-        bb: 192879.057
-        sigma: 0.374942
+        c0: 192879.057
+        sigma_scatter: 0.374942
 
 SHVF:
   formula: 'power_law'
@@ -76,7 +76,7 @@ host:
   R_vir: 220
   r_s: 20.0
   rho_0: !!float 9.04e6
-  use_Roche: False
+  use_Roche: True
   position_Earth: [8.5, 0., 0.]
 
 repopulations:
@@ -86,16 +86,18 @@ repopulations:
   print_freq: 1
 
   num_subs_max: !!float 5e5
-  rng_seed:
+  rng_seed: 0
 
   columns_to_save:
-    Jfactor2:
-    concentration:
+    formula_example:
       formula: '1e17 * params[0] * Vmax'
       params:
         - 0.5
         - !!float 2e7
       variables:
         'Vmax'
-#    - Jfactor
-#    - repop_Theta
+    R_t:
+    R_s:
+    J03_vel:
+    Js_vel:
+    theta_s:
