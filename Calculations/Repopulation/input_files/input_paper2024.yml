@@ -17,13 +17,13 @@ SHVF:
     mm: -4.08
 SRD:
   dmo:
-    fragile:
-      args:
-      - -0.151
-      - 39.27964
-      - 220.0
-      last_subhalo: 5.57
     resilient:
+      formula: 'srd_lalalala'
+      params:
+        - 0.5
+        - 400.
+        - 50.57
+    fragile:
       args: 1.0
       last_subhalo: 0.0
   formula:
@@ -53,7 +53,7 @@ repopulations:
   inc_factor: 5
   its: 2
   saveall: True
-  num_brightest: 126313359
+  num_brightest: 1
   num_subs_max: !!float 5e5
   print_freq: 1
 

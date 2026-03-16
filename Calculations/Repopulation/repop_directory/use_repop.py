@@ -12,6 +12,7 @@ outtime = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 def JJcosas(Vmax, params):
     return Vmax**2. + params
 
+
 input_file['repopulations']['columns_to_save']['JJcosas'] = {
     'formula': JJcosas, 'params': 10, 'variables': 'Vmax'}
 

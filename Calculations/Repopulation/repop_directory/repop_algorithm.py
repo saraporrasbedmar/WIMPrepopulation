@@ -16,7 +16,7 @@ from scipy.integrate import simpson
 
 
 from shvf_functions import SHVF_model, SHVF_model_integral
-from srd_functions import srd_model
+from srd_functions import *
 
 
 def memory_usage_psutil():
@@ -62,12 +62,11 @@ class repop_algorithm:
 
 
         cv_cts = self.input_dict['Cv']
-        srd_cts = self.input_dict['SRD']
         self.SHVF_cts = self.input_dict['SHVF']
 
-        self.num_subs_max = int(float(
+        self.input_dict['repopulations']['num_subs_max'] = int(float(
             self.input_dict['repopulations']['num_subs_max']))
-        self.repop_num_brightest = int(
+        self.input_dict['repopulations']['num_brightest'] = int(
             self.input_dict['repopulations']['num_brightest'])
 
         self.SHVF_RangeMin = self.SHVF_cts['RangeMin']
@@ -80,10 +79,15 @@ class repop_algorithm:
         self.Cv_bb = cv_cts[sim_type]['bb']
         self.Cv_sigma = cv_cts[sim_type]['sigma']
 
-        self.srd_args_repop = srd_cts[sim_type][res_string]['args']
-        self.srd_args_visible = srd_cts[sim_type][res_string]['args']
-        self.srd_last_sub = np.asarray(
-            srd_cts[sim_type][res_string]['last_subhalo'])
+        self.input_dict['SRD'] = self.input_dict['SRD'][
+            sim_type][res_string]
+
+        # self.input_dict['SRD'] = self.input_dict['SRD'][
+        #     sim_type][res_string]
+        #
+        # self.input_dict['SRD'] = self.input_dict['SRD'][
+        #     sim_type][res_string]
+        print(self.input_dict['SRD'])
 
         self.subhalo_data = {}
         self.units = {}  # store units info for each parameter
@@ -91,7 +95,8 @@ class repop_algorithm:
         self.model_list = {
             'R_t': self.R_t,
             'Jfactor': self.Jfactor,
-            'Jfactor2': self.Jfactor2
+            'Jfactor2': self.Jfactor2,
+            'srd_lalalala': srd_lalalala,
         }
 
         print(self.SHVF_RangeMin, self.SHVF_RangeMax)
@@ -102,6 +107,45 @@ class repop_algorithm:
                   SHVF_model_int=self.SHVF_model,
                   SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
                   verbose_int=False))
+
+    def calculate_formula(self, xx, formula, params=None):
+
+        if isinstance(formula, str):
+
+            if formula in self.model_list.keys():
+                return self.model_list[formula](xx, params)
+
+            bb = {}
+
+            if isinstance(params, float) or isinstance(params, int):
+                bb['params'] = params
+            elif isinstance(params, list):
+                bb['params'] = np.array(params, dtype=float)
+
+            # TODO
+            variables = parametrization.get('variables', None)
+            if isinstance(variables, str):
+                bb[variables] = self.get_parameter(variables, None)
+            elif isinstance(variables, list):
+                for var in variables:
+                    bb[var] = self.get_parameter(var, None)
+
+            # Evaluate formula
+            try:
+                aa = eval(formula, {}, bb)
+            except Exception as e:
+                raise ValueError(
+                    f'Error evaluating formula' + formula
+                    + f'with parameters {bb}: {e}')
+
+            return aa
+
+        elif callable(formula):
+
+            if params is not None:
+                return formula(xx, params)
+            else:
+                return formula(xx)
 
     def R_max(self, V, C, cosmo_H_0=None):
         """
@@ -203,13 +247,6 @@ class repop_algorithm:
                 * (np.log((host_r_s + R) / host_r_s)
                    - R / (host_r_s + R)))
 
-    def N_subs_resilient(self, DistGC, args):
-        return args * np.ones_like(DistGC)
-
-    def N_subs_fragile(self, DistGC, args, srd_last_sub):
-        return (args[1] * np.exp(args[0] / DistGC * args[2])
-                * (DistGC >= srd_last_sub))
-
     def mass_from_Vmax(self, Vmax, Rmax, c200, cosmo_G=None):
         """
         Mass from a subhalo assuming a NFW profile.
@@ -228,7 +265,8 @@ class repop_algorithm:
             cosmo_G = self.input_dict['cosmo_constants']['G']
 
         return (Vmax ** 2 * Rmax / float(cosmo_G)
-                * ff(c200) / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)))
+                * ff(c200)
+                / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)))
 
     def C200_from_Cv(self, c200, Cv):
         """
@@ -268,7 +306,8 @@ class repop_algorithm:
             return
 
         elif parametrization['formula'] in self.model_list.keys():
-            self.subhalo_data[name] =  self.model_list[parametrization['formula']]()
+            self.subhalo_data[name] = self.model_list[
+                parametrization['formula']]()
             return
 
         formula = parametrization.get('formula', None)
@@ -294,7 +333,8 @@ class repop_algorithm:
                 aa = eval(parametrization['formula'], {}, bb)
             except Exception as e:
                 raise ValueError(
-                    f'Error evaluating formula' + parametrization['formula']
+                    f'Error evaluating formula'
+                    + parametrization['formula']
                     + f'with parameters {bb}: {e}')
 
             # If result is a scalar, broadcast to all subhalos
@@ -351,17 +391,24 @@ class repop_algorithm:
 
         # Random distribution of subhalos around the celestial sphere
         num_subs = len(Vmax)
-        self.subhalo_data['gal_theta'] = self.rng.uniform(0, 2 * np.pi, num_subs)
+        self.subhalo_data['gal_theta'] = self.rng.uniform(
+            0, 2 * np.pi, num_subs)
         self.units['Vmax'] = 'kpc'
-        self.subhalo_data['gal_phi'] = np.arccos(2 * self.rng.uniform(0, 1, num_subs) - 1)
+        self.subhalo_data['gal_phi'] = np.arccos(
+            2 * self.rng.uniform(0, 1, num_subs) - 1)
         self.units['Vmax'] = 'kpc'
 
         # Positions of the subhalos
-        self.subhalo_data['repop_Xs'] = Distgc * np.cos(self.subhalo_data['gal_theta']) * np.sin(self.subhalo_data['gal_phi'])
+        self.subhalo_data['repop_Xs'] = (
+                Distgc * np.cos(self.subhalo_data['gal_theta'])
+                * np.sin(self.subhalo_data['gal_phi']))
         self.units['Vmax'] = 'kpc'
-        self.subhalo_data['repop_Ys'] = Distgc * np.sin(self.subhalo_data['gal_theta']) * np.sin(self.subhalo_data['gal_phi'])
+        self.subhalo_data['repop_Ys'] = (
+                Distgc * np.sin(self.subhalo_data['gal_theta'])
+                * np.sin(self.subhalo_data['gal_phi']))
         self.units['Vmax'] = 'kpc'
-        self.subhalo_data['repop_Zs'] = Distgc * np.cos(self.subhalo_data['gal_phi'])
+        self.subhalo_data['repop_Zs'] = (
+                Distgc * np.cos(self.subhalo_data['gal_phi']))
         self.units['Vmax'] = 'kpc'
 
         self.subhalo_data['repop_DistEarth'] = ((
@@ -402,8 +449,8 @@ class repop_algorithm:
         # change this number if necessary
         # (output from 'calculate_characteristics_subhalo()')
 
-        brightest_Js = np.zeros((2 * self.repop_num_brightest, 6))
-        brightest_J03 = np.zeros((2 * self.repop_num_brightest, 6))
+        brightest_Js = np.zeros((2 * self.input_dict['repopulations']['num_brightest'], 6))
+        brightest_J03 = np.zeros((2 * self.input_dict['repopulations']['num_brightest'], 6))
 
 
         # We calculate our subhalo population in bins to save memory
@@ -415,7 +462,10 @@ class repop_algorithm:
 
             try:
                 m_max = np.min((
-                    newton(self.xx, m_min, args=[m_min, self.num_subs_max]),
+                    newton(
+                        self.xx,
+                        m_min,
+                        args=[m_min, self.input_dict['repopulations']['num_subs_max']]),
                     self.SHVF_RangeMax
                 ))
             except RuntimeError:
@@ -462,7 +512,7 @@ class repop_algorithm:
 
             self.calculate_characteristics_subhalo()
 
-            for new_sub in range(self.repop_num_brightest):
+            for new_sub in range(self.input_dict['repopulations']['num_brightest']):
 
                 bright_Js = np.argmax(new_data[:, 0])
 
@@ -482,11 +532,11 @@ class repop_algorithm:
                     bright_Js = np.argmax(new_data[:, 0])
 
                 brightest_Js[
-                self.repop_num_brightest + new_sub, :] = new_data[
+                self.input_dict['repopulations']['num_brightest'] + new_sub, :] = new_data[
                     bright_Js, [0, 2, 3, 4, 5, 6]]
                 new_data[bright_Js, 0] = 0.
 
-            for new_sub in range(self.repop_num_brightest):
+            for new_sub in range(self.input_dict['repopulations']['num_brightest']):
 
                 bright_J03 = np.argmax(new_data[:, 1])
 
@@ -506,19 +556,19 @@ class repop_algorithm:
                     bright_J03 = np.argmax(new_data[:, 1])
 
                 brightest_J03[
-                self.repop_num_brightest + new_sub, :] = new_data[bright_J03,
+                self.input_dict['repopulations']['num_brightest'] + new_sub, :] = new_data[bright_J03,
                                                     1:]
                 new_data[bright_J03, 1] = 0.
 
             # if sum(new_data[:, 0]) > 1.:
-            #     for new_sub in range(self.repop_num_brightest):
+            #     for new_sub in range(self.input_dict['repopulations']['num_brightest']):
             #
             #         while sum(new_data[:, 0]) > 1.:
             #
             #             bright_Js = np.argmax(new_data[:, 0])
             #
             #             brightest_Js[
-            #             self.repop_num_brightest + new_sub, :] = new_data[
+            #             self.input_dict['repopulations']['num_brightest'] + new_sub, :] = new_data[
             #                 bright_Js, [0, 2, 3, 4, 5, 6]]
             #             new_data[bright_Js, 0] = 0.
 
@@ -535,12 +585,12 @@ class repop_algorithm:
             # bright_Js = np.argmax(new_data[:, 0])
 
             # if sum(new_data[:, 1]) > 1.:
-            #     for new_sub in range(self.repop_num_brightest):
+            #     for new_sub in range(self.input_dict['repopulations']['num_brightest']):
             #         while sum(new_data[:, 1]) > 1.:
             #             bright_J03 = np.argmax(new_data[:, 1])
             #
             #             brightest_J03[
-            #             self.repop_num_brightest + new_sub, :] = new_data[bright_J03, 1:]
+            #             self.input_dict['repopulations']['num_brightest'] + new_sub, :] = new_data[bright_J03, 1:]
             #             new_data[bright_J03, 1] = 0.
 
             # while (R_t(new_data[bright_J03, 4],
@@ -564,8 +614,8 @@ class repop_algorithm:
 
             m_min = new_mmin
 
-        return (brightest_Js[:self.repop_num_brightest, :],
-                    brightest_J03[:self.repop_num_brightest, :])
+        return (brightest_Js[:self.input_dict['repopulations']['num_brightest'], :],
+                    brightest_J03[:self.input_dict['repopulations']['num_brightest'], :])
 
     def xx(self, mmax, mmin, root):
         return (SHVF_model_integral(
@@ -637,12 +687,15 @@ class repop_algorithm:
 
             datasets = {}
 
-            for iter_idx in range(self.input_dict['repopulations']['its']):
+            for iter_idx in range(
+                    self.input_dict['repopulations']['its']):
 
-                if (iter_idx % self.input_dict['repopulations']['print_freq']
+                if (iter_idx
+                        % self.input_dict['repopulations']['print_freq']
                         == 0):
                     print('    %s %s: it %d' % (
-                        time.strftime(' %Y-%m-%d %H:%M:%S', time.gmtime()),
+                        time.strftime(
+                            ' %Y-%m-%d %H:%M:%S', time.gmtime()),
                         self.str_out, iter_idx))
                     progress = open(self.path_output + 'progress_'
                                     + self.str_out + '.txt'
@@ -652,7 +705,8 @@ class repop_algorithm:
                     progress.write(
                         '        %.3f  %s\n' %
                         (memory_usage_psutil(),
-                         time.strftime(' %Y-%m-%d %H:%M:%S', time.gmtime())))
+                         time.strftime(
+                             ' %Y-%m-%d %H:%M:%S', time.gmtime())))
                     progress.close()
 
                 iter_group = f.create_group(f'iteration_{iter_idx}')
@@ -666,7 +720,10 @@ class repop_algorithm:
 
                     try:
                         m_max = np.min((
-                            newton(self.xx, m_min, args=[m_min, self.num_subs_max]),
+                            newton(
+                                self.xx, m_min,
+                                args=[m_min, self.input_dict[
+                                    'repopulations']['num_subs_max']]),
                             self.SHVF_RangeMax
                         ))
                     except RuntimeError:
@@ -687,7 +744,8 @@ class repop_algorithm:
                         Vmax_array=x, SHVF_model=self.SHVF_model,
                         SHVF_params=[self.SHVF_bb, self.SHVF_mm],
                         verbose=False)
-                    cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
+                    cumul = [simpson(y=y[:i], x=x[:i])
+                             for i in range(1, len(x))]
                     cumul /= cumul[-1]
                     x_mean = (x[1:] + x[:-1]) / 2.
                     x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
@@ -701,12 +759,14 @@ class repop_algorithm:
                     # self.subhalo_data['Vmax']['units'] = 'km/s'
 
                     # Montecarlo algorithm for creating the Distgc of subhalos
-                    x = np.linspace(0., self.input_dict['host']['R_vir'], num=2000)
-                    y = srd_model(
-                        Vmax_array=x, SHVF_model=self.SHVF_model,
-                        SHVF_params=[self.SHVF_bb, self.SHVF_mm],
-                        verbose=False)
-                    cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
+                    x = np.linspace(
+                        0., self.input_dict['host']['R_vir'], num=2000)
+                    y = self.calculate_formula(
+                        x, self.input_dict['SRD']['formula'],
+                        self.input_dict['SRD']['params']
+                    )
+                    cumul = [simpson(y=y[:i], x=x[:i])
+                             for i in range(1, len(x))]
                     cumul /= cumul[-1]
                     x_mean = (x[1:] + x[:-1]) / 2.
                     x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
@@ -714,7 +774,8 @@ class repop_algorithm:
                         cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
 
                     # self.subhalo_data['Distgc'] = {}
-                    self.subhalo_data['Distgc'] = spline(self.rng.random(num_subhalos))
+                    self.subhalo_data['Distgc'] = spline(
+                        self.rng.random(num_subhalos))
                     # self.units['Vmax'] = 'kpc'
 
                     self.calculate_characteristics_subhalo()
