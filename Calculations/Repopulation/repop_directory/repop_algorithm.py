@@ -4,6 +4,7 @@ import yaml
 import psutil
 import time
 import h5py
+import inspect
 
 import numpy as np
 
@@ -48,26 +49,26 @@ class repop_algorithm:
         else:
             self.input_dict = path_input
 
-        if self.input_dict['repopulations']['rng_seed'] < 0:
-            self.rng = np.random.default_rng(seed=None)
-        else:
+        try:
             self.rng = np.random.default_rng(
                 seed=self.input_dict['repopulations']['rng_seed'])
+
+            print('Warning: seed for np.random has been explicitly set'
+                  ' to: seed='
+                  + str(self.input_dict['repopulations']['rng_seed'])
+                  + '.\nOnly use this setting for testing purposes.')
+        except:
+            self.rng = np.random.default_rng(seed=None)
 
 
         cv_cts = self.input_dict['Cv']
         srd_cts = self.input_dict['SRD']
         self.SHVF_cts = self.input_dict['SHVF']
 
-        repopulations = self.input_dict['repopulations']
-
-        self.rho_0 = float(self.input_dict['host']['rho_0'])
-
-        self.repop_its = repopulations['its']
-        self.num_subs_max = int(float(repopulations['num_subs_max']))
-        self.repop_print_freq = repopulations['print_freq']
-        self.repop_num_brightest = int(repopulations['num_brightest'])
-        self.repop_inc_factor = repopulations['inc_factor']
+        self.num_subs_max = int(float(
+            self.input_dict['repopulations']['num_subs_max']))
+        self.repop_num_brightest = int(
+            self.input_dict['repopulations']['num_brightest'])
 
         self.SHVF_RangeMin = self.SHVF_cts['RangeMin']
         self.SHVF_RangeMax = self.SHVF_cts['RangeMax']
@@ -84,14 +85,6 @@ class repop_algorithm:
         self.srd_last_sub = np.asarray(
             srd_cts[sim_type][res_string]['last_subhalo'])
 
-
-        self.total_number_subs = SHVF_model_integral(
-                  Vmax_min=self.SHVF_RangeMin,
-                  Vmax_max=self.SHVF_RangeMax,
-                  SHVF_model_int=self.SHVF_model,
-                  SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
-                  verbose_int=False)
-
         self.subhalo_data = {}
         self.units = {}  # store units info for each parameter
 
@@ -101,18 +94,17 @@ class repop_algorithm:
             'Jfactor2': self.Jfactor2
         }
 
-        # if config:
-        #     for key, value in config.items():
-        #         # Assume raw data are numpy arrays
-        #         self.subhalo_data[key] = value
-        # # To be filled with raw data (e.g., concentrations)
-
         print(self.SHVF_RangeMin, self.SHVF_RangeMax)
         print('    Max. number of repop subhalos: %i'
-              % self.total_number_subs)
+              % SHVF_model_integral(
+                  Vmax_min=self.SHVF_RangeMin,
+                  Vmax_max=self.SHVF_RangeMax,
+                  SHVF_model_int=self.SHVF_model,
+                  SHVF_params_int=[self.SHVF_bb, self.SHVF_mm],
+                  verbose_int=False))
 
     def R_max(self, V, C, cosmo_H_0=None):
-        '''
+        """
         Calculate Rmax of a subhalo.
 
         :param V: float or array-like [km/s]
@@ -122,14 +114,14 @@ class repop_algorithm:
 
         :return: float or array-like [kpc]
             Rmax of the subhalo given by the inputs.
-        '''
+        """
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
 
         return V / cosmo_H_0 * np.sqrt(2. / C) * 1e3
 
     def R_s(self, V, C, cosmo_H_0=None):
-        '''
+        """
         Calculate scale radius (R_s) of a subhalo following the NFW
         analytical expression for a subhalo density profile.
 
@@ -140,7 +132,7 @@ class repop_algorithm:
 
         :return: float or array-like [kpc]
             R_s of the subhalo given by the inputs.
-        '''
+        """
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
 
@@ -149,7 +141,7 @@ class repop_algorithm:
     def R_t(self, V, C, DistGC,
             cosmo_H_0=None, cosmo_G=None,
             host_rho_0=None, host_r_s=None):
-        '''
+        """
         Calculation of tidal radius (R_t) of a subhalo, following the
         NFW analytical expression for a subhalo density profile.
 
@@ -165,13 +157,13 @@ class repop_algorithm:
 
         :return: float or array-like [kpc]
             Tidal radius of the subhalo given by the inputs.
-        '''
+        """
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
         if cosmo_G is None:
             cosmo_G = self.input_dict['cosmo_constants']['G']
         if host_rho_0 is None:
-            host_rho_0 = self.rho_0
+            host_rho_0 = self.input_dict['host']['rho_0']
         if host_r_s is None:
             host_r_s = self.input_dict['host']['r_s']
 
@@ -191,7 +183,7 @@ class repop_algorithm:
                 )
 
     def Mhost_encapsulated(self, R, host_rho_0=None, host_r_s=None):
-        '''
+        """
         Host mass encapsulated up to a certain radius. We are following
         a NFW density profile for the host.
 
@@ -200,9 +192,9 @@ class repop_algorithm:
 
         :return: float or array-like [Msun]
             Host mass encapsulated up to R.
-        '''
+        """
         if host_rho_0 is None:
-            host_rho_0 = self.rho_0
+            host_rho_0 = self.input_dict['host']['rho_0']
         if host_r_s is None:
             host_r_s = self.input_dict['host']['r_s']
 
@@ -219,7 +211,7 @@ class repop_algorithm:
                 * (DistGC >= srd_last_sub))
 
     def mass_from_Vmax(self, Vmax, Rmax, c200, cosmo_G=None):
-        '''
+        """
         Mass from a subhalo assuming a NFW profile.
         Theoretical steps in Moline16.
 
@@ -231,7 +223,7 @@ class repop_algorithm:
             Concentration of the subhalo in terms of mass.
         :return: float or array-like [Msun]
             Mass from the subhalo assuming a NFW profile.
-        '''
+        """
         if cosmo_G is None:
             cosmo_G = self.input_dict['cosmo_constants']['G']
 
@@ -239,7 +231,7 @@ class repop_algorithm:
                 * ff(c200) / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)))
 
     def C200_from_Cv(self, c200, Cv):
-        '''
+        """
         Formula to find c200 knowing Cv to input in the Newton
         root-finding method.
 
@@ -251,60 +243,46 @@ class repop_algorithm:
         :return: float or array-like
             The output will be 0 when you find the c200 for a
             specific Cv.
-        '''
+        """
         return (200 * (np.log(1. + 2.163) - 2.163 / (1. + 2.163))
                 / ff(c200) * (c200 / 2.163) ** 3 - Cv)
 
 
     def set_parameter(self, name, array, unit=None):
-        '''Set raw parameter data with optional unit.'''
+        """Set raw parameter data with optional unit."""
         self.subhalo_data[name] = array
         if unit:
             self.units[name] = unit
 
 
     def get_parameter(self, name, parametrization):
-        '''
+        """
         Retrieve parameter, computing if necessary.
         Uses values to avoid recomputation.
-        '''
+        """
         if name in self.subhalo_data:
-            # Raw parameter, no computation needed
             return self.subhalo_data[name]
 
         elif name in self.model_list.keys():
             self.subhalo_data[name] = self.model_list[name]()
+            return
 
-        else:
-            # Need to compute parameter
-            # compute_func = getattr(self, f'compute_{name}', None)
-            # compute_func = self.compute_concentration(name)
-            try:
-                # data = compute_func()
-                self.subhalo_data[name] = self.compute_concentration(parametrization)
-                # return data
-            except:
-                raise ValueError(
-                    f'Parameter "{name}" not found '
-                    f'and no compute method defined.')
+        elif parametrization['formula'] in self.model_list.keys():
+            self.subhalo_data[name] =  self.model_list[parametrization['formula']]()
+            return
 
-
-    def compute_concentration(self, name):
-
-        if name['formula'] in self.model_list.keys():
-            return self.model_list[name['formula']]()
-
-        elif type(name['formula']) == str:
+        formula = parametrization.get('formula', None)
+        if isinstance(formula, str):
 
             bb = {}
 
-            params = name.get('params', None)
+            params = parametrization.get('params', None)
             if isinstance(params, float) or isinstance(params, int):
                 bb['params'] = params
             elif isinstance(params, list):
                 bb['params'] = np.array(params, dtype=float)
 
-            variables = name.get('variables', None)
+            variables = parametrization.get('variables', None)
             if isinstance(variables, str):
                 bb[variables] = self.get_parameter(variables, None)
             elif isinstance(variables, list):
@@ -313,10 +291,10 @@ class repop_algorithm:
 
             # Evaluate formula
             try:
-                aa = eval(name['formula'], {}, bb)
+                aa = eval(parametrization['formula'], {}, bb)
             except Exception as e:
                 raise ValueError(
-                    f'Error evaluating formula' + name['formula']
+                    f'Error evaluating formula' + parametrization['formula']
                     + f'with parameters {bb}: {e}')
 
             # If result is a scalar, broadcast to all subhalos
@@ -324,16 +302,26 @@ class repop_algorithm:
                 n = len(self.subhalo_data['Vmax'])
                 return aa * np.ones(n)
 
-            return aa
+            self.subhalo_data[name] = aa
+            return
 
-        elif callable(name['formula']):
-            if name['params'] is None:
-                return name['formula']
-            else:
-                return name['formula'](name['params'])
+        elif callable(formula):
+
+            vars_for_func = {}
+            variables = parametrization.get('variables', [])
+            if isinstance(variables, str):
+                variables = [variables]
+            for var in variables:
+                vars_for_func[var] = self.get_parameter(var, None)
+
+            params = parametrization.get('params', None)
+            if params is not None:
+                vars_for_func['params'] = params
+
+            self.subhalo_data[name] = formula(**vars_for_func)
+            return
 
 
-    # Example: custom parametrization dependent on concentration
     def Jfactor(self):
         # Depends on concentration
         # conc = self.get_parameter('concentration', None)
@@ -543,27 +531,8 @@ class repop_algorithm:
             #                  new_data[bright_Js, 6],
             #                  cosmo_H_0)):
             #         print('subhalo broken (Js)')
-            # progress = open(pathname + '/progress_' +
-            #                 sim_type + '_'
-            #                 + str(res_string)
-            #                 + '_results.txt', 'a')
-            # progress.write('subhalo broken (Js)'
-            #                + str(new_data[bright_Js, :])
-            #                + str(R_t(new_data[bright_Js, 4],
-            #                          new_data[bright_Js, 6],
-            #                          new_data[bright_Js, 2],
-            #                          cosmo_H_0, cosmo_G,
-            #                          host_rho_0, host_r_s))
-            #                + '  '
-            #                + str(R_s(new_data[bright_Js, 4],
-            #                          new_data[bright_Js, 6],
-            #                          cosmo_H_0))
-            #                + '\n')
-            # progress.write(bright_Js + '\n')
             # new_data[bright_Js, 0] = 0.
             # bright_Js = np.argmax(new_data[:, 0])
-            # progress.write('Js  ' + bright_Js + '\n')
-            # progress.close()
 
             # if sum(new_data[:, 1]) > 1.:
             #     for new_sub in range(self.repop_num_brightest):
@@ -583,27 +552,8 @@ class repop_algorithm:
             #              new_data[bright_J03, 6],
             #              cosmo_H_0)):
             #     print('subhalo broken (J03)')
-            # progress = open(pathname + '/progress_' +
-            #                 sim_type + '_'
-            #                 + str(res_string)
-            #                 + '_results.txt', 'a')
-            # progress.write('subhalo broken (J03)'
-            #                + str(new_data[bright_J03, :])
-            #                + str(R_t(new_data[bright_J03, 4],
-            #                          new_data[bright_J03, 6],
-            #                          new_data[bright_J03, 2],
-            #                          cosmo_H_0, cosmo_G,
-            #                          host_rho_0, host_r_s))
-            #                + '  '
-            #                + str(R_s(new_data[bright_J03, 4],
-            #                          new_data[bright_J03, 6],
-            #                          cosmo_H_0))
-            #                + '\n')
-            # progress.write(bright_J03 + '\n')
             # new_data[bright_J03, 1] = 0.
             # bright_J03 = np.argmax(new_data[:, 1])
-            # progress.write('J03 ' + bright_J03 + '\n')
-            # progress.close()
 
             # We take the brightest subhalos only
             brightest_Js = brightest_Js[
@@ -626,26 +576,57 @@ class repop_algorithm:
                   verbose_int=False) - root)
 
     def store_dict_as_hdf(self, group, d):
+
         for key, value in d.items():
             if value is None:
                 group.create_group(key)
                 continue
+
+            # Case 1: nested dict
             if isinstance(value, dict):
-                # Create subgroup
                 subgroup = group.create_group(key)
                 self.store_dict_as_hdf(subgroup, value)
+                continue
+
+            # Case 2: callable: convert to string
+            if callable(value):
+                value = inspect.getsource(value).strip()
+
+            # Case 3: list of callables or mixed lists
+            if isinstance(value, list):
+                # create subgroup and save each element
+                list_group = group.create_group(key)
+                for i, element in enumerate(value):
+                    item_name = f"item_{i}"
+
+                    if callable(element):
+                        element = inspect.getsource(element).strip()
+
+                    if isinstance(element, dict):
+                        item_group = list_group.create_group(item_name)
+                        self.store_dict_as_hdf(item_group, element)
+                    else:
+                        if isinstance(element, str):
+                            data = np.string_(element)
+                            dtype = h5py.string_dtype(encoding="utf-8")
+                        else:
+                            data = element
+                            dtype = None
+                        list_group.create_dataset(item_name, data=data,
+                                                  dtype=dtype)
+                continue
+
+            # Case 4: primitive value
+            if isinstance(value, str):
+                data = np.string_(value)
+                dtype = h5py.string_dtype("utf-8")
             else:
-                # Assume value is a primitive or array
-                # Convert strings if needed
-                if isinstance(value, str):
-                    data = np.string_(value)
-                    dtype = h5py.string_dtype(encoding='utf-8')
-                else:
-                    data = value
-                    dtype = None
-                if key in group:
-                    del group[key]
-                group.create_dataset(key, data=data, dtype=dtype)
+                data = value
+                dtype = None
+
+            if key in group:
+                del group[key]
+            group.create_dataset(key, data=data, dtype=dtype)
 
     def interior_full_repop(self):
 
@@ -656,7 +637,7 @@ class repop_algorithm:
 
             datasets = {}
 
-            for iter_idx in range(self.repop_its):
+            for iter_idx in range(self.input_dict['repopulations']['its']):
 
                 if (iter_idx % self.input_dict['repopulations']['print_freq']
                         == 0):
@@ -773,7 +754,6 @@ class repop_algorithm:
         return
 
     def run(self, path_output):
-        # print(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime()))
 
         self.path_output = path_output + '/'
 
@@ -793,14 +773,11 @@ class repop_algorithm:
                   default_flow_style=False, allow_unicode=True)
         file_inputs.close()
 
-
-
-
-"""
+'''
     def sort_by_parameter(self, param_name):
-        '''
+        """
         Return indices to sort objects based on a parameter.
-        '''
+        """
         param_data = self.get_parameter(
             param_name).value  # get raw numpy array
         return np.argsort(param_data)
@@ -821,7 +798,7 @@ class repop_algorithm:
 
 # ----------- CONCENTRATIONS ----------------------
 def Cv_Grand2012(Vmax, Cv_bb, Cv_mm):
-    '''
+    """
     Calculate the concentration of a subhalo population.
     Based on Grand 2012.07846.
 
@@ -830,7 +807,7 @@ def Cv_Grand2012(Vmax, Cv_bb, Cv_mm):
 
     :return: float or array-like
         Concentrations of a subhalo population.
-    '''
+    """
     # Concentration based on Grand 2012.07846.
     return (10 ** Cv_bb
             * Vmax ** Cv_mm)
@@ -847,13 +824,8 @@ def Cv_Mol2021_redshift0(V, c0=1.75e5, c1=-0.90368, c2=0.2749, c3=-0.028):
                               for i in range(3)])))
 
 
-def Moline21_normalization(V, c0):
-    return Cv_Mol2021_redshift0(V, c0, c1=-0.90368,
-                                c2=0.2749, c3=-0.028)
-
-
 def C_Scatt(C, Cv_sigma):
-    '''
+    """
     Create a scatter in the concentration parameter of the
     repopulated population.
     Scatter in logarithmic scale, following a Gaussian distribution.
@@ -863,7 +835,7 @@ def C_Scatt(C, Cv_sigma):
         law).
     :return: float or array-like
         Subhalos with scattered concentrations.
-    '''
+    """
     scatter = self.rng.normal(loc=0, scale=Cv_sigma, size=C.size)
     return C * 10 ** scatter
 
@@ -873,7 +845,7 @@ def J_abs_vel(V, D_earth, C,
               cosmo_G=input_dict['cosmo_constants']['G'],
               cosmo_H_0=input_dict['cosmo_constants']['H_0'],
               change_units=True):
-    '''
+    """
     J-factor enclosing whole subhalo as a function of the
     subhalo Vmax.
 
@@ -891,7 +863,7 @@ def J_abs_vel(V, D_earth, C,
         Units in which it can be returned:
         -> [Msun**2 / kpc**5] with change_units=False
         -> [GeV**2 / cm**5] with change_units=True
-    '''
+    """
     yy = (2.163 ** 3. / D_earth ** 2.
           / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)) ** 2
           * cosmo_H_0 / 12 / np.pi / float(cosmo_G) ** 2
@@ -906,7 +878,7 @@ def J_abs_vel(V, D_earth, C,
 def Js_vel(V, D_earth, C,
            cosmo_G,
            cosmo_H_0, change_units=True):
-    '''
+    """
     Jfactor enclosing the subhalo up to rs as a function of Vmax.
 
     :param V: float or array-like  [km/s]
@@ -923,7 +895,7 @@ def Js_vel(V, D_earth, C,
         Units in which it can be returned:
         -> [Msun**2 / kpc**5] with change_units=False
         -> [GeV**2 / cm**5] with change_units=True
-    '''
+    """
     return J_abs_vel(V, D_earth, C,
                      cosmo_G=cosmo_G,
                      cosmo_H_0=cosmo_H_0,
@@ -933,7 +905,7 @@ def Js_vel(V, D_earth, C,
 def J03_vel(V, D_earth, C,
             cosmo_G,
             cosmo_H_0, change_units=True):
-    '''
+    """
     Jfactor enclosing the subhalo up to 0.3 degrees as a
     function of Vmax.
 
@@ -951,7 +923,7 @@ def J03_vel(V, D_earth, C,
         Units in which it can be returned:
         -> [Msun**2 / kpc**5] with change_units=False
         -> [GeV**2 / cm**5] with change_units=True
-    '''
+    """
     return (J_abs_vel(V, D_earth, C,
                       cosmo_G=cosmo_G,
                       cosmo_H_0=cosmo_H_0,
@@ -959,4 +931,4 @@ def J03_vel(V, D_earth, C,
             * (1 - 1 / (1 + 2.163 * D_earth * np.tan(0.15 * np.pi / 180.)
                         / R_max(V, C, cosmo_H_0)) ** 3))
 
-"""
+'''

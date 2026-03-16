@@ -1,14 +1,10 @@
 Cv:
   dmo:
     bb: 283862.7023
-    mm: None
-    sigma:
-    - 0.297659
+    sigma: 0.297659
   hydro:
     bb: 192879.057
-    mm: None
-    sigma:
-    - 0.374942
+    sigma: 0.374942
 SHVF:
   model: 'SHVF_Grand2012'
   RangeMax: 120.0
@@ -61,7 +57,7 @@ repopulations:
   num_subs_max: !!float 5e5
   print_freq: 1
 
-  rng_seed: 0
+  rng_seed: None
 
   columns_to_save:
     Jfactor2:
