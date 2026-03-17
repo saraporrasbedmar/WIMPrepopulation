@@ -1,0 +1,110 @@
+cosmo_constants:
+  G: !!float 4.297e-06
+  H_0: 67.7
+  rho_crit: 135.73
+
+host:
+  R_vir: 220
+  r_s: 20.0
+  rho_0: !!float 9.04e6
+  use_Roche: True
+  position_Earth: [8.5, 0., 0.]
+
+repopulations:
+  RangeMax: 120.0
+  RangeMin: 5.
+  its: 2
+  save_all: True
+  num_brightest: 1
+  print_freq: 1
+
+  num_subs_max: !!float 5e5
+  rng_seed: 0
+
+  columns_to_save:
+    formula_example:
+      formula: '1e17 * params[0] * Vmax'
+      params:
+        - 0.5
+        - !!float 2e7
+      variables:
+        'Vmax'
+    R_t:
+    R_s:
+    J03_vel:
+    Js_vel:
+    theta_s:
+
+configurations:
+  dmo_resilient:
+    Cv:
+      formula: 'Moline21_normalization'
+      params:
+        c0: 283862.7023
+        sigma_scatter: 0.297659
+    SHVF:
+      formula: 'power_law'
+      params:
+        V0: 5.78
+        slope: -3.92
+    SRD:
+      formula: 'srd_constant'
+      params:
+        args: 1.
+
+  dmo_fragile:
+    Cv:
+      formula: 'Moline21_normalization'
+      params:
+        c0: 283862.7023
+        sigma_scatter: 0.297659
+    SHVF:
+      formula: 'power_law'
+      params:
+        V0: 5.68
+        slope: -3.92
+    SRD:
+      formula: 'srd_exponential'
+      params:
+        exp_fit:
+          - -0.151
+          - 39.3
+          - 220.0
+        last_subhalo: 5.57
+
+  mhd_resilient:
+    Cv:
+      formula: 'Moline21_normalization'
+      params:
+        c0: 192879.057
+        sigma_scatter: 0.374942
+    SHVF:
+      formula: 'power_law'
+      params:
+        V0: 5.51
+        slope: -4.08
+    SRD:
+      formula: 'srd_constant'
+      params:
+        args: 1.
+
+  mhd_fragile:
+    Cv:
+      formula: 'Moline21_normalization'
+      params:
+        c0: 192879.057
+        sigma_scatter: 0.374942
+    SHVF:
+      formula: 'power_law'
+      params:
+        V0: 5.3
+        slope: -4.08
+    SRD:
+      formula: 'srd_exponential'
+      params:
+        exp_fit:
+          - -0.16
+          - 37.1
+          - 220.0
+        last_subhalo: 15.71
+

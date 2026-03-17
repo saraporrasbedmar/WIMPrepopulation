@@ -35,10 +35,10 @@ def ff(c):
 
 
 class RepopAlgorithm:
-    def __init__(self, sim_type, res_string, path_input):
+    def __init__(self, path_input):
 
         self.path_output = None
-        self.str_out = str(sim_type) + '_' + str(res_string)
+        self.configuration = None
 
         if type(path_input) == str:
             self.input_dict = read_config_file(path_input)
@@ -61,34 +61,39 @@ class RepopAlgorithm:
         self.input_dict['repopulations']['num_brightest'] = int(
             self.input_dict['repopulations']['num_brightest'])
 
-        self.SHVF_RangeMin = self.input_dict['SHVF']['RangeMin']
-        self.SHVF_RangeMax = self.input_dict['SHVF']['RangeMax']
-        self.input_dict['SHVF']['params'] = self.input_dict['SHVF'][
-            'params'][sim_type][res_string]
-
-        self.input_dict['SRD'] = self.input_dict['SRD'][
-            sim_type][res_string]
-
-        self.input_dict['Cv']['params'] = self.input_dict['Cv'][
-            'params'][sim_type][res_string]
+        self.RangeMin = self.input_dict['repopulations']['RangeMin']
+        self.RangeMax = self.input_dict['repopulations']['RangeMax']
 
         self.subhalo_data = {}
-        self.units = {}  # store units info for each parameter
+        self.units = {}
 
-        print(self.SHVF_RangeMin, self.SHVF_RangeMax)
-        print('    Max. number of repop subhalos: %i'
-              % self.SHVF_integral(
-            Vmax_min=self.SHVF_RangeMin,
-            Vmax_max=self.SHVF_RangeMax))
+    def run(self, path_output, configuration=None):
 
-    def run(self, path_output):
+        if configuration is None:
+            config_list = self.input_dict['configurations'].keys()
+        elif isinstance(configuration, str):
+            config_list = [configuration]
+        elif isinstance(configuration, list):
+            config_list = configuration
+        else:
+            raise TypeError(
+                'Configuration type not accepted.\n'
+                + 'type: ' + type(configuration) + '\n'
+                + 'configuration value: ' + configuration)
 
         self.path_output = path_output + '/'
 
         if not os.path.exists(path_output + '/'):
             os.makedirs(path_output + '/')
 
-        self.interior_full_repop()
+        for ii in config_list:
+            self.configuration = ii
+            print()
+            print(self.configuration)
+            print(self.RangeMin, self.RangeMax)
+            print('    Number of repop subhalos: %i'
+                  % self.SHVF_integral(self.RangeMin, self.RangeMax))
+            self.interior_full_repop()
 
         # if full_repop:
         #     self.interior_full_repop()
@@ -103,10 +108,10 @@ class RepopAlgorithm:
 
     def calculate_formula(self, xx, formula, params=None):
 
-        if hasattr(self, formula):
-            return getattr(self, formula)(xx, **params)
-
         if isinstance(formula, str):
+
+            if hasattr(self, formula):
+                return getattr(self, formula)(xx, **params)
 
             bb = {}
 
@@ -233,10 +238,12 @@ class RepopAlgorithm:
             ) ** 0.5
 
 
-        repop_C = self.Cv_Mol2021_redshift0(self.subhalo_data['Vmax'])
+        repop_C = self.Cv_Mol2021_redshift0_scattered(
+            self.subhalo_data['Vmax'])
         scatter = self.rng.normal(
             loc=0,
-            scale=self.input_dict['Cv']['params']['sigma_scatter'],
+            scale=self.input_dict['configurations'][self.configuration][
+                'Cv']['params']['sigma_scatter'],
             size=num_subs)
         self.subhalo_data['Cv'] = repop_C * 10 ** scatter
         self.get_parameter('C200_from_Cv', None)
@@ -269,9 +276,9 @@ class RepopAlgorithm:
 
 
         # We calculate our subhalo population in bins to save memory
-        m_min = self.SHVF_RangeMin
+        m_min = self.RangeMin
 
-        while m_min < self.SHVF_RangeMax:
+        while m_min < self.RangeMax:
 
             self.subhalo_data = {}
 
@@ -281,10 +288,10 @@ class RepopAlgorithm:
                         self.xx,
                         m_min,
                         args=[m_min, self.input_dict['repopulations']['num_subs_max']]),
-                    self.SHVF_RangeMax
+                    self.RangeMax
                 ))
             except RuntimeError:
-                m_max = self.SHVF_RangeMax
+                m_max = self.RangeMax
 
             num_subhalos = self.SHVF_integral(
                 Vmax_min=m_min, Vmax_max=m_max)
@@ -294,8 +301,10 @@ class RepopAlgorithm:
             # Montecarlo algorithm for creating the Vmax of subhalos
             x = np.geomspace(m_min, m_max, num=2000)
             y = self.calculate_formula(
-                x, self.input_dict['SHVF']['formula'],
-                self.input_dict['SHVF']['params']
+                x, self.input_dict['configurations'][
+                    self.configuration]['SHVF']['formula'],
+                self.input_dict['configurations'][
+                    self.configuration]['SHVF']['params']
             )
             cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
             cumul /= cumul[-1]
@@ -310,8 +319,11 @@ class RepopAlgorithm:
             # Montecarlo algorithm for creating the Distgc of subhalos
             x = np.linspace(0., self.input_dict['host']['R_vir'], num=2000)
             y = self.calculate_formula(
-                x, self.input_dict['SRD']['formula'],
-                self.input_dict['SRD']['params']
+                x,
+                self.input_dict['configurations'][
+                    self.configuration]['SRD']['formula'],
+                self.input_dict['configurations'][
+                    self.configuration]['SRD']['params']
             )
             cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
             cumul /= cumul[-1]
@@ -487,8 +499,8 @@ class RepopAlgorithm:
 
     def interior_full_repop(self):
 
-        with h5py.File(self.path_output + 'fullrepop_' + self.str_out
-                       + '.h5', 'a') as f:
+        with h5py.File(self.path_output + 'fullrepop_'
+                       + self.configuration + '.h5', 'a') as f:
             input_group = f.create_group(f'inputs')
             self.store_dict_as_hdf(input_group, self.input_dict)
 
@@ -503,12 +515,13 @@ class RepopAlgorithm:
                     print('    %s %s: it %d' % (
                         time.strftime(
                             ' %Y-%m-%d %H:%M:%S', time.gmtime()),
-                        self.str_out, iter_idx))
+                        self.configuration, iter_idx))
                     progress = open(self.path_output + 'progress_'
-                                    + self.str_out + '.txt'
+                                    + self.configuration + '.txt'
                                     , 'a')
                     progress.write(
-                        self.str_out + ', iteration ' + str(iter_idx))
+                        self.configuration
+                        + ', iteration ' + str(iter_idx))
                     progress.write(
                         '        %.3f  %s\n' %
                         (memory_usage_psutil(),
@@ -519,9 +532,9 @@ class RepopAlgorithm:
                 iter_group = f.create_group(f'iteration_{iter_idx}')
 
                 # We calculate our subhalo population in bins
-                m_min = self.SHVF_RangeMin
+                m_min = self.RangeMin
 
-                while m_min < self.SHVF_RangeMax:
+                while m_min < self.RangeMax:
 
                     self.subhalo_data = {}
 
@@ -531,10 +544,10 @@ class RepopAlgorithm:
                                 self.xx, m_min,
                                 args=[m_min, self.input_dict[
                                     'repopulations']['num_subs_max']]),
-                            self.SHVF_RangeMax
+                            self.RangeMax
                         ))
                     except RuntimeError:
-                        m_max = self.SHVF_RangeMax
+                        m_max = self.RangeMax
 
                     num_subhalos = self.SHVF_integral(
                         Vmax_min=m_min, Vmax_max=m_max)
@@ -546,8 +559,10 @@ class RepopAlgorithm:
                     x = np.geomspace(m_min, m_max, num=2000)
                     y = self.calculate_formula(
                         x,
-                        self.input_dict['SHVF']['formula'],
-                        self.input_dict['SHVF']['params']
+                        self.input_dict['configurations'][
+                            self.configuration]['SHVF']['formula'],
+                        self.input_dict['configurations'][
+                            self.configuration]['SHVF']['params']
                     )
                     cumul = [simpson(y=y[:i], x=x[:i])
                              for i in range(1, len(x))]
@@ -568,8 +583,10 @@ class RepopAlgorithm:
                         0., self.input_dict['host']['R_vir'], num=2000)
                     y = self.calculate_formula(
                         x,
-                        self.input_dict['SRD']['formula'],
-                        self.input_dict['SRD']['params']
+                        self.input_dict['configurations'][
+                            self.configuration]['SRD']['formula'],
+                        self.input_dict['configurations'][
+                            self.configuration]['SRD']['params']
                     )
                     cumul = [simpson(y=y[:i], x=x[:i])
                              for i in range(1, len(x))]
@@ -828,7 +845,7 @@ class RepopAlgorithm:
             self.R_s(Vmax, Cv, cosmo_H_0) / D_Earth)
 
     # ----------- Cv ---------------------------------------------------
-    def Cv_Mol2021_redshift0(
+    def Cv_Mol2021_redshift0_scattered(
             self, V, c0=1.75e5, c1=-0.90368, c2=0.2749, c3=-0.028):
         # Median subhalo concentration depending on its Vmax and
         # its redshift (here z=0).
@@ -998,9 +1015,11 @@ class RepopAlgorithm:
     def SHVF_integral(self, Vmax_min, Vmax_max,
                       formula=None, params=None):
         if formula is None:
-            formula = self.input_dict['SHVF']['formula']
+            formula = self.input_dict['configurations'][
+                self.configuration]['SHVF']['formula']
         if params is None:
-            params = self.input_dict['SHVF']['params']
+            params = self.input_dict['configurations'][
+                self.configuration]['SHVF']['params']
 
         vmax_array = np.geomspace(Vmax_min, Vmax_max, num=150)
 

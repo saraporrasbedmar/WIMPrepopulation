@@ -6,7 +6,7 @@ import numpy
 from repop_algorithm import RepopAlgorithm, read_config_file
 
 
-input_file = read_config_file('../input_files/input_paper2024.yml')
+input_file = read_config_file('input_paper_example.yml')
 
 
 outtime = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
@@ -28,9 +28,9 @@ def srd_example(Vmax, params):
     return (0.5 + 0.01 * Vmax**params)*(Vmax > 150)
 
 
-input_file['SRD']['dmo']['resilient'] = {
+input_file['configurations']['dmo_resilient']['SRD'] = {
     'formula': srd_example, 'params': 1e2}
 
 
-model = RepopAlgorithm('mhd', 'resilient', input_file)
+model = RepopAlgorithm(input_file)
 model.run('../outputs/test_2026/test_' + outtime)
