@@ -10,7 +10,7 @@ import numpy as np
 
 from scipy.optimize import newton
 from scipy.interpolate import UnivariateSpline
-from scipy.integrate import simpson
+from scipy.integrate import simpson, cumtrapz
 
 # from astropy import units as u
 
@@ -82,6 +82,7 @@ class RepopAlgorithm:
                 + 'configuration value: ' + configuration)
 
         self.path_output = path_output + '/'
+        print(path_output)
 
         if not os.path.exists(path_output + '/'):
             os.makedirs(path_output + '/')
@@ -556,7 +557,7 @@ class RepopAlgorithm:
 
 
                     # Montecarlo algorithm for creating of subhalo Vmax
-                    x = np.geomspace(m_min, m_max, num=2000)
+                    x = np.geomspace(m_min, m_max, num=200)
                     y = self.calculate_formula(
                         x,
                         self.input_dict['configurations'][
@@ -564,13 +565,11 @@ class RepopAlgorithm:
                         self.input_dict['configurations'][
                             self.configuration]['SHVF']['params']
                     )
-                    cumul = [simpson(y=y[:i], x=x[:i])
-                             for i in range(1, len(x))]
+                    cumul = cumtrapz(
+                        y=y * x * np.log(10), x=np.log10(x), initial=0)
                     cumul /= cumul[-1]
-                    x_mean = (x[1:] + x[:-1]) / 2.
-                    x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
                     spline = UnivariateSpline(
-                        cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
+                        cumul, x, s=0, k=1, ext=0)
 
                     # self.subhalo_data['Vmax'] = {}
 
@@ -588,13 +587,11 @@ class RepopAlgorithm:
                         self.input_dict['configurations'][
                             self.configuration]['SRD']['params']
                     )
-                    cumul = [simpson(y=y[:i], x=x[:i])
-                             for i in range(1, len(x))]
+                    cumul = cumtrapz(y=y, x=x, initial=0)
                     cumul /= cumul[-1]
-                    x_mean = (x[1:] + x[:-1]) / 2.
                     x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
                     spline = UnivariateSpline(
-                        cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
+                        cumul[x_min:], x[x_min:], s=0, k=1, ext=0)
 
                     # self.subhalo_data['Distgc'] = {}
                     self.subhalo_data['Distgc'] = spline(

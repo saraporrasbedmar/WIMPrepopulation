@@ -11,8 +11,10 @@ input_file = read_config_file('input_paper_example.yml')
 
 outtime = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
+
 def save_example_with_callable(Vmax, params):
     return (0.5 + 0.01 * Vmax**params)
+
 
 input_file['repopulations']['columns_to_save']['ex_with_callable'] = {
     'formula': save_example_with_callable,
@@ -28,8 +30,8 @@ def srd_example(Vmax, params):
     return (0.5 + 0.01 * Vmax**params)*(Vmax > 150)
 
 
-input_file['configurations']['dmo_resilient']['SRD'] = {
-    'formula': srd_example, 'params': 1e2}
+# input_file['configurations']['dmo_resilient']['SRD'] = {
+#     'formula': srd_example, 'params': 1e2}
 
 
 model = RepopAlgorithm(input_file)
