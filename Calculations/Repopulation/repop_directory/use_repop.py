@@ -1,6 +1,8 @@
 import os
 import time
 
+import numpy
+
 from repop_algorithm import RepopAlgorithm, read_config_file
 
 
@@ -25,10 +27,10 @@ input_file['repopulations']['columns_to_save']['ex_with_callable'] = {
 def srd_example(Vmax, params):
     return (0.5 + 0.01 * Vmax**params)*(Vmax > 150)
 
+
 input_file['SRD']['dmo']['resilient'] = {
     'formula': srd_example, 'params': 1e2}
 
-# print(input_file['repopulations']['columns_to_save'])
 
 model = RepopAlgorithm('mhd', 'resilient', input_file)
 model.run('../outputs/test_2026/test_' + outtime)

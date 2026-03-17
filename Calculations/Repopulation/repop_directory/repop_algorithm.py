@@ -14,9 +14,6 @@ from scipy.integrate import simpson
 
 # from astropy import units as u
 
-from shvf_functions import power_law
-from srd_functions import *
-
 def memory_usage_psutil():
     # return the memory usage in MB
     process = psutil.Process(os.getpid())
@@ -40,6 +37,7 @@ def ff(c):
 class RepopAlgorithm:
     def __init__(self, sim_type, res_string, path_input):
 
+        self.path_output = None
         self.str_out = str(sim_type) + '_' + str(res_string)
 
         if type(path_input) == str:
@@ -77,42 +75,38 @@ class RepopAlgorithm:
         self.subhalo_data = {}
         self.units = {}  # store units info for each parameter
 
-        self.model_list = {
-            'R_t': self.R_t,
-            'R_max': self.R_max,
-            'R_s': self.R_s,
-            'mass_from_Vmax': self.mass_from_Vmax,
-            'Mhost_encapsulated': self.Mhost_encapsulated,
-            'C200_from_Cv': self.C200_from_Cv,
-            'Cv_Mol2021_redshift0': self.Cv_Mol2021_redshift0,
-
-            'srd_constant': srd_constant,
-            'srd_exponential': srd_exponential,
-
-            'power_law': power_law,
-
-            'J03_vel': self.J03_vel,
-            'Js_vel': self.Js_vel,
-
-            'theta_s': self.theta_s,
-
-        }
-
         print(self.SHVF_RangeMin, self.SHVF_RangeMax)
         print('    Max. number of repop subhalos: %i'
               % self.SHVF_integral(
             Vmax_min=self.SHVF_RangeMin,
             Vmax_max=self.SHVF_RangeMax))
 
+    def run(self, path_output):
+
+        self.path_output = path_output + '/'
+
+        if not os.path.exists(path_output + '/'):
+            os.makedirs(path_output + '/')
+
+        self.interior_full_repop()
+
+        # if full_repop:
+        #     self.interior_full_repop()
+        # else:
+        #     elf.interior_loop_singularbrightest()
+
+        # Save input data in a file in the outputs directory
+        file_inputs = open(self.path_output + 'input_data.yml', 'w')
+        yaml.dump(self.input_dict, file_inputs,
+                  default_flow_style=False, allow_unicode=True)
+        file_inputs.close()
+
     def calculate_formula(self, xx, formula, params=None):
 
+        if hasattr(self, formula):
+            return getattr(self, formula)(xx, **params)
+
         if isinstance(formula, str):
-
-            if formula in self.model_list.keys():
-                if isinstance(params, dict):
-                    return self.model_list[formula](xx, **params)
-
-                return self.model_list[formula](xx, params)
 
             bb = {}
 
@@ -121,13 +115,9 @@ class RepopAlgorithm:
             elif isinstance(params, list):
                 bb['params'] = np.array(params, dtype=float)
 
-            # TODO
-            variables = parametrization.get('variables', None)
-            if isinstance(variables, str):
-                bb[variables] = self.get_parameter(variables, None)
-            elif isinstance(variables, list):
-                for var in variables:
-                    bb[var] = self.get_parameter(var, None)
+            if isinstance(xx, list):
+                xx = np.array(xx)
+            bb['xx'] = xx
 
             # Evaluate formula
             try:
@@ -136,209 +126,15 @@ class RepopAlgorithm:
                 raise ValueError(
                     f'Error evaluating formula' + formula
                     + f'with parameters {bb}: {e}')
-
             return aa
 
         elif callable(formula):
-
             if params is not None:
                 if isinstance(params, dict):
                     return formula(xx, **params)
-
                 return formula(xx, params)
             else:
                 return formula(xx)
-
-    def SHVF_integral(self, Vmax_min, Vmax_max,
-                      formula=None, params=None):
-        if formula is None:
-            formula = self.input_dict['SHVF']['formula']
-        if params is None:
-            params = self.input_dict['SHVF']['params']
-
-        vmax_array = np.geomspace(Vmax_min, Vmax_max, num=150)
-
-        yy = self.calculate_formula(
-            vmax_array, formula=formula, params=params)
-
-        return int(np.rint(simpson(
-            y=yy * np.log(10) * vmax_array, x=np.log10(vmax_array))))
-
-    def R_max(self, Vmax=None, Cv=None, cosmo_H_0=None):
-        """
-        Calculate R_max of a subhalo.
-
-        :param V: float or array-like [km/s]
-            Maximum circular velocity inside a subhalo.
-        :param C: float or array-like
-            Subhalo concentration.
-
-        :return: float or array-like [kpc]
-            R_max of the subhalo given by the inputs.
-        """
-        if Vmax is None:
-            Vmax = self.get_parameter('Vmax', None)
-        if Cv is None:
-            Cv = self.get_parameter('Cv', None)
-        if cosmo_H_0 is None:
-            cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
-
-        return Vmax / cosmo_H_0 * np.sqrt(2. / Cv) * 1e3
-
-    def R_s(self, Vmax=None, Cv=None, cosmo_H_0=None):
-        """
-        Calculate scale radius (R_s) of a subhalo following the NFW
-        analytical expression for a subhalo density profile.
-
-        :param V: float or array-like [km/s]
-            Maximum circular velocity inside a subhalo.
-        :param C: float or array-like
-            Subhalo concentration.
-
-        :return: float or array-like [kpc]
-            R_s of the subhalo given by the inputs.
-        """
-        if Vmax is None:
-            Vmax = self.get_parameter('Vmax', None)
-        if Cv is None:
-            Cv = self.get_parameter('Cv', None)
-        if cosmo_H_0 is None:
-            cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
-
-        return self.R_max(Vmax, Cv, cosmo_H_0) / 2.163
-
-    def R_t(self, Vmax=None, Cv=None, Distgc=None,
-            cosmo_H_0=None, cosmo_G=None,
-            host_rho_0=None, host_r_s=None):
-        """
-        Calculation of tidal radius (R_t) of a subhalo, following the
-        NFW analytical expression for a subhalo density profile.
-
-        Definition of R_t: 1603.04057 King radius pg 14
-
-        :param V: float or array-like [km/s]
-            Maximum circular velocity inside a subhalo.
-        :param C: float or array-like
-            Subhalo concentration.
-        :param Distgc: float or array-like [kpc]
-            Distance from the center of the subhalo to the
-            Galactic Center (GC).
-
-        :return: float or array-like [kpc]
-            Tidal radius of the subhalo given by the inputs.
-        """
-        if Vmax is None:
-            Vmax = self.get_parameter('Vmax', None)
-        if Cv is None:
-            Cv = self.get_parameter('Cv', None)
-        if Distgc is None:
-            Distgc = self.get_parameter('Distgc', None)
-        if cosmo_H_0 is None:
-            cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
-        if cosmo_G is None:
-            cosmo_G = self.input_dict['cosmo_constants']['G']
-        if host_rho_0 is None:
-            host_rho_0 = self.input_dict['host']['rho_0']
-        if host_r_s is None:
-            host_r_s = self.input_dict['host']['r_s']
-
-        # self.get_parameter('R_max', None)
-        # self.get_parameter('C200_from_Cv', None)
-        # self.get_parameter('mass_from_Vmax', None)
-        # self.get_parameter('Mhost_encapsulated', None)
-
-        R_max = self.get_parameter('R_max', None)
-        c200 = self.get_parameter('C200_from_Cv', None)
-        M = self.mass_from_Vmax(Vmax, R_max, c200, cosmo_G)
-        Mhost = self.Mhost_encapsulated(Distgc, host_rho_0, host_r_s)
-
-        return Distgc * (M / (3 * Mhost)) ** (1/3.)
-
-    def Mhost_encapsulated(self, Distgc=None,
-                           host_rho_0=None, host_r_s=None):
-        """
-        Host mass encapsulated up to a certain radius. We are following
-        a NFW density profile for the host.
-
-        :param R: float or array-like [kpc]
-            Radius up to which we integrate the density profile.
-
-        :return: float or array-like [Msun]
-            Host mass encapsulated up to R.
-        """
-        if Distgc is None:
-            Distgc = self.get_parameter('Distgc', None)
-        if host_rho_0 is None:
-            host_rho_0 = self.input_dict['host']['rho_0']
-        if host_r_s is None:
-            host_r_s = self.input_dict['host']['r_s']
-
-        return (4 * np.pi * host_rho_0
-                * host_r_s ** 3
-                * (np.log((host_r_s + Distgc) / host_r_s)
-                   - Distgc / (host_r_s + Distgc)))
-
-    def C200_from_Cv(self, Cv=None):
-        """
-        Formula to find c200 knowing Cv to input in the Newton
-        root-finding method.
-
-        :param c200: float or array-like
-            c200 of subhalo (concentration definition)
-        :param Cv: float or array-like
-            Cv of subhalo (concentration definition)
-
-        :return: float or array-like
-            The output will be 0 when you find the c200 for a
-            specific Cv.
-        """
-        if Cv is None:
-            Cv = self.get_parameter('Cv', None)
-
-        def int_interior(c200i, Cvi):
-            return (200 * (np.log(1. + 2.163) - 2.163 / (1. + 2.163))
-                    / ff(c200i) * (c200i / 2.163) ** 3 - Cvi)
-
-        if type(Cv) == float:
-            c200 = newton(int_interior, x0=40.0, args=[Cv])
-        else:
-            c200 = np.array([newton(int_interior, x0=40.0, args=[i])
-                             for i in Cv])
-
-        return c200
-
-    def mass_from_Vmax(self, Vmax=None, R_max=None, c200=None,
-                       cosmo_G=None):
-        """
-        Mass from a subhalo assuming a NFW profile.
-        Theoretical steps in Moline16.
-
-        :param Vmax: float or array-like [km/s]
-            Maximum radial velocity of a bound particle in the subhalo.
-        :param R_max: float or array-like [kpc]
-            Radius at which Vmax happens (from the subhalo center).
-        :param c200: float or array-like
-            Concentration of the subhalo in terms of mass.
-        :return: float or array-like [Msun]
-            Mass from the subhalo assuming a NFW profile.
-        """
-        if Vmax is None:
-            Vmax = self.get_parameter('Vmax', None)
-        if R_max is None:
-            R_max = self.get_parameter('R_max', None)
-        if c200 is None:
-            try:
-                self.get_parameter('c200', None)
-            except:
-                self.get_parameter('C200_from_Cv', None)
-            c200 = self.get_parameter('C200_from_Cv', None)
-
-        if cosmo_G is None:
-            cosmo_G = self.input_dict['cosmo_constants']['G']
-
-        return (Vmax ** 2 * R_max / cosmo_G
-                * ff(c200)
-                / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)))
 
     def get_parameter(self, name, parametrization):
         """
@@ -348,21 +144,12 @@ class RepopAlgorithm:
         if name in self.subhalo_data:
             return self.subhalo_data[name]
 
-        # try:
-        #     self.subhalo_data[name] = getattr(self, name)()
-        # except:
-        #     print()
-
-        if name in self.model_list.keys():
-            self.subhalo_data[name] = self.model_list[name]()
-            return
-
-        elif parametrization['formula'] in self.model_list.keys():
-            self.subhalo_data[name] = self.model_list[
-                parametrization['formula']]()
+        if hasattr(self, name):
+            self.subhalo_data[name] = getattr(self, name)()
             return
 
         formula = parametrization.get('formula', None)
+
         if isinstance(formula, str):
 
             bb = {}
@@ -388,11 +175,6 @@ class RepopAlgorithm:
                     f'Error evaluating formula'
                     + parametrization['formula']
                     + f'with parameters {bb}: {e}')
-
-            # If result is a scalar, broadcast to all subhalos
-            if isinstance(aa, (float, int)):
-                n = len(self.subhalo_data['Vmax'])
-                return aa * np.ones(n)
 
             self.subhalo_data[name] = aa
             return
@@ -736,7 +518,7 @@ class RepopAlgorithm:
 
                 iter_group = f.create_group(f'iteration_{iter_idx}')
 
-                # We calculate our subhalo population in bins to save memory
+                # We calculate our subhalo population in bins
                 m_min = self.SHVF_RangeMin
 
                 while m_min < self.SHVF_RangeMax:
@@ -760,7 +542,7 @@ class RepopAlgorithm:
                     print(m_min, m_max, num_subhalos)
 
 
-                    # Montecarlo algorithm for creating the Vmax of subhalos
+                    # Montecarlo algorithm for creating of subhalo Vmax
                     x = np.geomspace(m_min, m_max, num=2000)
                     y = self.calculate_formula(
                         x,
@@ -781,7 +563,7 @@ class RepopAlgorithm:
                         num_subhalos))
                     # self.subhalo_data['Vmax']['units'] = 'km/s'
 
-                    # Montecarlo algorithm for creating the Distgc of subhalos
+                    # Montecarlo algorithm for creating of subhalo Distgc
                     x = np.linspace(
                         0., self.input_dict['host']['R_vir'], num=2000)
                     y = self.calculate_formula(
@@ -838,26 +620,6 @@ class RepopAlgorithm:
             f.flush()
         return
 
-    def run(self, path_output):
-
-        self.path_output = path_output + '/'
-
-        if not os.path.exists(path_output + '/'):
-            os.makedirs(path_output + '/')
-
-        self.interior_full_repop()
-
-        # if full_repop:
-        #     self.interior_full_repop()
-        # else:
-        #     elf.interior_loop_singularbrightest()
-
-        # Save input data in a file in the outputs directory
-        file_inputs = open(self.path_output + 'input_data.yml', 'w')
-        yaml.dump(self.input_dict, file_inputs,
-                  default_flow_style=False, allow_unicode=True)
-        file_inputs.close()
-
     '''
     def sort_by_parameter(self, param_name):
         """
@@ -879,6 +641,192 @@ class RepopAlgorithm:
             pass
         return sorted_params
     '''
+    # ----------- General formulas -------------------------------------
+    def R_max(self, Vmax=None, Cv=None, cosmo_H_0=None):
+        """
+        Calculate R_max of a subhalo.
+
+        :param V: float or array-like [km/s]
+            Maximum circular velocity inside a subhalo.
+        :param C: float or array-like
+            Subhalo concentration.
+
+        :return: float or array-like [kpc]
+            R_max of the subhalo given by the inputs.
+        """
+        if Vmax is None:
+            Vmax = self.get_parameter('Vmax', None)
+        if Cv is None:
+            Cv = self.get_parameter('Cv', None)
+        if cosmo_H_0 is None:
+            cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
+
+        return Vmax / cosmo_H_0 * np.sqrt(2. / Cv) * 1e3
+
+    def R_s(self, Vmax=None, Cv=None, cosmo_H_0=None):
+        """
+        Calculate scale radius (R_s) of a subhalo following the NFW
+        analytical expression for a subhalo density profile.
+
+        :param V: float or array-like [km/s]
+            Maximum circular velocity inside a subhalo.
+        :param C: float or array-like
+            Subhalo concentration.
+
+        :return: float or array-like [kpc]
+            R_s of the subhalo given by the inputs.
+        """
+        if Vmax is None:
+            Vmax = self.get_parameter('Vmax', None)
+        if Cv is None:
+            Cv = self.get_parameter('Cv', None)
+        if cosmo_H_0 is None:
+            cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
+
+        return self.R_max(Vmax, Cv, cosmo_H_0) / 2.163
+
+    def R_t(self, Vmax=None, Cv=None, Distgc=None,
+            cosmo_H_0=None, cosmo_G=None,
+            host_rho_0=None, host_r_s=None):
+        """
+        Calculation of tidal radius (R_t) of a subhalo, following the
+        NFW analytical expression for a subhalo density profile.
+
+        Definition of R_t: 1603.04057 King radius pg 14
+
+        :param V: float or array-like [km/s]
+            Maximum circular velocity inside a subhalo.
+        :param C: float or array-like
+            Subhalo concentration.
+        :param Distgc: float or array-like [kpc]
+            Distance from the center of the subhalo to the
+            Galactic Center (GC).
+
+        :return: float or array-like [kpc]
+            Tidal radius of the subhalo given by the inputs.
+        """
+        if Vmax is None:
+            Vmax = self.get_parameter('Vmax', None)
+        if Cv is None:
+            Cv = self.get_parameter('Cv', None)
+        if Distgc is None:
+            Distgc = self.get_parameter('Distgc', None)
+        if cosmo_H_0 is None:
+            cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
+        if cosmo_G is None:
+            cosmo_G = self.input_dict['cosmo_constants']['G']
+        if host_rho_0 is None:
+            host_rho_0 = self.input_dict['host']['rho_0']
+        if host_r_s is None:
+            host_r_s = self.input_dict['host']['r_s']
+
+        R_max = self.R_max(Vmax=Vmax, Cv=Cv, cosmo_H_0=cosmo_H_0)
+        c200 = self.get_parameter('C200_from_Cv', None)
+        M_subhalo = self.mass_from_Vmax(Vmax, R_max, c200, cosmo_G)
+        M_host = self.Mhost_encapsulated(Distgc, host_rho_0, host_r_s)
+
+        return Distgc * (M_subhalo / (3 * M_host)) ** (1/3.)
+
+    def Mhost_encapsulated(self, Distgc=None,
+                           host_rho_0=None, host_r_s=None):
+        """
+        Host mass encapsulated up to a certain radius. We are following
+        a NFW density profile for the host.
+
+        :param R: float or array-like [kpc]
+            Radius up to which we integrate the density profile.
+
+        :return: float or array-like [Msun]
+            Host mass encapsulated up to R.
+        """
+        if Distgc is None:
+            Distgc = self.get_parameter('Distgc', None)
+        if host_rho_0 is None:
+            host_rho_0 = self.input_dict['host']['rho_0']
+        if host_r_s is None:
+            host_r_s = self.input_dict['host']['r_s']
+
+        return (4 * np.pi * host_rho_0
+                * host_r_s ** 3
+                * (np.log((host_r_s + Distgc) / host_r_s)
+                   - Distgc / (host_r_s + Distgc)))
+
+    def C200_from_Cv(self, Cv=None):
+        """
+        Formula to find c200 knowing Cv to input in the Newton
+        root-finding method.
+
+        :param c200: float or array-like
+            c200 of subhalo (concentration definition)
+        :param Cv: float or array-like
+            Cv of subhalo (concentration definition)
+
+        :return: float or array-like
+            The output will be 0 when you find the c200 for a
+            specific Cv.
+        """
+        if Cv is None:
+            Cv = self.get_parameter('Cv', None)
+
+        def int_interior(c200i, Cvi):
+            return (200 * (np.log(1. + 2.163) - 2.163 / (1. + 2.163))
+                    / ff(c200i) * (c200i / 2.163) ** 3 - Cvi)
+
+        if type(Cv) == float:
+            c200 = newton(int_interior, x0=40.0, args=[Cv])
+        else:
+            c200 = np.array([newton(int_interior, x0=40.0, args=[i])
+                             for i in Cv])
+
+        return c200
+
+    def mass_from_Vmax(self, Vmax=None, R_max=None, c200=None,
+                       cosmo_G=None):
+        """
+        Mass from a subhalo assuming a NFW profile.
+        Theoretical steps in Moline16.
+
+        :param Vmax: float or array-like [km/s]
+            Maximum radial velocity of a bound particle in the subhalo.
+        :param R_max: float or array-like [kpc]
+            Radius at which Vmax happens (from the subhalo center).
+        :param c200: float or array-like
+            Concentration of the subhalo in terms of mass.
+        :return: float or array-like [Msun]
+            Mass from the subhalo assuming a NFW profile.
+        """
+        if Vmax is None:
+            Vmax = self.get_parameter('Vmax', None)
+        if R_max is None:
+            R_max = self.get_parameter('R_max', None)
+        if c200 is None:
+            try:
+                self.get_parameter('c200', None)
+            except:
+                self.get_parameter('C200_from_Cv', None)
+            c200 = self.get_parameter('C200_from_Cv', None)
+
+        if cosmo_G is None:
+            cosmo_G = self.input_dict['cosmo_constants']['G']
+
+        return (Vmax ** 2 * R_max / cosmo_G
+                * ff(c200)
+                / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)))
+
+    def theta_s(self, Vmax=None, Cv=None, D_Earth=None, cosmo_H_0=None):
+        # Angular size of subhalos (up to R_s)
+        if Vmax is None:
+            Vmax = self.get_parameter('Vmax', None)
+        if Cv is None:
+            Cv = self.get_parameter('Cv', None)
+        if D_Earth is None:
+            D_Earth = self.get_parameter('D_Earth', None)
+        if cosmo_H_0 is None:
+            cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
+
+        return 180 / np.pi * np.arctan(
+            self.R_s(Vmax, Cv, cosmo_H_0) / D_Earth)
+
     # ----------- Cv ---------------------------------------------------
     def Cv_Mol2021_redshift0(
             self, V, c0=1.75e5, c1=-0.90368, c2=0.2749, c3=-0.028):
@@ -1024,13 +972,40 @@ class RepopAlgorithm:
                    / (1 + 2.163 * D_Earth * np.tan(0.15 * np.pi / 180.)
                       / self.R_max(Vmax, Cv, cosmo_H_0)) ** 3))
 
-    def theta_s(self, Vmax=None, Cv=None, D_Earth=None):
-        # Angular size of subhalos (up to R_s)
-        if Vmax is None:
-            Vmax = self.get_parameter('Vmax', None)
-        if Cv is None:
-            Cv = self.get_parameter('Cv', None)
-        if D_Earth is None:
-            D_Earth = self.get_parameter('D_Earth', None)
+    # ----------- SRD --------------------------------------------------
+    def srd_constant(self, xx, args):
+        return args * np.ones_like(xx)
 
-        return 180 / np.pi * np.arctan(self.R_s(Vmax, Cv) / D_Earth)
+    def srd_exponential(self, xx, exp_fit, last_subhalo):
+        return (exp_fit[1] * np.exp(exp_fit[0] / xx * exp_fit[2])
+                * (xx >= last_subhalo))
+
+    # ----------- SHVF -------------------------------------------------
+    def power_law(self, Vmax, V0, slope):
+        """
+        SubHalo Velocity Function (SHVF) - number of subhalos as a
+        function of Vmax. Power law formula.
+        Definition taken from Grand 2012.07846.
+
+        :param Vmax_array: float or array-like [km/s]
+            Maximum radial velocity of a bound particle in the subhalo.
+
+        :return: float or array-like
+            Number of subhalos defined by the Vmax input.
+        """
+        return 10 ** V0 * Vmax ** slope
+
+    def SHVF_integral(self, Vmax_min, Vmax_max,
+                      formula=None, params=None):
+        if formula is None:
+            formula = self.input_dict['SHVF']['formula']
+        if params is None:
+            params = self.input_dict['SHVF']['params']
+
+        vmax_array = np.geomspace(Vmax_min, Vmax_max, num=150)
+
+        yy = self.calculate_formula(
+            vmax_array, formula=formula, params=params)
+
+        return int(np.rint(simpson(
+            y=yy * np.log(10) * vmax_array, x=np.log10(vmax_array))))
