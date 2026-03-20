@@ -13,7 +13,7 @@ from scipy.optimize import newton
 from scipy.interpolate import UnivariateSpline
 from scipy.integrate import simpson, cumtrapz
 
-# from astropy import units as u
+from astropy import units as u
 
 def memory_usage_psutil():
     # return the memory usage in MB
@@ -46,6 +46,8 @@ class RepopAlgorithm:
         else:
             self.input_dict = path_input
 
+        self.input_dict_strings = copy.deepcopy(self.input_dict)
+
         try:
             self.rng = np.random.default_rng(
                 seed=self.input_dict['repopulations']['rng_seed'])
@@ -65,8 +67,27 @@ class RepopAlgorithm:
         self.RangeMin = self.input_dict['repopulations']['RangeMin']
         self.RangeMax = self.input_dict['repopulations']['RangeMax']
 
+        for key, value in self.input_dict['cosmo_constants'].items():
+            self.input_dict['cosmo_constants'][key] = (
+                self.input_dict['cosmo_constants'][key]['value']
+                * u.Unit(self.input_dict['cosmo_constants'][key]['unit']
+                         )#.decompose()
+            )
+
+        for key, value in self.input_dict['host'].items():
+            self.input_dict['host'][key] = (
+                self.input_dict['host'][key]['value']
+                * u.Unit(self.input_dict['host'][key]['unit']
+                         )#.decompose()
+            )
+
         self.subhalo_data = {}
         self.units = {}
+
+        for key, value in self.input_dict['units'].items():
+            self.units[key] = u.Unit(value)
+            # self.units[key] = self.units[key]#.decompose()
+        print('aaaaaa')
 
     def run(self, path_output, configuration=None):
 
@@ -104,7 +125,7 @@ class RepopAlgorithm:
 
         # Save input data in a file in the outputs directory
         file_inputs = open(self.path_output + 'input_data.yml', 'w')
-        aaa = copy.deepcopy(self.input_dict)
+        aaa = copy.deepcopy(self.input_dict_strings)
         aaa = self.change_callables_into_strings(aaa)
         yaml.dump(aaa, file_inputs,
                   default_flow_style=False, allow_unicode=True)
@@ -275,14 +296,12 @@ class RepopAlgorithm:
         self.subhalo_data['Cv'] = repop_C * 10 ** scatter
         self.get_parameter('C200_from_Cv', None)
 
-
         for param in self.input_dict['repopulations']['columns_to_save']:
             self.get_parameter(
                 param,
                 self.input_dict['repopulations']['columns_to_save'][param])
 
-
-        if self.input_dict['host']['use_Roche']:
+        if self.input_dict['repopulations']['use_Roche']:
             self.subhalo_data['survives_Roche'] = (
                     self.R_t(
                         self.subhalo_data['Vmax'],
@@ -529,7 +548,7 @@ class RepopAlgorithm:
         with h5py.File(self.path_output + 'fullrepop_'
                        + self.configuration + '.h5', 'a') as f:
             input_group = f.create_group(f'inputs')
-            aaa = copy.deepcopy(self.input_dict)
+            aaa = copy.deepcopy(self.input_dict_strings)
             aaa['configurations'] = aaa[
                 'configurations'][self.configuration]
             self.store_dict_as_hdf(input_group, aaa)
@@ -600,15 +619,15 @@ class RepopAlgorithm:
                     spline = UnivariateSpline(
                         cumul, x, s=0, k=1, ext=0)
 
-                    # self.subhalo_data['Vmax'] = {}
-
                     self.subhalo_data['Vmax'] = spline(self.rng.random(
-                        num_subhalos))
-                    # self.subhalo_data['Vmax']['units'] = 'km/s'
+                        num_subhalos)) * self.units['Vmax']
 
                     # Montecarlo algorithm for creating of subhalo Distgc
                     x = np.linspace(
-                        0., self.input_dict['host']['R_vir'], num=2000)
+                        0.,
+                        (self.input_dict['host']['R_vir'].to(
+                            self.units['Distgc'])),
+                        num=2000)
                     y = self.calculate_formula(
                         x,
                         self.input_dict['configurations'][
@@ -622,12 +641,11 @@ class RepopAlgorithm:
                     spline = UnivariateSpline(
                         cumul[x_min:], x[x_min:], s=0, k=1, ext=0)
 
-                    # self.subhalo_data['Distgc'] = {}
-                    self.subhalo_data['Distgc'] = spline(
-                        self.rng.random(num_subhalos))
-                    # self.units['Vmax'] = 'kpc'
+                    self.subhalo_data['Distgc'] = (
+                            spline(self.rng.random(num_subhalos))
+                            * self.units['Distgc'])
 
-                    self.calculate_characteristics_subhalo()
+                    # self.calculate_characteristics_subhalo()
 
                     # if self.input_dict['repopulations']['saveall']:
 
@@ -647,10 +665,9 @@ class RepopAlgorithm:
                             )
 
                             # Save metadata for new key
-                            datasets[key].attrs['units'] = 'unknown'
-                            # datasets[key].attrs['units'] = units_dict.get(
-                            #     key, default_units)
-                            datasets[key].attrs['description'] = f'{key} data'
+                            if key in self.input_dict['units'].keys():
+                                datasets[key].attrs['units'] = str(
+                                self.input_dict_strings['units'][key])
 
                         # Append the new batch data to the dataset
                         dataset = datasets[key]

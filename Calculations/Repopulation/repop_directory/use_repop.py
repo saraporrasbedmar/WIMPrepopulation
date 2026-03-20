@@ -35,4 +35,5 @@ def srd_example(Vmax, params):
 
 
 model = RepopAlgorithm(input_file)
-model.run('../outputs/test_2026/test_' + outtime)
+model.run('../outputs/test_2026/test_' + outtime,
+          configuration='dmo_resilient')
