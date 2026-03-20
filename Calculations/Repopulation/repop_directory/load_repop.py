@@ -1,17 +1,37 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import h5py
-import psutil
 import os
 import yaml
+import h5py
+import psutil
+import numpy as np
+import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from scipy.optimize import curve_fit
 
+all_size = 26
+plt.rcParams['mathtext.fontset'] = 'stix'
+plt.rcParams['font.family'] = 'STIXGeneral'
+plt.rcParams['axes.labelsize'] = all_size
+plt.rcParams['lines.markersize'] = 10
+plt.rc('font', size=all_size)
+plt.rc('axes', titlesize=all_size)
+plt.rc('axes', labelsize=all_size)
+plt.rc('xtick', labelsize=all_size)
+plt.rc('ytick', labelsize=all_size)
+plt.rc('legend', fontsize=20)
+plt.rc('figure', titlesize=all_size)
+plt.rc('xtick', top=True, direction='in')
+plt.rc('ytick', right=True, direction='in')
+plt.rc('xtick.major', size=10, width=2, top=False, pad=10)
+plt.rc('ytick.major', size=10, width=2, right=True, pad=5)
+plt.rc('xtick.minor', size=7, width=1.5, top=False)
+plt.rc('ytick.minor', size=7, width=1.5)
+
 def memory_usage_psutil():
-    # return the memory usage in MB
     process = psutil.Process(os.getpid())
     mem = process.memory_info()[0] / float(10 ** 6)
+    print('Memory used: %.2f MB' % mem)
     return mem
+
 
 def read_config_file(ConfigFile):
     with open(ConfigFile, 'r') as stream:
@@ -22,25 +42,22 @@ def read_config_file(ConfigFile):
     return parsed_yaml
 
 
+input_directory = '../outputs/test_2026/test_2026-03-20 11:47:30/'
+
 data_dmo_frg = h5py.File(
-    '../outputs/test_2026/test_2026-03-19 19:49:40/'
-    'fullrepop_dmo_fragile.h5', 'r')
+    input_directory + 'fullrepop_dmo_fragile.h5', 'r')
 data_dmo_res = h5py.File(
-    '../outputs/test_2026/test_2026-03-19 19:49:40/'
-    'fullrepop_dmo_resilient.h5', 'r')
+    input_directory + 'fullrepop_dmo_resilient.h5', 'r')
 data_mhd_frg = h5py.File(
-    '../outputs/test_2026/test_2026-03-19 19:49:40/'
-    'fullrepop_mhd_fragile.h5', 'r')
+    input_directory + 'fullrepop_mhd_fragile.h5', 'r')
 data_mhd_res = h5py.File(
-    '../outputs/test_2026/test_2026-03-19 19:49:40/'
-    'fullrepop_mhd_resilient.h5', 'r')
+    input_directory + 'fullrepop_mhd_resilient.h5', 'r')
 
 input_data = read_config_file(
-    '../outputs/test_2026/test_2026-03-19 19:49:40/'
-    'input_data.yml')
+    input_directory + 'input_data.yml')
 
 
-print(memory_usage_psutil())
+memory_usage_psutil()
 
 # ------ SHVF ----------------------------------------------------------
 
@@ -82,9 +99,12 @@ def find_PowerLaw(xx, yy, lim_inf, lim_sup):
 
 
 
+print('----- SHVF -----')
 plt.figure(figsize=(10, 10))
 
-xx_plot = np.logspace(np.log10(2), np.log10(120), 100)
+xx_plot = np.logspace(
+    np.log10(input_data['repopulations']['RangeMin']),
+    np.log10(input_data['repopulations']['RangeMax']), 100)
 
 dNdV_dict_dmo_res = []
 dNdV_dict_dmo_frg = []
@@ -100,7 +120,7 @@ for i in range(input_data['repopulations']['its']):
     fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(
         x_cumul_mean, aaa,
         lim_inf=input_data['repopulations']['RangeMin'],
-        lim_sup=20.)
+        lim_sup=10.)
     dNdV_dict_dmo_res.append([fitsM_DMO, fitsB_DMO])
     plt.plot(xx_plot, 10 ** fitsB_DMO * xx_plot ** fitsM_DMO,
              color='k', alpha=0.7, linestyle='-', lw=2)
@@ -112,7 +132,7 @@ for i in range(input_data['repopulations']['its']):
     fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(
         x_cumul_mean, aaa,
         lim_inf=input_data['repopulations']['RangeMin'],
-        lim_sup=20.)
+        lim_sup=10.)
     dNdV_dict_dmo_frg.append([fitsM_DMO, fitsB_DMO])
     plt.plot(xx_plot, 10 ** fitsB_DMO * xx_plot ** fitsM_DMO,
              color='b', alpha=0.7, linestyle='-', lw=2)
@@ -124,7 +144,7 @@ for i in range(input_data['repopulations']['its']):
     fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(
         x_cumul_mean, aaa,
         lim_inf=input_data['repopulations']['RangeMin'],
-        lim_sup=20.)
+        lim_sup=10.)
     dNdV_dict_mhd_res.append([fitsM_DMO, fitsB_DMO])
     plt.plot(xx_plot, 10 ** fitsB_DMO * xx_plot ** fitsM_DMO,
              color='green', alpha=0.7, linestyle='-', lw=2)
@@ -136,7 +156,7 @@ for i in range(input_data['repopulations']['its']):
     fitsM_DMO, fitsB_DMO, _, _ = find_PowerLaw(
         x_cumul_mean, aaa,
         lim_inf=input_data['repopulations']['RangeMin'],
-        lim_sup=20.)
+        lim_sup=10.)
     dNdV_dict_mhd_frg.append([fitsM_DMO, fitsB_DMO])
     plt.plot(xx_plot, 10 ** fitsB_DMO * xx_plot ** fitsM_DMO,
              color='orange', alpha=0.7, linestyle='-', lw=2)
@@ -173,7 +193,7 @@ plt.xscale('log')
 plt.yscale('log')
 
 
-print(memory_usage_psutil())
+memory_usage_psutil()
 
 
 fig, ax = plt.subplots()
@@ -216,6 +236,7 @@ plt.ylabel(r'Number of subhalos', size=24)
 
 
 # ------- SRD ----------------------------------------------------------
+print('----- SRD -----')
 fig, ax = plt.subplots(figsize=(7, 5))
 
 R_vir = float(input_data['host']['R_vir'])
@@ -270,7 +291,6 @@ for i in range(input_data['repopulations']['its']):
         p0=[-0.15, 1]
     )
     fits_srd['dmo_fragile'].append(fits)
-    print(fits_srd['dmo_fragile'])
 
 
     hist_dmo, bins_dmo = np.histogram(

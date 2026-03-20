@@ -1,9 +1,10 @@
 import os
 import sys
 import yaml
-import psutil
+import copy
 import time
 import h5py
+import psutil
 import inspect
 
 import numpy as np
@@ -103,9 +104,34 @@ class RepopAlgorithm:
 
         # Save input data in a file in the outputs directory
         file_inputs = open(self.path_output + 'input_data.yml', 'w')
-        yaml.dump(self.input_dict, file_inputs,
+        aaa = copy.deepcopy(self.input_dict)
+        aaa = self.change_callables_into_strings(aaa)
+        yaml.dump(aaa, file_inputs,
                   default_flow_style=False, allow_unicode=True)
         file_inputs.close()
+        return
+
+    def change_callables_into_strings(self, data_dict):
+        if isinstance(data_dict, dict):
+            for key, value in data_dict.items():
+                if callable(value):
+                    data_dict[key] = inspect.getsource(value).strip()
+                elif isinstance(value, dict):
+                    self.change_callables_into_strings(value)
+                elif isinstance(value, list):
+                    for idx, item in enumerate(value):
+                        if callable(item):
+                            value[idx] = inspect.getsource(item).strip()
+                        elif isinstance(item, dict):
+                            self.change_callables_into_strings(item)
+
+        elif isinstance(data_dict, list):
+            for idx, item in enumerate(data_dict):
+                if callable(item):
+                    data_dict[idx] = inspect.getsource(item).strip()
+                elif isinstance(item, dict):
+                    self.change_callables_into_strings(item)
+        return data_dict
 
     def calculate_formula(self, xx, formula, params=None):
 
@@ -503,7 +529,10 @@ class RepopAlgorithm:
         with h5py.File(self.path_output + 'fullrepop_'
                        + self.configuration + '.h5', 'a') as f:
             input_group = f.create_group(f'inputs')
-            self.store_dict_as_hdf(input_group, self.input_dict)
+            aaa = copy.deepcopy(self.input_dict)
+            aaa['configurations'] = aaa[
+                'configurations'][self.configuration]
+            self.store_dict_as_hdf(input_group, aaa)
 
             datasets = {}
 
