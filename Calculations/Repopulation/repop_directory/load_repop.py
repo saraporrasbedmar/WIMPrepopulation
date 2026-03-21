@@ -424,12 +424,6 @@ print(data['J03_vel'][:]/algorithm_old.J03_vel(
     **kwargs
 ))
 
-print(data['J03_vel'][:])
-
-print(algorithm_old.J03_vel(
-    V=data['Vmax'][:], D_earth=data['D_Earth'][:], C=Cv,
-    **kwargs
-))
 
 print('\nR_max')
 print(data['R_max'][:]/algorithm_old.R_max(

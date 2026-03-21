@@ -31,11 +31,18 @@ input_file['repopulations']['columns_to_save']['ex_with_callable'] = {
 def srd_example(Vmax, params):
     return (0.5 + 0.01 * Vmax**params)*(Vmax > 150)
 
-
 # input_file['configurations']['dmo_resilient']['SRD'] = {
 #     'formula': srd_example, 'params': 1e2}
+
+def aaa(Vmax, params):
+    return 1e5 + Vmax.value + params
+
+
+input_file['configurations']['dmo_resilient']['Cv'] = {
+    'formula': aaa, 'params': 12, 'variables': 'Vmax'}
 
 
 model = RepopAlgorithm(input_file)
 model.run('../outputs/test_2026/test_' + outtime,
-          configuration='dmo_resilient')
+          # configuration='dmo_resilient'
+          )

@@ -201,12 +201,24 @@ class RepopAlgorithm:
             return self.subhalo_data[name]
 
         if hasattr(self, name):
+            if isinstance(parametrization, dict):
+                self.subhalo_data[name] = getattr(self, name)(
+                    **parametrization)
+                return
             self.subhalo_data[name] = getattr(self, name)()
             return
 
         formula = parametrization.get('formula', None)
 
         if isinstance(formula, str):
+
+            if hasattr(self, formula):
+                if isinstance(parametrization, dict):
+                    self.subhalo_data[name] = getattr(self, formula)(
+                        **parametrization['params'])
+                    return
+                self.subhalo_data[name] = getattr(self, formula)()
+                return
 
             bb = {}
 
@@ -285,30 +297,28 @@ class RepopAlgorithm:
             + (self.subhalo_data['repop_Zs'] - position_Earth[2]) ** 2
             ) ** 0.5
 
-
-        repop_C = self.Cv_Mol2021_redshift0_scattered(
-            self.subhalo_data['Vmax'])
-        # scatter = self.rng.normal(
-        #     loc=0,
-        #     scale=self.input_dict['configurations'][self.configuration][
-        #         'Cv']['params']['sigma_scatter'],
-        #     size=num_subs)
-        self.subhalo_data['Cv'] = repop_C #* 10 ** scatter
-        self.get_parameter('C200_from_Cv', None)
+        if 'Cv' in self.input_dict[
+            'configurations'][self.configuration].keys():
+            self.get_parameter('Cv',
+                parametrization=self.input_dict['configurations'][
+                    self.configuration]['Cv'])
+            self.get_parameter('C200_from_Cv', None)
 
         for pn in self.input_dict['repopulations']['columns_to_save']:
             self.get_parameter(
                 pn,
                 self.input_dict['repopulations']['columns_to_save'][pn])
 
-        if self.input_dict['repopulations']['use_Roche']:
+        if self.input_dict['configurations'][
+                    self.configuration]['use_Roche']:
             self.subhalo_data['survives_Roche'] = (
-                    self.R_t(
-                        self.subhalo_data['Vmax'],
-                        self.subhalo_data['Cv'],
-                        self.subhalo_data['Distgc'])
-                    > self.R_s(self.subhalo_data['Vmax'],
-                               self.subhalo_data['Cv'])
+                    self.get_parameter('R_t', None)
+                    > self.get_parameter('R_s', None)
+            ) * u.dimensionless_unscaled
+
+        self.subhalo_data['engulfs_Earth'] = (
+            self.get_parameter('R_s', None)
+            > self.get_parameter('D_Earth', None)
             ) * u.dimensionless_unscaled
 
         return
@@ -669,10 +679,11 @@ class RepopAlgorithm:
                                 chunks=True,
                                 compression='gzip'
                             )
-
-                            datasets[key].attrs['units'] = str(
-                                self.subhalo_data[key].unit)
-
+                            try:
+                                datasets[key].attrs['units'] = str(
+                                    self.subhalo_data[key].unit)
+                            except AttributeError:
+                                datasets[key].attrs['units'] = ''
 
                         # Append the new batch data to the dataset
                         dataset = datasets[key]
@@ -822,10 +833,8 @@ class RepopAlgorithm:
         if host_r_s is None:
             host_r_s = self.input_dict['host']['r_s']
 
-        return (4 * np.pi * host_rho_0
-                * host_r_s ** 3
-                * (np.log((host_r_s + Distgc) / host_r_s)
-                   - Distgc / (host_r_s + Distgc)))
+        return (4 * np.pi * host_rho_0 * host_r_s ** 3
+                * ff(Distgc / host_r_s))
 
     def C200_from_Cv(self, Cv=None):
         """
@@ -845,7 +854,7 @@ class RepopAlgorithm:
             Cv = self.get_parameter('Cv', None)
 
         def int_interior(c200i, Cvi):
-            return (200 * (np.log(1. + 2.163) - 2.163 / (1. + 2.163))
+            return (200 * ff(2.163)
                     / ff(c200i) * (c200i / 2.163) ** 3 - Cvi)
 
         if type(Cv) == float:
@@ -886,8 +895,7 @@ class RepopAlgorithm:
             cosmo_G = self.input_dict['cosmo_constants']['G']
 
         return (Vmax ** 2 * R_max / cosmo_G
-                * ff(c200)
-                / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)))
+                * ff(c200)/ ff(2.163))
 
     def theta_s(self, Vmax=None, Cv=None, D_Earth=None, cosmo_H_0=None,
                 unit='degree'):
@@ -905,8 +913,11 @@ class RepopAlgorithm:
             self.R_s(Vmax, Cv, cosmo_H_0) / D_Earth).to(u.Unit(unit))
 
     # ----------- Cv ---------------------------------------------------
-    def Cv_Mol2021_redshift0_scattered(
-            self, V, c0=1.75e5, c1=-0.90368, c2=0.2749, c3=-0.028):
+
+    def Cv_Mol2021_redshift0_scattered(self,
+            Vmax=None,
+            c0=1.75e5, c1=-0.90368, c2=0.2749, c3=-0.028,
+            sigma_scatter=0.):
         # Median subhalo concentration depending on its Vmax and
         # its redshift (here z=0).
         # Moline et al. 2110.02097
@@ -922,11 +933,17 @@ class RepopAlgorithm:
         #     Subhalos with scattered concentrations.
         #
         # V - max radial velocity of a bound particle in the subhalo [km/s]
+        if Vmax is None:
+            Vmax = self.get_parameter('Vmax', None)
         ci = [c0, c1, c2, c3]
-        V = (V * u.s / u.km).to(1)
-        yy = ci[0] * (1 + (sum([ci[i + 1] * np.log10(V) ** (i + 1)
+        Vmax = (Vmax * u.s / u.km).to(1)
+        yy = ci[0] * (1 + (sum([ci[i + 1] * np.log10(Vmax) ** (i + 1)
                                 for i in range(3)])))
-        return yy * u.dimensionless_unscaled
+
+        scatter = 10 ** self.rng.normal(
+            loc=0, scale=sigma_scatter, size=len(Vmax))
+
+        return yy * scatter * u.dimensionless_unscaled
 
     # ----------- J-FACTORS --------------------------------------------
     def J_abs_vel(self, Vmax=None, D_Earth=None, Cv=None,
@@ -961,8 +978,7 @@ class RepopAlgorithm:
             unit = self.input_dict['repopulations'][
                 'columns_to_save']['J_abs_vel']['unit']
 
-        yy = (2.163 ** 3. / D_Earth ** 2.
-              / (np.log(1. + 2.163) - 2.163 / (1. + 2.163)) ** 2
+        yy = (2.163 ** 3. / D_Earth ** 2. / ff(2.163) ** 2
               * cosmo_H_0 / 12 / np.pi / cosmo_G ** 2
               * np.sqrt(Cv / 2) * Vmax ** 3)
 
@@ -1050,6 +1066,11 @@ class RepopAlgorithm:
         return args * np.ones_like(xx)
 
     def srd_exponential(self, xx, exp_fit, last_subhalo):
+        xx = xx.to(u.kpc).value
+        last_subhalo = (
+                last_subhalo['value']
+                * u.Unit(last_subhalo['unit']).to(u.kpc))
+
         return (exp_fit[1] * np.exp(exp_fit[0] / xx * exp_fit[2])
                 * (xx >= last_subhalo))
 
