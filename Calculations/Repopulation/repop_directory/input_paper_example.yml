@@ -1,13 +1,13 @@
 cosmo_constants:
   G:
     value: !!float 4.297e-06
-    unit: kpc * km2 / (M_sun * s2)
+    unit: kpc * km2 / (Msun * s2)
   H_0:
     value: 67.7
     unit: km / (s * Mpc)
   rho_crit:
     value: 135.73
-    unit: M_sun / kpc3
+    unit: Msun / kpc3
 
 host:
   R_vir:
@@ -18,14 +18,14 @@ host:
     unit: kpc
   rho_0:
     value: !!float 9.04e6
-    unit: M_sun / kpc3
+    unit: Msun / kpc3
   position_Earth:
     value: [8.5, 0., 0.]
     unit: kpc
 
 repopulations:
   RangeMax: 120.0
-  RangeMin: 50.
+  RangeMin: 35.
 
   use_Roche: True
 
@@ -38,6 +38,10 @@ repopulations:
   rng_seed: 0
 
   columns_to_save:
+    Vmax:
+      unit: km / s
+    Distgc:
+      unit: kpc
     formula_example:
       formula: '1e17 * params[0] * Vmax'
       params:
@@ -45,12 +49,21 @@ repopulations:
         - !!float 2e7
       variables:
         'Vmax'
-      unit: M_sun * km / s
+      unit: Msun * km / s
     R_t:
+      unit: kpc
     R_s:
+      unit: kpc
+    R_max:
+      unit: kpc
     J03_vel:
+      unit: GeV2 / cm5
     Js_vel:
+      unit: Msun2 / kpc5
+    J_abs_vel:
+      unit: GeV2 / cm5
     theta_s:
+      unit: degree
 
 configurations:
   dmo_resilient:
@@ -128,7 +141,3 @@ configurations:
         last_subhalo:
           value: 15.71
           unit: kpc
-
-units:
-  Vmax: km / s
-  Distgc: kpc

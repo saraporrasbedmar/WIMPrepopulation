@@ -2,6 +2,8 @@ import os
 import time
 
 import numpy
+from astropy import units as u
+from astropy import constants as c
 
 from repop_algorithm import RepopAlgorithm, read_config_file
 
@@ -13,7 +15,7 @@ outtime = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
 
 def save_example_with_callable(Vmax, params):
-    return (0.5 + 0.01 * Vmax**params)
+    return (0.5 * (u.km/ u.s) + 0.01 * Vmax)**params
 
 
 input_file['repopulations']['columns_to_save']['ex_with_callable'] = {
