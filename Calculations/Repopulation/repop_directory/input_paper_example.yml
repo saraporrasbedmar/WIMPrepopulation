@@ -25,12 +25,12 @@ host:
 
 repopulations:
   RangeMax: 120.0
-  RangeMin: .5
+  RangeMin: 2.
 
   its: 2
   print_freq: 1
 
-  save_full_repop: False
+  save_full_repop: True
   num_brightest: 2
   allow_break_roche: False
   allow_engulf_Earth: False
@@ -45,28 +45,28 @@ repopulations:
       unit: km / s
     Distgc:
       unit: kpc
-#    formula_example:
-#      formula: '1e17 * params[0] * Vmax'
-#      params:
-#        - 0.5
-#        - !!float 2e7
-#      variables:
-#        'Vmax'
-#      unit: Msun * km / s
-#    R_t:
-#      unit: kpc
-#    R_s:
-#      unit: kpc
-#    R_max:
-#      unit: kpc
-#    J03_vel:
-#      unit: GeV2 / cm5
-#    Js_vel:
-#      unit: Msun2 / kpc5
-#    J_abs_vel:
-#      unit: GeV2 / cm5
-#    theta_s:
-#      unit: degree
+    formula_example:
+      formula: '1e17 * params[0] * Vmax'
+      params:
+        - 0.5
+        - !!float 2e7
+      variables:
+        'Vmax'
+      unit: Msun * km / s
+    R_t:
+      unit: kpc
+    R_s:
+      unit: kpc
+    R_max:
+      unit: kpc
+    J03_vel:
+      unit: GeV2 / cm5
+    Js_vel:
+      unit: Msun2 / kpc5
+    J_abs_vel:
+      unit: GeV2 / cm5
+    theta_s:
+      unit: degree
 
 configurations:
   dmo_resilient:

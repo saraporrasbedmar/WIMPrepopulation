@@ -1,5 +1,4 @@
 import os
-import sys
 import yaml
 import copy
 import time
@@ -15,6 +14,7 @@ from scipy.integrate import simpson, cumtrapz
 
 from astropy import units as u
 from astropy import constants as c
+
 
 def memory_usage_psutil():
     # return the memory usage in MB
@@ -89,6 +89,9 @@ class RepopAlgorithm:
                 * u.Unit(self.input_dict['host'][key]['unit']
                          )
             )
+
+        self._m_min = None
+        self._m_max = None
 
         self.subhalo_data = {}
 
@@ -264,31 +267,101 @@ class RepopAlgorithm:
 
     def calculate_characteristics_subhalo(
             self, Vmax=None, Distgc=None, position_Earth=None):
+
+        self.subhalo_data = {}
+
         if Vmax is None:
-            Vmax = self.subhalo_data['Vmax']
+            try:
+                self._m_max = np.min((
+                    newton(
+                        self.xx, self._m_min,
+                        args=[self._m_min, self._num_subs_max]),
+                    self.RangeMax
+                ))
+            except RuntimeError:
+                self._m_max = self.RangeMax
+
+            num_subhalos = self.SHVF_integral(
+                Vmax_min=self._m_min, Vmax_max=self._m_max)
+
+            print(self._m_min, self._m_max, num_subhalos)
+
+            # Montecarlo algorithm for creating of subhalo Vmax
+            x = np.geomspace(self._m_min, self._m_max, num=200)
+            y = self.calculate_formula(
+                x,
+                self.input_dict['configurations'][
+                    self.configuration]['SHVF']['formula'],
+                self.input_dict['configurations'][
+                    self.configuration]['SHVF']['params']
+            )
+            cumul = cumtrapz(
+                y=y * x * np.log(10), x=np.log10(x), initial=0)
+            cumul /= cumul[-1]
+            spline = UnivariateSpline(
+                cumul, x, s=0, k=1, ext=0)
+
+            self.subhalo_data['Vmax'] = (
+                    spline(self.rng.random(num_subhalos))
+                    * u.Unit(
+                self.input_dict['repopulations'][
+                    'columns_to_save']['Vmax']['unit']))
+        else:
+            self.subhalo_data['Vmax'] = Vmax
+
         if Distgc is None:
-            Distgc = self.subhalo_data['Distgc']
+            # Montecarlo algorithm for creating of subhalo Distgc
+            x = np.linspace(
+                0.,
+                (self.input_dict['host']['R_vir'].to(
+                    u.Unit(self.input_dict
+                           ['repopulations']['columns_to_save']
+                           ['Distgc']['unit']))),
+                num=2000)
+            y = self.calculate_formula(
+                x,
+                self.input_dict['configurations'][
+                    self.configuration]['SRD']['formula'],
+                self.input_dict['configurations'][
+                    self.configuration]['SRD']['params']
+            )
+            cumul = cumtrapz(y=y, x=x, initial=0)
+            cumul /= cumul[-1]
+            x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
+            spline = UnivariateSpline(
+                cumul[x_min:], x[x_min:], s=0, k=1, ext=0)
+
+            self.subhalo_data['Distgc'] = (
+                    spline(self.rng.random(num_subhalos))
+                    * u.Unit(self.input_dict
+                             ['repopulations']['columns_to_save']
+                             ['Distgc']['unit']))
+        else:
+            self.subhalo_data['Distgc'] = Distgc
+
         if position_Earth is None:
             position_Earth = self.input_dict['host']['position_Earth']
 
         # Random distribution of subhalos around the celestial sphere
-        num_subs = len(Vmax)
         self.subhalo_data['gal_theta'] = self.rng.uniform(
-            0, 2 * np.pi, num_subs) * u.degree
+            0, 2 * np.pi, len(self.subhalo_data['Vmax'])) * u.rad
 
         self.subhalo_data['gal_phi'] = np.arccos(
-            2 * self.rng.uniform(0, 1, num_subs) - 1) * u.degree
-
+            2 * self.rng.uniform(0, 1, len(self.subhalo_data['Vmax']))
+            - 1) * u.rad
 
         # Positions of the subhalos
         self.subhalo_data['repop_Xs'] = (
-                Distgc * np.cos(self.subhalo_data['gal_theta'])
+                self.subhalo_data['Distgc']
+                * np.cos(self.subhalo_data['gal_theta'])
                 * np.sin(self.subhalo_data['gal_phi']))
         self.subhalo_data['repop_Ys'] = (
-                Distgc * np.sin(self.subhalo_data['gal_theta'])
+                self.subhalo_data['Distgc']
+                * np.sin(self.subhalo_data['gal_theta'])
                 * np.sin(self.subhalo_data['gal_phi']))
         self.subhalo_data['repop_Zs'] = (
-                Distgc * np.cos(self.subhalo_data['gal_phi']))
+                self.subhalo_data['Distgc']
+                * np.cos(self.subhalo_data['gal_phi']))
 
         self.subhalo_data['D_Earth'] = ((
             self.subhalo_data['repop_Xs'] - position_Earth[0]) ** 2
@@ -419,75 +492,9 @@ class RepopAlgorithm:
                 iter_group = f.create_group(f'iteration_{iter_idx}')
 
                 # We calculate our subhalo population in bins
-                m_min = self.RangeMin
+                self._m_min = self.RangeMin
 
-                while m_min < self.RangeMax:
-
-                    self.subhalo_data = {}
-
-                    try:
-                        m_max = np.min((
-                            newton(
-                                self.xx, m_min,
-                                args=[m_min, self._num_subs_max]),
-                            self.RangeMax
-                        ))
-                    except RuntimeError:
-                        m_max = self.RangeMax
-
-                    num_subhalos = self.SHVF_integral(
-                        Vmax_min=m_min, Vmax_max=m_max)
-
-                    print(m_min, m_max, num_subhalos)
-
-
-                    # Montecarlo algorithm for creating of subhalo Vmax
-                    x = np.geomspace(m_min, m_max, num=200)
-                    y = self.calculate_formula(
-                        x,
-                        self.input_dict['configurations'][
-                            self.configuration]['SHVF']['formula'],
-                        self.input_dict['configurations'][
-                            self.configuration]['SHVF']['params']
-                    )
-                    cumul = cumtrapz(
-                        y=y * x * np.log(10), x=np.log10(x), initial=0)
-                    cumul /= cumul[-1]
-                    spline = UnivariateSpline(
-                        cumul, x, s=0, k=1, ext=0)
-
-                    self.subhalo_data['Vmax'] = (
-                            spline(self.rng.random(num_subhalos))
-                            * u.Unit(
-                        self.input_dict['repopulations'][
-                            'columns_to_save']['Vmax']['unit']))
-
-                    # Montecarlo algorithm for creating of subhalo Distgc
-                    x = np.linspace(
-                        0.,
-                        (self.input_dict['host']['R_vir'].to(
-                            u.Unit(self.input_dict
-                                   ['repopulations']['columns_to_save']
-                                   ['Distgc']['unit']))),
-                        num=2000)
-                    y = self.calculate_formula(
-                        x,
-                        self.input_dict['configurations'][
-                            self.configuration]['SRD']['formula'],
-                        self.input_dict['configurations'][
-                            self.configuration]['SRD']['params']
-                    )
-                    cumul = cumtrapz(y=y, x=x, initial=0)
-                    cumul /= cumul[-1]
-                    x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
-                    spline = UnivariateSpline(
-                        cumul[x_min:], x[x_min:], s=0, k=1, ext=0)
-
-                    self.subhalo_data['Distgc'] = (
-                            spline(self.rng.random(num_subhalos))
-                            * u.Unit(self.input_dict
-                                   ['repopulations']['columns_to_save']
-                                   ['Distgc']['unit']))
+                while self._m_min < self.RangeMax:
 
                     self.calculate_characteristics_subhalo()
 
@@ -513,10 +520,10 @@ class RepopAlgorithm:
 
                         dataset = datasets[key]
                         current_size = dataset.shape[0]
-                        new_size = current_size + num_subhalos
+                        new_size = current_size + len(array)
                         dataset.resize((new_size,))
                         dataset[current_size:new_size] = array
-                    m_min = m_max
+                    self._m_min = self._m_max
             f.flush()
         return
 
@@ -563,75 +570,9 @@ class RepopAlgorithm:
                     highest_dict[ii] = {}
 
                 # We calculate our subhalo population in bins
-                m_min = self.RangeMin
+                self._m_min = self.RangeMin
 
-                while m_min < self.RangeMax:
-
-                    self.subhalo_data = {}
-
-                    try:
-                        m_max = np.min((
-                            newton(
-                                self.xx, m_min * 1.05,
-                                args=[m_min, self._num_subs_max]),
-                            self.RangeMax
-                        ))
-                    except RuntimeError:
-                        m_max = self.RangeMax
-
-                    num_subhalos = self.SHVF_integral(
-                        Vmax_min=m_min, Vmax_max=m_max)
-
-                    print(m_min, m_max, num_subhalos)
-
-
-                    # Montecarlo algorithm for creating of subhalo Vmax
-                    x = np.geomspace(m_min, m_max, num=200)
-                    y = self.calculate_formula(
-                        x,
-                        self.input_dict['configurations'][
-                            self.configuration]['SHVF']['formula'],
-                        self.input_dict['configurations'][
-                            self.configuration]['SHVF']['params']
-                    )
-                    cumul = cumtrapz(
-                        y=y * x * np.log(10), x=np.log10(x), initial=0)
-                    cumul /= cumul[-1]
-                    spline = UnivariateSpline(
-                        cumul, x, s=0, k=1, ext=0)
-
-                    self.subhalo_data['Vmax'] = (
-                            spline(self.rng.random(num_subhalos))
-                            * u.Unit(
-                        self.input_dict['repopulations'][
-                            'columns_to_save']['Vmax']['unit']))
-
-                    # Montecarlo algorithm for creating of subhalo Distgc
-                    x = np.linspace(
-                        0.,
-                        (self.input_dict['host']['R_vir'].to(
-                            u.Unit(self.input_dict
-                                   ['repopulations']['columns_to_save']
-                                   ['Distgc']['unit']))),
-                        num=2000)
-                    y = self.calculate_formula(
-                        x,
-                        self.input_dict['configurations'][
-                            self.configuration]['SRD']['formula'],
-                        self.input_dict['configurations'][
-                            self.configuration]['SRD']['params']
-                    )
-                    cumul = cumtrapz(y=y, x=x, initial=0)
-                    cumul /= cumul[-1]
-                    x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
-                    spline = UnivariateSpline(
-                        cumul[x_min:], x[x_min:], s=0, k=1, ext=0)
-
-                    self.subhalo_data['Distgc'] = (
-                            spline(self.rng.random(num_subhalos))
-                            * u.Unit(self.input_dict
-                                   ['repopulations']['columns_to_save']
-                                   ['Distgc']['unit']))
+                while self._m_min < self.RangeMax:
 
                     self.calculate_characteristics_subhalo()
 
@@ -675,7 +616,7 @@ class RepopAlgorithm:
                                 highest_dict[ii][key] = np.append(
                                     highest_dict[ii][key],
                                     array[highest_indexes])
-                    m_min = m_max
+                    self._m_min = self._m_max
 
                 for ii in self.input_dict[
                     'repopulations']['things_to_save_by']:
@@ -725,19 +666,6 @@ class RepopAlgorithm:
             f.flush()
         return
 
-    '''
-    def get_sorted_parameters(self, param_name):
-        indices = self.sort_by_parameter(param_name)
-        sorted_params = {}
-        for key in self.subhalo_data:
-            sorted_params[key] = self.get_parameter(key)[indices]
-        # Also include computed parameters if needed
-        for key in self.values:
-            # values contains computed subhalo_data
-            # retrieve and sort as well
-            pass
-        return sorted_params
-    '''
     # ----------- General formulas -------------------------------------
     def R_max(self, Vmax=None, Cv=None, cosmo_H_0=None, unit=None):
         """
