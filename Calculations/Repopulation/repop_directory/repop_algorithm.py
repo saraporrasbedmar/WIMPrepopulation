@@ -68,8 +68,8 @@ class RepopAlgorithm:
         except ValueError:
             self.rng = np.random.default_rng(seed=None)
 
-        self.input_dict['repopulations']['num_subs_max'] = int(float(
-            self.input_dict['repopulations']['num_subs_max']))
+        self._num_subs_max = int(5e5)
+
         self.input_dict['repopulations']['num_brightest'] = int(
             self.input_dict['repopulations']['num_brightest'])
 
@@ -119,12 +119,11 @@ class RepopAlgorithm:
             print(self.RangeMin, self.RangeMax)
             print('    Number of repop subhalos: %i'
                   % self.SHVF_integral(self.RangeMin, self.RangeMax))
-            self.interior_full_repop()
 
-        # if full_repop:
-        #     self.interior_full_repop()
-        # else:
-        #     elf.interior_loop_singularbrightest()
+            if self.input_dict['repopulations']['save_full_repop']:
+                self.interior_full_repop()
+            else:
+                self.interior_brightest()
 
         # Save input data in a file in the outputs directory
         file_inputs = open(self.path_output + 'input_data.yml', 'w')
@@ -311,190 +310,20 @@ class RepopAlgorithm:
 
         if self.input_dict['configurations'][
                     self.configuration]['use_Roche']:
+            self.get_parameter('R_t', None)
+            self.get_parameter('R_s', None)
             self.subhalo_data['survives_Roche'] = (
                     self.get_parameter('R_t', None)
                     > self.get_parameter('R_s', None)
-            ) * u.dimensionless_unscaled
+            )
 
+        self.get_parameter('R_s', None)
         self.subhalo_data['engulfs_Earth'] = (
             self.get_parameter('R_s', None)
             > self.get_parameter('D_Earth', None)
-            ) * u.dimensionless_unscaled
+            )
 
         return
-
-    def interior_loop_brightest(self):
-        # We have 6 variables we want to save in our files,
-        # change this number if necessary
-        # (output from 'calculate_characteristics_subhalo()')
-
-        brightest_Js = np.zeros((2 * self.input_dict['repopulations']['num_brightest'], 6))
-        brightest_J03 = np.zeros((2 * self.input_dict['repopulations']['num_brightest'], 6))
-
-
-        # We calculate our subhalo population in bins to save memory
-        m_min = self.RangeMin
-
-        while m_min < self.RangeMax:
-
-            self.subhalo_data = {}
-
-            try:
-                m_max = np.min((
-                    newton(
-                        self.xx,
-                        m_min,
-                        args=[m_min, self.input_dict['repopulations']['num_subs_max']]),
-                    self.RangeMax
-                ))
-            except RuntimeError:
-                m_max = self.RangeMax
-
-            num_subhalos = self.SHVF_integral(
-                Vmax_min=m_min, Vmax_max=m_max)
-
-            print(m_min, m_max, num_subhalos)
-
-            # Montecarlo algorithm for creating the Vmax of subhalos
-            x = np.geomspace(m_min, m_max, num=2000)
-            y = self.calculate_formula(
-                x, self.input_dict['configurations'][
-                    self.configuration]['SHVF']['formula'],
-                self.input_dict['configurations'][
-                    self.configuration]['SHVF']['params']
-            )
-            cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
-            cumul /= cumul[-1]
-            x_mean = (x[1:] + x[:-1]) / 2.
-            x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
-            spline = UnivariateSpline(
-                cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
-
-            self.subhalo_data['Vmax'] = spline(self.rng.random(num_subhalos))
-
-            # Montecarlo algorithm for creating the Distgc of subhalos
-            x = np.linspace(0., self.input_dict['host']['R_vir'], num=2000)
-            y = self.calculate_formula(
-                x,
-                self.input_dict['configurations'][
-                    self.configuration]['SRD']['formula'],
-                self.input_dict['configurations'][
-                    self.configuration]['SRD']['params']
-            )
-            cumul = [simpson(y=y[:i], x=x[:i]) for i in range(1, len(x))]
-            cumul /= cumul[-1]
-            x_mean = (x[1:] + x[:-1]) / 2.
-            x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
-            spline = UnivariateSpline(
-                cumul[x_min:], x_mean[x_min:], s=0, k=1, ext=0)
-            self.subhalo_data['Distgc'] = spline(self.rng.random(num_subhalos))
-
-            self.calculate_characteristics_subhalo()
-
-            for new_sub in range(self.input_dict['repopulations']['num_brightest']):
-
-                bright_Js = np.argmax(new_data[:, 0])
-
-                while (self.R_t(new_data[bright_Js, 4],
-                           new_data[bright_Js, 6],
-                           new_data[bright_Js, 2],
-                           cosmo_H_0, cosmo_G,
-                           host_rho_0, host_r_s)
-                       < R_s(new_data[bright_Js, 4],
-                             new_data[bright_Js, 6],
-                             cosmo_H_0)) \
-                        and (new_data[bright_Js, 0] > 1.):
-                    print('broken Js')
-                    print(new_data[bright_Js, :])
-
-                    new_data[bright_Js, 0] = 0.
-                    bright_Js = np.argmax(new_data[:, 0])
-
-                brightest_Js[
-                self.input_dict['repopulations']['num_brightest'] + new_sub, :] = new_data[
-                    bright_Js, [0, 2, 3, 4, 5, 6]]
-                new_data[bright_Js, 0] = 0.
-
-            for new_sub in range(self.input_dict['repopulations']['num_brightest']):
-
-                bright_J03 = np.argmax(new_data[:, 1])
-
-                while (R_t(new_data[bright_J03, 4],
-                           new_data[bright_J03, 6],
-                           new_data[bright_J03, 2],
-                           cosmo_H_0, cosmo_G,
-                           host_rho_0, host_r_s)
-                       < R_s(new_data[bright_J03, 4],
-                             new_data[bright_J03, 6],
-                             cosmo_H_0)) \
-                        and (new_data[bright_J03, 1] > 1.):
-                    print('broken J03')
-                    print(new_data[bright_J03, :])
-
-                    new_data[bright_J03, 1] = 0.
-                    bright_J03 = np.argmax(new_data[:, 1])
-
-                brightest_J03[
-                self.input_dict['repopulations']['num_brightest'] + new_sub, :] = new_data[bright_J03,
-                                                    1:]
-                new_data[bright_J03, 1] = 0.
-
-            # if sum(new_data[:, 0]) > 1.:
-            #     for new_sub in range(self.input_dict['repopulations']['num_brightest']):
-            #
-            #         while sum(new_data[:, 0]) > 1.:
-            #
-            #             bright_Js = np.argmax(new_data[:, 0])
-            #
-            #             brightest_Js[
-            #             self.input_dict['repopulations']['num_brightest'] + new_sub, :] = new_data[
-            #                 bright_Js, [0, 2, 3, 4, 5, 6]]
-            #             new_data[bright_Js, 0] = 0.
-
-            # while (R_t(new_data[bright_Js, 4],
-            #                new_data[bright_Js, 6],
-            #                new_data[bright_Js, 2],
-            #                cosmo_H_0, cosmo_G,
-            #                host_rho_0, host_r_s)
-            #            < R_s(new_data[bright_Js, 4],
-            #                  new_data[bright_Js, 6],
-            #                  cosmo_H_0)):
-            #         print('subhalo broken (Js)')
-            # new_data[bright_Js, 0] = 0.
-            # bright_Js = np.argmax(new_data[:, 0])
-
-            # if sum(new_data[:, 1]) > 1.:
-            #     for new_sub in range(self.input_dict['repopulations']['num_brightest']):
-            #         while sum(new_data[:, 1]) > 1.:
-            #             bright_J03 = np.argmax(new_data[:, 1])
-            #
-            #             brightest_J03[
-            #             self.input_dict['repopulations']['num_brightest'] + new_sub, :] = new_data[bright_J03, 1:]
-            #             new_data[bright_J03, 1] = 0.
-
-            # while (R_t(new_data[bright_J03, 4],
-            #            new_data[bright_J03, 6],
-            #            new_data[bright_J03, 2],
-            #            cosmo_H_0, cosmo_G,
-            #            host_rho_0, host_r_s)
-            #        < R_s(new_data[bright_J03, 4],
-            #              new_data[bright_J03, 6],
-            #              cosmo_H_0)):
-            #     print('subhalo broken (J03)')
-            # new_data[bright_J03, 1] = 0.
-            # bright_J03 = np.argmax(new_data[:, 1])
-
-            # We take the brightest subhalos only
-            brightest_Js = brightest_Js[
-                           np.argsort(brightest_Js[:, 0])[::-1],
-                           :]
-            brightest_J03 = brightest_J03[
-                            np.argsort(brightest_J03[:, 0])[::-1], :]
-
-            m_min = new_mmin
-
-        return (brightest_Js[:self.input_dict['repopulations']['num_brightest'], :],
-                    brightest_J03[:self.input_dict['repopulations']['num_brightest'], :])
 
     def xx(self, mmax, mmin, root):
         return self.SHVF_integral(Vmax_min=mmin, Vmax_max=mmax) - root
@@ -600,8 +429,7 @@ class RepopAlgorithm:
                         m_max = np.min((
                             newton(
                                 self.xx, m_min,
-                                args=[m_min, self.input_dict[
-                                    'repopulations']['num_subs_max']]),
+                                args=[m_min, self._num_subs_max]),
                             self.RangeMax
                         ))
                     except RuntimeError:
@@ -663,8 +491,6 @@ class RepopAlgorithm:
 
                     self.calculate_characteristics_subhalo()
 
-                    # if self.input_dict['repopulations']['saveall']:
-
                     for key, array in self.subhalo_data.items():
                         # If dataset already exists, get it
                         if key in iter_group:
@@ -685,26 +511,221 @@ class RepopAlgorithm:
                             except AttributeError:
                                 datasets[key].attrs['units'] = ''
 
-                        # Append the new batch data to the dataset
                         dataset = datasets[key]
                         current_size = dataset.shape[0]
                         new_size = current_size + num_subhalos
                         dataset.resize((new_size,))
                         dataset[current_size:new_size] = array
-
                     m_min = m_max
             f.flush()
         return
 
-    '''
-    def sort_by_parameter(self, param_name):
-        """
-        Return indices to sort objects based on a parameter.
-        """
-        param_data = self.get_parameter(
-            param_name).value  # get raw numpy array
-        return np.argsort(param_data)
+    def interior_brightest(self):
 
+        with h5py.File(self.path_output + 'brightest_'
+                       + self.configuration + '.h5', 'a') as f:
+            input_group = f.create_group(f'inputs')
+            aaa = copy.deepcopy(self.input_dict_strings)
+            aaa['configurations'] = aaa[
+                'configurations'][self.configuration]
+            self.store_dict_as_hdf(input_group, aaa)
+
+            datasets = {}
+
+            for iter_idx in range(
+                    self.input_dict['repopulations']['its']):
+
+                if (iter_idx
+                        % self.input_dict['repopulations']['print_freq']
+                        == 0):
+                    print('    %s %s: it %d' % (
+                        time.strftime(
+                            ' %Y-%m-%d %H:%M:%S', time.gmtime()),
+                        self.configuration, iter_idx))
+                    progress = open(self.path_output + 'progress_'
+                                    + self.configuration + '.txt'
+                                    , 'a')
+                    progress.write(
+                        self.configuration
+                        + ', iteration ' + str(iter_idx))
+                    progress.write(
+                        '        %.3f  %s\n' %
+                        (memory_usage_psutil(),
+                         time.strftime(
+                             ' %Y-%m-%d %H:%M:%S', time.gmtime())))
+                    progress.close()
+
+                iter_group = f.create_group(f'iteration_{iter_idx}')
+
+                highest_dict = {}
+                for ii in self.input_dict[
+                    'repopulations']['things_to_save_by']:
+                    highest_dict[ii] = {}
+
+                # We calculate our subhalo population in bins
+                m_min = self.RangeMin
+
+                while m_min < self.RangeMax:
+
+                    self.subhalo_data = {}
+
+                    try:
+                        m_max = np.min((
+                            newton(
+                                self.xx, m_min * 1.05,
+                                args=[m_min, self._num_subs_max]),
+                            self.RangeMax
+                        ))
+                    except RuntimeError:
+                        m_max = self.RangeMax
+
+                    num_subhalos = self.SHVF_integral(
+                        Vmax_min=m_min, Vmax_max=m_max)
+
+                    print(m_min, m_max, num_subhalos)
+
+
+                    # Montecarlo algorithm for creating of subhalo Vmax
+                    x = np.geomspace(m_min, m_max, num=200)
+                    y = self.calculate_formula(
+                        x,
+                        self.input_dict['configurations'][
+                            self.configuration]['SHVF']['formula'],
+                        self.input_dict['configurations'][
+                            self.configuration]['SHVF']['params']
+                    )
+                    cumul = cumtrapz(
+                        y=y * x * np.log(10), x=np.log10(x), initial=0)
+                    cumul /= cumul[-1]
+                    spline = UnivariateSpline(
+                        cumul, x, s=0, k=1, ext=0)
+
+                    self.subhalo_data['Vmax'] = (
+                            spline(self.rng.random(num_subhalos))
+                            * u.Unit(
+                        self.input_dict['repopulations'][
+                            'columns_to_save']['Vmax']['unit']))
+
+                    # Montecarlo algorithm for creating of subhalo Distgc
+                    x = np.linspace(
+                        0.,
+                        (self.input_dict['host']['R_vir'].to(
+                            u.Unit(self.input_dict
+                                   ['repopulations']['columns_to_save']
+                                   ['Distgc']['unit']))),
+                        num=2000)
+                    y = self.calculate_formula(
+                        x,
+                        self.input_dict['configurations'][
+                            self.configuration]['SRD']['formula'],
+                        self.input_dict['configurations'][
+                            self.configuration]['SRD']['params']
+                    )
+                    cumul = cumtrapz(y=y, x=x, initial=0)
+                    cumul /= cumul[-1]
+                    x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
+                    spline = UnivariateSpline(
+                        cumul[x_min:], x[x_min:], s=0, k=1, ext=0)
+
+                    self.subhalo_data['Distgc'] = (
+                            spline(self.rng.random(num_subhalos))
+                            * u.Unit(self.input_dict
+                                   ['repopulations']['columns_to_save']
+                                   ['Distgc']['unit']))
+
+                    self.calculate_characteristics_subhalo()
+
+                    for ii in self.input_dict[
+                        'repopulations']['things_to_save_by']:
+                        data_bright = self.get_parameter(ii, None)
+
+                        if not self.input_dict[
+                        'repopulations']['allow_break_roche']:
+                            if ('survives_Roche'
+                                    not in self.subhalo_data.keys()):
+                                self.get_parameter('R_t', None)
+                                self.get_parameter('R_s', None)
+                                self.subhalo_data['survives_Roche'] = (
+                                    self.get_parameter('R_t', None)
+                                    > self.get_parameter('R_s', None)
+                                )
+                            data_bright *= self.get_parameter(
+                                'survives_Roche', None)
+
+                        if not self.input_dict[
+                            'repopulations']['allow_engulf_Earth']:
+                            self.get_parameter('engulfs_Earth', None)
+                            data_bright *= ~self.get_parameter(
+                                'engulfs_Earth', None)
+
+                        temp = np.argpartition(
+                            -data_bright,
+                            self.input_dict['repopulations'][
+                                'num_brightest']
+                        )
+                        highest_indexes = temp[:self.input_dict[
+                            'repopulations']['num_brightest']]
+
+                        for key, array in self.subhalo_data.items():
+                            if key not in highest_dict[ii].keys():
+                                highest_dict[ii][key] = (
+                                    array[highest_indexes].copy()
+                                )
+                            else:
+                                highest_dict[ii][key] = np.append(
+                                    highest_dict[ii][key],
+                                    array[highest_indexes])
+                    m_min = m_max
+
+                for ii in self.input_dict[
+                    'repopulations']['things_to_save_by']:
+
+                    highest_group = iter_group.create_group(
+                        f'highest_' + str(ii))
+
+                    if (len(highest_dict[ii][ii]) > self.input_dict[
+                        'repopulations']['num_brightest']):
+                        temp = np.argpartition(
+                            -highest_dict[ii][ii],
+                            self.input_dict['repopulations'][
+                                'num_brightest']
+                        )
+                        highest_indexes = temp[:self.input_dict[
+                            'repopulations']['num_brightest']]
+
+                        for key, array in highest_dict[ii].items():
+                            datasets[key] = (
+                                    highest_group.create_dataset(
+                                        key,
+                                        data=array[highest_indexes],
+                                        chunks=True,
+                                        compression='gzip'
+                                    ))
+                            try:
+                                datasets[key].attrs['units'] = str(
+                                    self.subhalo_data[key].unit)
+                            except AttributeError:
+                                datasets[key].attrs['units'] = ''
+
+                    else:
+                        for key, array in highest_dict[ii].items():
+                            datasets[key] = (
+                                    highest_group.create_dataset(
+                                        key,
+                                        data=array,
+                                        chunks=True,
+                                        compression='gzip'
+                                    ))
+                            try:
+                                datasets[key].attrs['units'] = str(
+                                    self.subhalo_data[key].unit)
+                            except AttributeError:
+                                datasets[key].attrs['units'] = ''
+                print(memory_usage_psutil())
+            f.flush()
+        return
+
+    '''
     def get_sorted_parameters(self, param_name):
         indices = self.sort_by_parameter(param_name)
         sorted_params = {}
@@ -737,8 +758,11 @@ class RepopAlgorithm:
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
         if unit is None:
-            unit = self.input_dict['repopulations'][
-                'columns_to_save']['R_max']['unit']
+            try:
+                unit = self.input_dict['repopulations'][
+                    'columns_to_save']['R_max']['unit']
+            except KeyError:
+                unit = 'kpc'
 
         return (Vmax / cosmo_H_0 * np.sqrt(2. / Cv)).to(u.Unit(unit))
 
@@ -762,8 +786,11 @@ class RepopAlgorithm:
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
         if unit is None:
-            unit = self.input_dict['repopulations'][
-                'columns_to_save']['R_s']['unit']
+            try:
+                unit = self.input_dict['repopulations'][
+                    'columns_to_save']['R_s']['unit']
+            except KeyError:
+                unit = 'kpc'
 
         return (self.R_max(Vmax, Cv, cosmo_H_0) / 2.163
                 ).to(u.Unit(unit))
@@ -803,8 +830,11 @@ class RepopAlgorithm:
         if host_r_s is None:
             host_r_s = self.input_dict['host']['r_s']
         if unit is None:
-            unit = self.input_dict['repopulations'][
-                'columns_to_save']['R_t']['unit']
+            try:
+                unit = self.input_dict['repopulations'][
+                    'columns_to_save']['R_t']['unit']
+            except KeyError:
+                unit = 'kpc'
 
         R_max = self.R_max(Vmax=Vmax, Cv=Cv, cosmo_H_0=cosmo_H_0)
         c200 = self.get_parameter('C200_from_Cv', None)
@@ -975,8 +1005,11 @@ class RepopAlgorithm:
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
         if unit is None:
-            unit = self.input_dict['repopulations'][
-                'columns_to_save']['J_abs_vel']['unit']
+            try:
+                unit = self.input_dict['repopulations'][
+                    'columns_to_save']['J_abs_vel']['unit']
+            except KeyError:
+                unit = 'GeV2 cm-5'
 
         yy = (2.163 ** 3. / D_Earth ** 2. / ff(2.163) ** 2
               * cosmo_H_0 / 12 / np.pi / cosmo_G ** 2
@@ -1013,8 +1046,11 @@ class RepopAlgorithm:
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
         if unit is None:
-            unit = self.input_dict['repopulations'][
-                'columns_to_save']['Js_vel']['unit']
+            try:
+                unit = self.input_dict['repopulations'][
+                    'columns_to_save']['Js_vel']['unit']
+            except KeyError:
+                unit = 'GeV2 cm-5'
 
         return 7/8. * self.J_abs_vel(
             Vmax, D_Earth, Cv,
@@ -1050,8 +1086,11 @@ class RepopAlgorithm:
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
         if unit is None:
-            unit = self.input_dict['repopulations'][
-                'columns_to_save']['J03_vel']['unit']
+            try:
+                unit = self.input_dict['repopulations'][
+                    'columns_to_save']['J03_vel']['unit']
+            except KeyError:
+                unit = 'GeV2 cm-5'
 
         return (self.J_abs_vel(
             Vmax, D_Earth, Cv, cosmo_G=cosmo_G, cosmo_H_0=cosmo_H_0,

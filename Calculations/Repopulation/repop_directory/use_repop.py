@@ -44,5 +44,5 @@ input_file['configurations']['dmo_resilient']['Cv'] = {
 
 model = RepopAlgorithm(input_file)
 model.run('../outputs/test_2026/test_' + outtime,
-          # configuration='dmo_resilient'
+          # configuration='mhd_fragile'
           )
