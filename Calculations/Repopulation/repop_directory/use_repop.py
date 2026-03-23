@@ -21,7 +21,8 @@ def save_example_with_callable(Vmax, params):
     return (0.5 * (u.km/ u.s) + 0.01 * Vmax)**params
 
 
-input_file['repopulations']['columns_to_save']['ex_with_callable'] = {
+input_file['repopulations']['params_to_save'][
+    'example_with_callable'] = {
     'formula': save_example_with_callable,
     'params': 10, 'variables': 'Vmax'}
 
@@ -47,23 +48,29 @@ def aaa(Vmax, params):
 
 model = RepopAlgorithm(input_file)
 
-from scipy.integrate import simpson, cumtrapz
+model.run('../outputs/test_2026/test_' + outtime,
+          # configuration='mhd_fragile'
+          )
 
-def xx(mmin, mmax, root):
-    mmin = max(mmin, 1e-20)
-    vmax_array = np.geomspace(mmin, mmax, num=150)
 
-    yy = 10 ** 5.78 * vmax_array ** -3.92
-    print(mmin, mmax, simpson(
-        y=yy * np.log(10) * vmax_array, x=np.log10(vmax_array)))
+### some tests ----------------------------------------
+# def xx(mmin, mmax, root):
+#     mmin = max(mmin, 1e-20)
+#     vmax_array = np.geomspace(mmin, mmax, num=150)
+#
+#     yy = 10 ** 5.78 * vmax_array ** -3.92
+#     print(mmin, mmax, simpson(
+#         y=yy * np.log(10) * vmax_array, x=np.log10(vmax_array)))
+#
+#     return (int(np.rint(simpson(
+#         y=yy * np.log(10) * vmax_array, x=np.log10(vmax_array))))
+#             - root)
+#
+# aa = newton(xx, 1., args=[120., int(2e5)])
+# print(aa)
+# print(xx(aa, 120., 0))
 
-    return (int(np.rint(simpson(
-        y=yy * np.log(10) * vmax_array, x=np.log10(vmax_array))))
-            - root)
 
-aa = newton(xx, 1., args=[120., int(2e5)])
-print(aa)
-print(xx(aa, 120., 0))
 
 
 # def SHVF_integraltraaa(Vmax_min, Vmax_max,
@@ -113,7 +120,3 @@ print(xx(aa, 120., 0))
 # print((SHVF_integraltraaa(0.1, 120.)))
 # print((SHVF_integralsimson(0.1, 120.)))
 # print((SHVF_integralquad(0.1, 120.)))
-
-model.run('../outputs/test_2026/test_' + outtime,
-          # configuration='mhd_fragile'
-          )

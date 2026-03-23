@@ -70,8 +70,10 @@ class RepopAlgorithm:
 
         self._num_subs_max = int(5e5)
 
-        self.input_dict['repopulations']['num_brightest'] = int(
-            self.input_dict['repopulations']['num_brightest'])
+        self._number_highest = int(
+            self.input_dict['repopulations']['number_highest'])
+
+        self._its = self.input_dict['repopulations']['number_iterations']
 
         self.RangeMin = self.input_dict['repopulations']['RangeMin']
         self.RangeMax = self.input_dict['repopulations']['RangeMax']
@@ -267,7 +269,7 @@ class RepopAlgorithm:
             return
 
     def calculate_characteristics_subhalo(
-            self, Vmax=None, Distgc=None, position_Earth=None):
+            self, Vmax=None, D_GC=None, position_Earth=None):
 
         self.subhalo_data = {}
 
@@ -308,18 +310,18 @@ class RepopAlgorithm:
                     spline(self.rng.random(num_subhalos))
                     * u.Unit(
                 self.input_dict['repopulations'][
-                    'columns_to_save']['Vmax']['unit']))
+                    'params_to_save']['Vmax']['unit']))
         else:
             self.subhalo_data['Vmax'] = Vmax
 
-        if Distgc is None:
-            # Montecarlo algorithm for creating of subhalo Distgc
+        if D_GC is None:
+            # Montecarlo algorithm for creating of subhalo D_GC
             x = np.linspace(
                 0. * u.kpc,
                 (self.input_dict['host']['R_vir'].to(
                     u.Unit(self.input_dict
-                           ['repopulations']['columns_to_save']
-                           ['Distgc']['unit']))),
+                           ['repopulations']['params_to_save']
+                           ['D_GC']['unit']))),
                 num=2000)
 
             if (self.input_dict['repopulations']['use_spherical_shells']
@@ -342,42 +344,45 @@ class RepopAlgorithm:
             spline = UnivariateSpline(
                 cumul[x_min:], x[x_min:], s=0, k=1, ext=1)
 
-            self.subhalo_data['Distgc'] = (
+            self.subhalo_data['D_GC'] = (
                     spline(self.rng.random(num_subhalos))
                     * u.Unit(self.input_dict
-                             ['repopulations']['columns_to_save']
-                             ['Distgc']['unit']))
+                             ['repopulations']['params_to_save']
+                             ['D_GC']['unit']))
         else:
-            self.subhalo_data['Distgc'] = Distgc
+            self.subhalo_data['D_GC'] = D_GC
 
         if position_Earth is None:
             position_Earth = self.input_dict['host']['position_Earth']
 
         # Random distribution of subhalos around the celestial sphere
-        self.subhalo_data['gal_theta'] = self.rng.uniform(
+        self.subhalo_data['galactocentric_theta'] = self.rng.uniform(
             0, 2 * np.pi, len(self.subhalo_data['Vmax'])) * u.rad
 
-        self.subhalo_data['gal_phi'] = np.arccos(
+        self.subhalo_data['galactocentric_phi'] = np.arccos(
             2 * self.rng.uniform(0, 1, len(self.subhalo_data['Vmax']))
             - 1) * u.rad
 
         # Positions of the subhalos
-        self.subhalo_data['repop_Xs'] = (
-                self.subhalo_data['Distgc']
-                * np.cos(self.subhalo_data['gal_theta'])
-                * np.sin(self.subhalo_data['gal_phi']))
-        self.subhalo_data['repop_Ys'] = (
-                self.subhalo_data['Distgc']
-                * np.sin(self.subhalo_data['gal_theta'])
-                * np.sin(self.subhalo_data['gal_phi']))
-        self.subhalo_data['repop_Zs'] = (
-                self.subhalo_data['Distgc']
-                * np.cos(self.subhalo_data['gal_phi']))
+        self.subhalo_data['galactocentric_X'] = (
+                self.subhalo_data['D_GC']
+                * np.cos(self.subhalo_data['galactocentric_theta'])
+                * np.sin(self.subhalo_data['galactocentric_phi']))
+        self.subhalo_data['galactocentric_Y'] = (
+                self.subhalo_data['D_GC']
+                * np.sin(self.subhalo_data['galactocentric_theta'])
+                * np.sin(self.subhalo_data['galactocentric_phi']))
+        self.subhalo_data['galactocentric_Z'] = (
+                self.subhalo_data['D_GC']
+                * np.cos(self.subhalo_data['galactocentric_phi']))
 
         self.subhalo_data['D_Earth'] = ((
-            self.subhalo_data['repop_Xs'] - position_Earth[0]) ** 2
-            + (self.subhalo_data['repop_Ys'] - position_Earth[1]) ** 2
-            + (self.subhalo_data['repop_Zs'] - position_Earth[2]) ** 2
+            self.subhalo_data['galactocentric_X']
+            - position_Earth[0]) ** 2
+            + (self.subhalo_data['galactocentric_Y']
+               - position_Earth[1]) ** 2
+            + (self.subhalo_data['galactocentric_Z']
+               - position_Earth[2]) ** 2
             ) ** 0.5
 
         if 'Cv' in self.input_dict[
@@ -387,10 +392,10 @@ class RepopAlgorithm:
                     self.configuration]['Cv'])
             self.get_parameter('C200_from_Cv', None)
 
-        for pn in self.input_dict['repopulations']['columns_to_save']:
+        for pn in self.input_dict['repopulations']['params_to_save']:
             self.get_parameter(
                 pn,
-                self.input_dict['repopulations']['columns_to_save'][pn])
+                self.input_dict['repopulations']['params_to_save'][pn])
 
         if self.input_dict['configurations'][
                     self.configuration]['use_Roche']:
@@ -477,12 +482,10 @@ class RepopAlgorithm:
                 'configurations'][self.configuration]
             self.store_dict_as_hdf(input_group, aaa)
 
-            for iter_idx in range(
-                    self.input_dict['repopulations']['its']):
+            for iter_idx in range(self._its):
 
-                if (iter_idx
-                        % self.input_dict['repopulations']['print_freq']
-                        == 0):
+                if (iter_idx % self.input_dict['repopulations'][
+                    'print_frequency'] == 0):
                     print('    %s %s: it %d' % (
                         time.strftime(
                             ' %Y-%m-%d %H:%M:%S', time.gmtime()),
@@ -546,12 +549,10 @@ class RepopAlgorithm:
 
             datasets = {}
 
-            for iter_idx in range(
-                    self.input_dict['repopulations']['its']):
+            for iter_idx in range(self._its):
 
-                if (iter_idx
-                        % self.input_dict['repopulations']['print_freq']
-                        == 0):
+                if (iter_idx % self.input_dict['repopulations'][
+                    'print_frequency'] == 0):
                     print('    %s %s: it %d' % (
                         time.strftime(
                             ' %Y-%m-%d %H:%M:%S', time.gmtime()),
@@ -572,7 +573,7 @@ class RepopAlgorithm:
 
                 highest_dict = {}
                 for ii in self.input_dict[
-                    'repopulations']['things_to_save_by']:
+                    'repopulations']['params_to_order_by']:
                     highest_dict[ii] = {}
 
                 # We calculate our subhalo population in bins
@@ -583,11 +584,11 @@ class RepopAlgorithm:
                     self.calculate_characteristics_subhalo()
 
                     for ii in self.input_dict[
-                        'repopulations']['things_to_save_by']:
+                        'repopulations']['params_to_order_by']:
                         data_bright = self.get_parameter(ii, None)
 
                         if not self.input_dict[
-                        'repopulations']['allow_break_roche']:
+                        'repopulations']['allow_break_Roche']:
                             if ('survives_Roche'
                                     not in self.subhalo_data.keys()):
                                 self.get_parameter('R_t', None)
@@ -606,12 +607,8 @@ class RepopAlgorithm:
                                 'engulfs_Earth', None)
 
                         temp = np.argpartition(
-                            -data_bright,
-                            self.input_dict['repopulations'][
-                                'num_brightest']
-                        )
-                        highest_indexes = temp[:self.input_dict[
-                            'repopulations']['num_brightest']]
+                            -data_bright, self._number_highest)
+                        highest_indexes = temp[:self._number_highest]
 
                         for key, array in self.subhalo_data.items():
                             if key not in highest_dict[ii].keys():
@@ -625,20 +622,15 @@ class RepopAlgorithm:
                     self._m_min = self._m_max
 
                 for ii in self.input_dict[
-                    'repopulations']['things_to_save_by']:
+                    'repopulations']['params_to_order_by']:
 
                     highest_group = iter_group.create_group(
                         f'highest_' + str(ii))
 
-                    if (len(highest_dict[ii][ii]) > self.input_dict[
-                        'repopulations']['num_brightest']):
+                    if len(highest_dict[ii][ii]) > self._number_highest:
                         temp = np.argpartition(
-                            -highest_dict[ii][ii],
-                            self.input_dict['repopulations'][
-                                'num_brightest']
-                        )
-                        highest_indexes = temp[:self.input_dict[
-                            'repopulations']['num_brightest']]
+                            -highest_dict[ii][ii], self._number_highest)
+                        highest_indexes = temp[:self._number_highest]
 
                         for key, array in highest_dict[ii].items():
                             datasets[key] = (
@@ -673,9 +665,9 @@ class RepopAlgorithm:
         return
 
     # ----------- General formulas -------------------------------------
-    def R_max(self, Vmax=None, Cv=None, cosmo_H_0=None, unit=None):
+    def Rmax(self, Vmax=None, Cv=None, cosmo_H_0=None, unit=None):
         """
-        Calculate R_max of a subhalo.
+        Calculate Rmax of a subhalo.
 
         :param V: float or array-like [km/s]
             Maximum circular velocity inside a subhalo.
@@ -683,7 +675,7 @@ class RepopAlgorithm:
             Subhalo concentration.
 
         :return: float or array-like [kpc]
-            R_max of the subhalo given by the inputs.
+            Rmax of the subhalo given by the inputs.
         """
         if Vmax is None:
             Vmax = self.get_parameter('Vmax', None)
@@ -694,7 +686,7 @@ class RepopAlgorithm:
         if unit is None:
             try:
                 unit = self.input_dict['repopulations'][
-                    'columns_to_save']['R_max']['unit']
+                    'params_to_save']['Rmax']['unit']
             except KeyError:
                 unit = 'kpc'
 
@@ -722,14 +714,14 @@ class RepopAlgorithm:
         if unit is None:
             try:
                 unit = self.input_dict['repopulations'][
-                    'columns_to_save']['R_s']['unit']
+                    'params_to_save']['R_s']['unit']
             except KeyError:
                 unit = 'kpc'
 
-        return (self.R_max(Vmax, Cv, cosmo_H_0) / 2.163
+        return (self.Rmax(Vmax, Cv, cosmo_H_0) / 2.163
                 ).to(u.Unit(unit))
 
-    def R_t(self, Vmax=None, Cv=None, Distgc=None,
+    def R_t(self, Vmax=None, Cv=None, D_GC=None,
             cosmo_H_0=None, cosmo_G=None,
             host_rho_0=None, host_r_s=None, unit=None):
         """
@@ -742,7 +734,7 @@ class RepopAlgorithm:
             Maximum circular velocity inside a subhalo.
         :param C: float or array-like
             Subhalo concentration.
-        :param Distgc: float or array-like [kpc]
+        :param D_GC: float or array-like [kpc]
             Distance from the center of the subhalo to the
             Galactic Center (GC).
 
@@ -753,8 +745,8 @@ class RepopAlgorithm:
             Vmax = self.get_parameter('Vmax', None)
         if Cv is None:
             Cv = self.get_parameter('Cv', None)
-        if Distgc is None:
-            Distgc = self.get_parameter('Distgc', None)
+        if D_GC is None:
+            D_GC = self.get_parameter('D_GC', None)
         if cosmo_H_0 is None:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
         if cosmo_G is None:
@@ -766,19 +758,19 @@ class RepopAlgorithm:
         if unit is None:
             try:
                 unit = self.input_dict['repopulations'][
-                    'columns_to_save']['R_t']['unit']
+                    'params_to_save']['R_t']['unit']
             except KeyError:
                 unit = 'kpc'
 
-        R_max = self.R_max(Vmax=Vmax, Cv=Cv, cosmo_H_0=cosmo_H_0)
+        Rmax = self.Rmax(Vmax=Vmax, Cv=Cv, cosmo_H_0=cosmo_H_0)
         c200 = self.get_parameter('C200_from_Cv', None)
-        M_subhalo = self.mass_from_Vmax(Vmax, R_max, c200, cosmo_G)
-        M_host = self.Mhost_encapsulated(Distgc, host_rho_0, host_r_s)
+        M_subhalo = self.mass_from_Vmax(Vmax, Rmax, c200, cosmo_G)
+        M_host = self.Mhost_encapsulated(D_GC, host_rho_0, host_r_s)
 
-        return (Distgc * (M_subhalo / (3 * M_host)) ** (1/3.)
+        return (D_GC * (M_subhalo / (3 * M_host)) ** (1/3.)
                 ).to(u.Unit(unit))
 
-    def Mhost_encapsulated(self, Distgc=None,
+    def Mhost_encapsulated(self, D_GC=None,
                            host_rho_0=None, host_r_s=None, unit=None):
         """
         Host mass encapsulated up to a certain radius. We are following
@@ -790,15 +782,15 @@ class RepopAlgorithm:
         :return: float or array-like [Msun]
             Host mass encapsulated up to R.
         """
-        if Distgc is None:
-            Distgc = self.get_parameter('Distgc', None)
+        if D_GC is None:
+            D_GC = self.get_parameter('D_GC', None)
         if host_rho_0 is None:
             host_rho_0 = self.input_dict['host']['rho_0']
         if host_r_s is None:
             host_r_s = self.input_dict['host']['r_s']
 
         return (4 * np.pi * host_rho_0 * host_r_s ** 3
-                * ff(Distgc / host_r_s))
+                * ff(D_GC / host_r_s))
 
     def C200_from_Cv(self, Cv=None):
         """
@@ -829,7 +821,7 @@ class RepopAlgorithm:
 
         return c200 * u.dimensionless_unscaled
 
-    def mass_from_Vmax(self, Vmax=None, R_max=None, c200=None,
+    def mass_from_Vmax(self, Vmax=None, Rmax=None, c200=None,
                        cosmo_G=None, unit=None):
         """
         Mass from a subhalo assuming a NFW profile.
@@ -837,7 +829,7 @@ class RepopAlgorithm:
 
         :param Vmax: float or array-like [km/s]
             Maximum radial velocity of a bound particle in the subhalo.
-        :param R_max: float or array-like [kpc]
+        :param Rmax: float or array-like [kpc]
             Radius at which Vmax happens (from the subhalo center).
         :param c200: float or array-like
             Concentration of the subhalo in terms of mass.
@@ -846,8 +838,8 @@ class RepopAlgorithm:
         """
         if Vmax is None:
             Vmax = self.get_parameter('Vmax', None)
-        if R_max is None:
-            R_max = self.get_parameter('R_max', None)
+        if Rmax is None:
+            Rmax = self.get_parameter('Rmax', None)
         if c200 is None:
             try:
                 self.get_parameter('c200', None)
@@ -858,7 +850,7 @@ class RepopAlgorithm:
         if cosmo_G is None:
             cosmo_G = self.input_dict['cosmo_constants']['G']
 
-        return (Vmax ** 2 * R_max / cosmo_G
+        return (Vmax ** 2 * Rmax / cosmo_G
                 * ff(c200)/ ff(2.163)).to(u.Msun)
 
     def theta_s(self, Vmax=None, Cv=None, D_Earth=None, cosmo_H_0=None,
@@ -914,8 +906,9 @@ class RepopAlgorithm:
         return yy * scatter * u.dimensionless_unscaled
 
     # ----------- J-FACTORS --------------------------------------------
-    def J_abs_vel(self, Vmax=None, D_Earth=None, Cv=None,
-                  cosmo_G=None, cosmo_H_0=None, unit=None):
+    def J_whole_fromVmax(
+            self, Vmax=None, D_Earth=None, Cv=None,
+            cosmo_G=None, cosmo_H_0=None, unit=None):
         """
         J-factor enclosing whole subhalo as a function of the
         subhalo Vmax.
@@ -945,7 +938,7 @@ class RepopAlgorithm:
         if unit is None:
             try:
                 unit = self.input_dict['repopulations'][
-                    'columns_to_save']['J_abs_vel']['unit']
+                    'params_to_save']['J_abs_vel']['unit']
             except KeyError:
                 unit = 'GeV2 cm-5'
 
@@ -956,8 +949,9 @@ class RepopAlgorithm:
         return yy.to(u.Unit(unit), equivalencies=mass_energy2)
 
 
-    def Js_vel(self, Vmax=None, D_Earth=None, Cv=None,
-               cosmo_G=None, cosmo_H_0=None, unit=None):
+    def Js_fromVmax(
+            self, Vmax=None, D_Earth=None, Cv=None,
+            cosmo_G=None, cosmo_H_0=None, unit=None):
         """
         Jfactor enclosing the subhalo up to rs as a function of Vmax.
 
@@ -986,17 +980,18 @@ class RepopAlgorithm:
         if unit is None:
             try:
                 unit = self.input_dict['repopulations'][
-                    'columns_to_save']['Js_vel']['unit']
+                    'params_to_save']['Js_vel']['unit']
             except KeyError:
                 unit = 'GeV2 cm-5'
 
-        return 7/8. * self.J_abs_vel(
+        return 7/8. * self.J_whole_fromVmax(
             Vmax, D_Earth, Cv,
             cosmo_G=cosmo_G, cosmo_H_0=cosmo_H_0, unit=unit
         ).to(u.Unit(unit), equivalencies=mass_energy2)
 
-    def J03_vel(self, Vmax=None, D_Earth=None, Cv=None,
-                cosmo_G=None, cosmo_H_0=None, unit=None):
+    def J03_fromVmax(
+            self, Vmax=None, D_Earth=None, Cv=None,
+            cosmo_G=None, cosmo_H_0=None, unit=None):
         """
         Jfactor enclosing the subhalo up to 0.3 degrees as a
         function of Vmax.
@@ -1026,16 +1021,16 @@ class RepopAlgorithm:
         if unit is None:
             try:
                 unit = self.input_dict['repopulations'][
-                    'columns_to_save']['J03_vel']['unit']
+                    'params_to_save']['J03_vel']['unit']
             except KeyError:
                 unit = 'GeV2 cm-5'
 
-        return (self.J_abs_vel(
+        return (self.J_whole_fromVmax(
             Vmax, D_Earth, Cv, cosmo_G=cosmo_G, cosmo_H_0=cosmo_H_0,
             unit=unit)
                 * (1 - 1
                    / (1 + 2.163 * D_Earth * np.tan(0.15 * np.pi / 180.)
-                      / self.R_max(Vmax, Cv, cosmo_H_0)) ** 3)
+                      / self.Rmax(Vmax, Cv, cosmo_H_0)) ** 3)
                 ).to(u.Unit(unit), equivalencies=mass_energy2)
 
     # ----------- SRD --------------------------------------------------
@@ -1097,7 +1092,7 @@ class RepopAlgorithm:
                             * np.sqrt(2. * cv_mean))).to(u.kpc))
                 M = self.mass_from_Vmax(
                     Vmax=Vmax_max * u.km / u.s,
-                    R_max=(Vmax_max * u.km / u.s / (
+                    Rmax=(Vmax_max * u.km / u.s / (
                             self.input_dict['cosmo_constants']['H_0']
                             * np.sqrt(2. * cv_mean))).to(u.kpc),
                     c200=c200).to(u.Msun)[0]
@@ -1109,6 +1104,8 @@ class RepopAlgorithm:
                 fraction = self.dist_frac(self.R_Cut(M))
                 print(fraction)
                 print()
+                # TODO: this calculations gives very small number of
+                # subhalos, I believe there is something wrong
 
         return int(np.rint(fraction * quad(
             self.calculate_formula,

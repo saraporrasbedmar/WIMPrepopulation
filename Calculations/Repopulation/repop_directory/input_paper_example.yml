@@ -25,26 +25,26 @@ host:
 
 repopulations:
   RangeMax: 120.
-  RangeMin: .49
+  RangeMin: 5.
 
-  its: 1
-  print_freq: 1
+  number_iterations: 1
+  print_frequency: 1
 
   save_full_repop: True
   use_spherical_shells: False
-  num_brightest: 5
-  allow_break_roche: False
+  number_highest: 5
+  allow_break_Roche: False
   allow_engulf_Earth: False
-  things_to_save_by:
+  params_to_order_by:
     - Vmax
-    - Distgc
+    - D_GC
 
-  rng_seed: None
+  rng_seed: null
 
-  columns_to_save:
+  params_to_save:
     Vmax:
       unit: km / s
-    Distgc:
+    D_GC:
       unit: kpc
     formula_example:
       formula: '1e17 * params[0] * Vmax'
@@ -58,13 +58,13 @@ repopulations:
       unit: kpc
     R_s:
       unit: kpc
-    R_max:
+    Rmax:
       unit: kpc
-    J03_vel:
+    J03_fromVmax:
       unit: GeV2 / cm5
-    Js_vel:
+    Js_fromVmax:
       unit: Msun2 / kpc5
-    J_abs_vel:
+    J_whole_fromVmax:
       unit: GeV2 / cm5
     theta_s:
       unit: degree
