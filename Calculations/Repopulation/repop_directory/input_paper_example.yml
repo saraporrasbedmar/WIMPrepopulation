@@ -31,15 +31,15 @@ repopulations:
   print_freq: 1
 
   save_full_repop: True
-  use_spherical_shells: True
-  num_brightest: 2
+  use_spherical_shells: False
+  num_brightest: 5
   allow_break_roche: False
   allow_engulf_Earth: False
   things_to_save_by:
     - Vmax
     - Distgc
 
-  rng_seed: 0
+  rng_seed: None
 
   columns_to_save:
     Vmax:
@@ -70,25 +70,25 @@ repopulations:
       unit: degree
 
 configurations:
-#  dmo_resilient:
-#    use_Roche: True
-#    Cv:
-#      formula: 'Cv_Mol2021_redshift0_scattered'
-#      variables: Vmax
-#      params:
-#        c0: 283862.7023
-#        sigma_scatter: 0.297659
-#    SHVF:
-#      formula: 'power_law'
-#      params:
-#        V0: 5.78
-#        slope: -3.92
-#    SRD:
-#      formula: 'srd_constant'
-#      params:
-#        args: 1.
+  dmo_resilient:
+    use_Roche: True
+    Cv:
+      formula: 'Cv_Mol2021_redshift0_scattered'
+      variables: Vmax
+      params:
+        c0: 283862.7023
+        sigma_scatter: 0.297659
+    SHVF:
+      formula: 'power_law'
+      params:
+        V0: 5.78
+        slope: -3.92
+    SRD:
+      formula: 'srd_constant'
+      params:
+        args: 1.
 
-#  TODO: Cv falla con  '3e5 + Vmax.value'
+#  TODO: Cv fails with '3e5 + Vmax.value'
 
   dmo_fragile:
     use_Roche: True
