@@ -10,7 +10,7 @@ import numpy as np
 
 from scipy.optimize import newton
 from scipy.interpolate import UnivariateSpline
-from scipy.integrate import simpson, cumtrapz
+from scipy.integrate import cumulative_simpson, quad
 
 from astropy import units as u
 from astropy import constants as c
@@ -120,8 +120,9 @@ class RepopAlgorithm:
             print()
             print(self.configuration)
             print(self.RangeMin, self.RangeMax)
-            print('    Number of repop subhalos: %i'
-                  % self.SHVF_integral(self.RangeMin, self.RangeMax))
+            print('    Max number of repop subhalos: %i'
+                  % self.SHVF_integral(
+                self.RangeMin, self.RangeMax, force_no_fraction=True))
 
             if self.input_dict['repopulations']['save_full_repop']:
                 self.interior_full_repop()
@@ -274,20 +275,21 @@ class RepopAlgorithm:
             try:
                 self._m_max = np.min((
                     newton(
-                        self.xx, self._m_min,
+                        self.xx, self._m_min * 1.05,
                         args=[self._m_min, self._num_subs_max]),
                     self.RangeMax
                 ))
-            except RuntimeError:
+            except:
                 self._m_max = self.RangeMax
 
             num_subhalos = self.SHVF_integral(
-                Vmax_min=self._m_min, Vmax_max=self._m_max)
+                Vmax_min=self._m_min, Vmax_max=self._m_max,
+                force_no_fraction=False)
 
             print(self._m_min, self._m_max, num_subhalos)
 
             # Montecarlo algorithm for creating of subhalo Vmax
-            x = np.geomspace(self._m_min, self._m_max, num=200)
+            x = np.geomspace(self._m_min, self._m_max, num=2000)
             y = self.calculate_formula(
                 x,
                 self.input_dict['configurations'][
@@ -295,11 +297,12 @@ class RepopAlgorithm:
                 self.input_dict['configurations'][
                     self.configuration]['SHVF']['params']
             )
-            cumul = cumtrapz(
+
+            cumul = cumulative_simpson(
                 y=y * x * np.log(10), x=np.log10(x), initial=0)
             cumul /= cumul[-1]
             spline = UnivariateSpline(
-                cumul, x, s=0, k=1, ext=0)
+                cumul, x, s=0, k=1, ext=1)
 
             self.subhalo_data['Vmax'] = (
                     spline(self.rng.random(num_subhalos))
@@ -312,12 +315,19 @@ class RepopAlgorithm:
         if Distgc is None:
             # Montecarlo algorithm for creating of subhalo Distgc
             x = np.linspace(
-                0.,
+                0. * u.kpc,
                 (self.input_dict['host']['R_vir'].to(
                     u.Unit(self.input_dict
                            ['repopulations']['columns_to_save']
                            ['Distgc']['unit']))),
                 num=2000)
+
+            if (self.input_dict['repopulations']['use_spherical_shells']
+                    and self._Rcut < 8.5):
+                x = np.linspace(
+                    8.5 - self._Rcut, 8.5 + self._Rcut,
+                    num=3000)
+
             y = self.calculate_formula(
                 x,
                 self.input_dict['configurations'][
@@ -325,11 +335,12 @@ class RepopAlgorithm:
                 self.input_dict['configurations'][
                     self.configuration]['SRD']['params']
             )
-            cumul = cumtrapz(y=y, x=x, initial=0)
+
+            cumul = cumulative_simpson(y=y, x=x, initial=0)
             cumul /= cumul[-1]
             x_min = ((np.array(cumul) - 1e-8) < 0).argmin() - 1
             spline = UnivariateSpline(
-                cumul[x_min:], x[x_min:], s=0, k=1, ext=0)
+                cumul[x_min:], x[x_min:], s=0, k=1, ext=1)
 
             self.subhalo_data['Distgc'] = (
                     spline(self.rng.random(num_subhalos))
@@ -399,7 +410,9 @@ class RepopAlgorithm:
         return
 
     def xx(self, mmax, mmin, root):
-        return self.SHVF_integral(Vmax_min=mmin, Vmax_max=mmax) - root
+        return (self.SHVF_integral(
+            Vmax_min=np.max((mmin, 1e-20)),
+            Vmax_max=mmax, force_no_fraction=True) - root)
 
     def store_dict_as_hdf(self, group, d):
 
@@ -464,8 +477,6 @@ class RepopAlgorithm:
                 'configurations'][self.configuration]
             self.store_dict_as_hdf(input_group, aaa)
 
-            datasets = {}
-
             for iter_idx in range(
                     self.input_dict['repopulations']['its']):
 
@@ -477,8 +488,7 @@ class RepopAlgorithm:
                             ' %Y-%m-%d %H:%M:%S', time.gmtime()),
                         self.configuration, iter_idx))
                     progress = open(self.path_output + 'progress_'
-                                    + self.configuration + '.txt'
-                                    , 'a')
+                                    + self.configuration + '.txt', 'a')
                     progress.write(
                         self.configuration
                         + ', iteration ' + str(iter_idx))
@@ -490,6 +500,7 @@ class RepopAlgorithm:
                     progress.close()
 
                 iter_group = f.create_group(f'iteration_{iter_idx}')
+                datasets = {}
 
                 # We calculate our subhalo population in bins
                 self._m_min = self.RangeMin
@@ -499,11 +510,7 @@ class RepopAlgorithm:
                     self.calculate_characteristics_subhalo()
 
                     for key, array in self.subhalo_data.items():
-                        # If dataset already exists, get it
-                        if key in iter_group:
-                            datasets = iter_group[key]
-                        else:
-                            # Create dataset for new key
+                        if key not in iter_group.keys():
                             datasets[key] = iter_group.create_dataset(
                                 key,
                                 shape=(0,),
@@ -550,8 +557,7 @@ class RepopAlgorithm:
                             ' %Y-%m-%d %H:%M:%S', time.gmtime()),
                         self.configuration, iter_idx))
                     progress = open(self.path_output + 'progress_'
-                                    + self.configuration + '.txt'
-                                    , 'a')
+                                    + self.configuration + '.txt', 'a')
                     progress.write(
                         self.configuration
                         + ', iteration ' + str(iter_idx))
@@ -853,7 +859,7 @@ class RepopAlgorithm:
             cosmo_G = self.input_dict['cosmo_constants']['G']
 
         return (Vmax ** 2 * R_max / cosmo_G
-                * ff(c200)/ ff(2.163))
+                * ff(c200)/ ff(2.163)).to(u.Msun)
 
     def theta_s(self, Vmax=None, Cv=None, D_Earth=None, cosmo_H_0=None,
                 unit='degree'):
@@ -895,11 +901,15 @@ class RepopAlgorithm:
             Vmax = self.get_parameter('Vmax', None)
         ci = [c0, c1, c2, c3]
         Vmax = (Vmax * u.s / u.km).to(1)
-        yy = ci[0] * (1 + (sum([ci[i + 1] * np.log10(Vmax) ** (i + 1)
-                                for i in range(3)])))
 
-        scatter = 10 ** self.rng.normal(
-            loc=0, scale=sigma_scatter, size=len(Vmax))
+        yy = ci[0] * (1 + (sum([ci[i + 1] * np.log10(Vmax/10.) ** (i + 1)
+                                for i in range(3)])))
+        try:
+            scatter = 10 ** self.rng.normal(
+                loc=0, scale=sigma_scatter, size=len(Vmax))
+        except TypeError:
+            scatter = 10 ** self.rng.normal(
+                loc=0, scale=sigma_scatter, size=1)
 
         return yy * scatter * u.dimensionless_unscaled
 
@@ -1033,7 +1043,11 @@ class RepopAlgorithm:
         return args * np.ones_like(xx)
 
     def srd_exponential(self, xx, exp_fit, last_subhalo):
-        xx = xx.to(u.kpc).value
+
+        try:
+            xx = xx.to(u.kpc).value
+        except AttributeError:
+            xx = xx
         last_subhalo = (
                 last_subhalo['value']
                 * u.Unit(last_subhalo['unit']).to(u.kpc))
@@ -1057,7 +1071,8 @@ class RepopAlgorithm:
         return 10 ** V0 * Vmax ** slope
 
     def SHVF_integral(self, Vmax_min, Vmax_max,
-                      formula=None, params=None):
+                      formula=None, params=None,
+                      force_no_fraction=None):
         if formula is None:
             formula = self.input_dict['configurations'][
                 self.configuration]['SHVF']['formula']
@@ -1065,10 +1080,93 @@ class RepopAlgorithm:
             params = self.input_dict['configurations'][
                 self.configuration]['SHVF']['params']
 
-        vmax_array = np.geomspace(Vmax_min, Vmax_max, num=150)
+        fraction = 1.
+        if not force_no_fraction:
+            if self.input_dict['repopulations']['use_spherical_shells']:
+                cv_mean = self.calculate_formula(
+                    Vmax_max * u.km / u.s,
+                    self.input_dict['configurations'][
+                        self.configuration]['Cv']['formula'],
+                    {'c0': self.input_dict['configurations'][
+                        self.configuration]['Cv']['params']['c0'],
+                     'sigma_scatter': 0.}
+                )
+                c200 = self.C200_from_Cv(cv_mean)
+                print((Vmax_max * u.km / u.s / (
+                            self.input_dict['cosmo_constants']['H_0']
+                            * np.sqrt(2. * cv_mean))).to(u.kpc))
+                M = self.mass_from_Vmax(
+                    Vmax=Vmax_max * u.km / u.s,
+                    R_max=(Vmax_max * u.km / u.s / (
+                            self.input_dict['cosmo_constants']['H_0']
+                            * np.sqrt(2. * cv_mean))).to(u.kpc),
+                    c200=c200).to(u.Msun)[0]
+                print(cv_mean)
+                print(c200)
+                print(M)
+                self._Rcut = self.R_Cut(M)
+                print(self.R_Cut(M))
+                fraction = self.dist_frac(self.R_Cut(M))
+                print(fraction)
+                print()
 
-        yy = self.calculate_formula(
-            vmax_array, formula=formula, params=params)
+        return int(np.rint(fraction * quad(
+            self.calculate_formula,
+            a=Vmax_min, b=Vmax_max,
+            args=(formula, params))[0]))
 
-        return int(np.rint(simpson(
-            y=yy * np.log(10) * vmax_array, x=np.log10(vmax_array))))
+    # fraction of subhalos in this distance range
+    def dist_frac(self, Rcut, formula=None, params=None):
+        if formula is None:
+            formula = self.input_dict['configurations'][
+                self.configuration]['SRD']['formula']
+        if params is None:
+            params = self.input_dict['configurations'][
+                self.configuration]['SRD']['params']
+
+        R_vir = self.input_dict['host']['R_vir'].value
+
+        if Rcut < 8.5:
+            return (quad(
+                self.calculate_formula, a=8.5 - Rcut, b=8.5 + Rcut,
+                args=(formula, params))[0]
+                    / quad(
+                self.calculate_formula, a=0., b=R_vir,
+                args=(formula, params))[0])
+        else:
+            return 1.
+        # elif Rcut + 8.5 >= R_vir:
+        #     return 1
+        # else:
+        #     return (quad(
+        #         self.calculate_formula, a=0., b=8.5 + Rcut,
+        #         args=(formula, params))[0]
+        #             / quad(
+        #         self.calculate_formula, a=0., b=R_vir,
+        #         args=(formula, params))[0])
+
+    # max radial dist. from earth at which subhalo of mass M might be observed
+    def R_Cut(self, M, D_D=80., M_D=2.e8, C_D_corr=19,
+              **kwargs):
+        # NOTE: fraction of luminosity of Draco used as
+
+        # cutoff is R = .1, i.e. 10%
+        C = self.C_200(M, 0.1, **kwargs)  # este 0.1 es la distancia a la que
+        print(C, 'interior')
+        # estaría el
+        # subhalo, 0.1 kpc,
+        # del centro de la galaxia. Es muy pequeña, lo cual nos da una C
+        # mayor (subhalos cerca del centro están más concentrados)
+        # y por tanto un R_Cut mayor, con lo que repoblamos una región más
+        # grande (es decir, estamos siendo conservadoras en sentido
+        # de no dejarnos posibles subhalos relevantes sin simular)
+        return ((M * (D_D)**2 * C**3 * ff(C_D_corr)**2
+                / (M_D * 0.1 * ff(C)**2 * C_D_corr**3))**.5).value
+
+    def C_200(self, M, x, ci=[19.9, -0.195, 0.089, 0.089, -0.54]):
+        return (ci[0]
+                * (1 + sum([(ci[i + 1] * np.log10(M.value * 0.677 / 10 ** 8)
+                             ) ** (i + 1)
+                            for i in range(3)]))
+                * (1 + ci[4] * np.log10(
+                    x / self.input_dict['host']['R_vir'].value)))

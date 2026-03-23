@@ -24,13 +24,14 @@ host:
     unit: kpc
 
 repopulations:
-  RangeMax: 120.0
-  RangeMin: 2.
+  RangeMax: 120.
+  RangeMin: .49
 
-  its: 2
+  its: 1
   print_freq: 1
 
   save_full_repop: True
+  use_spherical_shells: True
   num_brightest: 2
   allow_break_roche: False
   allow_engulf_Earth: False
@@ -69,41 +70,25 @@ repopulations:
       unit: degree
 
 configurations:
-  dmo_resilient:
-    use_Roche: True
-    Cv:
-      formula: '3e5 + Vmax.value'
-      variables: Vmax
-      params:
-        c0: 283862.7023
-        sigma_scatter: 0.297659
-    SHVF:
-      formula: 'power_law'
-      params:
-        V0: 5.78
-        slope: -3.92
-    SRD:
-      formula: 'srd_constant'
-      params:
-        args: 1.
+#  dmo_resilient:
+#    use_Roche: True
+#    Cv:
+#      formula: 'Cv_Mol2021_redshift0_scattered'
+#      variables: Vmax
+#      params:
+#        c0: 283862.7023
+#        sigma_scatter: 0.297659
+#    SHVF:
+#      formula: 'power_law'
+#      params:
+#        V0: 5.78
+#        slope: -3.92
+#    SRD:
+#      formula: 'srd_constant'
+#      params:
+#        args: 1.
 
-  dmo_resilient2:
-    use_Roche: False
-    Cv:
-      formula: '3e5 + Vmax.value'
-      variables: Vmax
-      params:
-        c0: 283862.7023
-        sigma_scatter: 0.297659
-    SHVF:
-      formula: 'power_law'
-      params:
-        V0: 5.78
-        slope: -3.92
-    SRD:
-      formula: 'srd_constant'
-      params:
-        args: 1.
+#  TODO: Cv falla con  '3e5 + Vmax.value'
 
   dmo_fragile:
     use_Roche: True
@@ -145,25 +130,25 @@ configurations:
       params:
         args: 1.
 
-  mhd_fragile:
-    use_Roche: True
-    Cv:
-      formula: 'Cv_Mol2021_redshift0_scattered'
-      params:
-        c0: 192879.057
-        sigma_scatter: 0.374942
-    SHVF:
-      formula: 'power_law'
-      params:
-        V0: 5.3
-        slope: -4.08
-    SRD:
-      formula: 'srd_exponential'
-      params:
-        exp_fit:
-          - -0.16
-          - 37.1
-          - 220.0
-        last_subhalo:
-          value: 15.71
-          unit: kpc
+#  mhd_fragile:
+#    use_Roche: True
+#    Cv:
+#      formula: 'Cv_Mol2021_redshift0_scattered'
+#      params:
+#        c0: 192879.057
+#        sigma_scatter: 0.374942
+#    SHVF:
+#      formula: 'power_law'
+#      params:
+#        V0: 5.3
+#        slope: -4.08
+#    SRD:
+#      formula: 'srd_exponential'
+#      params:
+#        exp_fit:
+#          - -0.16
+#          - 37.1
+#          - 220.0
+#        last_subhalo:
+#          value: 15.71
+#          unit: kpc
