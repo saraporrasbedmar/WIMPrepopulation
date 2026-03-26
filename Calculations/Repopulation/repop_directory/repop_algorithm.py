@@ -68,7 +68,9 @@ class RepopAlgorithm:
         except ValueError:
             self.rng = np.random.default_rng(seed=None)
 
-        self._num_subs_max = int(5e5)
+        self._num_subs_max = np.max((
+            int(5e5),
+            self.input_dict['repopulations']['number_highest'] + 1))
 
         self._number_highest = int(
             self.input_dict['repopulations']['number_highest'])
