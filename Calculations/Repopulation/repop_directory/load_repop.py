@@ -8,8 +8,6 @@ import matplotlib.patches as mpatches
 from scipy.optimize import curve_fit
 
 
-import repop_algorithmfunctions as algorithm_old
-
 all_size = 26
 plt.rcParams['mathtext.fontset'] = 'stix'
 plt.rcParams['font.family'] = 'STIXGeneral'
@@ -48,14 +46,14 @@ def read_config_file(ConfigFile):
 
 input_directory = '../outputs/test_2026/test_2026-03-21 00:17:40/'
 
-# data_dmo_frg = h5py.File(
-#     input_directory + 'fullrepop_dmo_fragile.h5', 'r')
+data_dmo_frg = h5py.File(
+    input_directory + 'fullrepop_dmo_fragile.h5', 'r')
 data_dmo_res = h5py.File(
     input_directory + 'fullrepop_dmo_resilient.h5', 'r')
-# data_mhd_frg = h5py.File(
-#     input_directory + 'fullrepop_mhd_fragile.h5', 'r')
-# data_mhd_res = h5py.File(
-#     input_directory + 'fullrepop_mhd_resilient.h5', 'r')
+data_mhd_frg = h5py.File(
+    input_directory + 'fullrepop_mhd_fragile.h5', 'r')
+data_mhd_res = h5py.File(
+    input_directory + 'fullrepop_mhd_resilient.h5', 'r')
 
 input_data = read_config_file(
     input_directory + 'input_data.yml')
@@ -64,7 +62,7 @@ input_data = read_config_file(
 memory_usage_psutil()
 
 # ------ SHVF ----------------------------------------------------------
-'''
+
 x_cumul = np.geomspace(input_data['repopulations']['RangeMin'],
                        input_data['repopulations']['RangeMax'],
                        num=26)
@@ -373,72 +371,6 @@ ax.add_artist(legend22)
 
 plt.xlabel(r'D$_\mathrm{GC} \, / \, R_\mathrm{vir}$ ', size=24)
 plt.ylabel(r'Number of subhalos', size=24)
-'''
-
-# -- Check the code is consistent with the previous version ------------
-
-kwargs = {
-'cosmo_G': 4.297e-06,
-'cosmo_H_0': 67.7,
-'cosmo_rho_crit': 135.73,
-
-'host_R_vir': 220,
-'host_r_s': 20.0,
-'host_rho_0': 9.04e6
-}
-
-data = data_dmo_res['iteration_0']
-
-Cv = algorithm_old.Cv_Mol2021_redshift0(V=data['Vmax'][:])
-
-print('\nCv')
-print(data['Cv'][:]/algorithm_old.Cv_Mol2021_redshift0(
-    V=data['Vmax'][:],
-    **kwargs))
-
-print('\nC200')
-print(data['C200_from_Cv'][:]
-      /algorithm_old.C200_from_Cv_array(Cv))
-
-print('\nR_t')
-print(data['R_t'][:]/algorithm_old.R_t(
-    V=data['Vmax'][:], C=Cv, DistGC=data['Distgc'][:],
-    **kwargs))
-
-print('\nR_s')
-print(data['R_s'][:]/algorithm_old.R_s(
-    V=data['Vmax'][:], C=Cv,
-    **kwargs
-))
-
-print('\nJ_s')
-print(data['Js_vel'][:]/algorithm_old.Js_vel(
-    V=data['Vmax'][:], D_earth=data['D_Earth'][:], C=Cv,
-    change_units=False,
-    **kwargs
-))
-
-print('\nJ_03')
-print(data['J03_vel'][:]/algorithm_old.J03_vel(
-    V=data['Vmax'][:], D_earth=data['D_Earth'][:], C=Cv,
-    **kwargs
-))
-
-
-print('\nR_max')
-print(data['R_max'][:]/algorithm_old.R_max(
-    V=data['Vmax'][:], C=Cv,
-    **kwargs
-))
-
-print('\nJ_max')
-print(data['J_abs_vel'][:]/algorithm_old.J_abs_vel(
-    V=data['Vmax'][:], D_earth=data['D_Earth'][:], C=Cv,
-    change_units=True,
-    **kwargs
-))
-
-
 
 
 plt.show()
