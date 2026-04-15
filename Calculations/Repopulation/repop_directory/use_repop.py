@@ -4,6 +4,7 @@ import time
 import numpy as np
 from astropy import units as u
 from astropy import constants as c
+import matplotlib.pyplot as lt
 
 from scipy.optimize import newton
 from scipy.integrate import simpson, cumulative_trapezoid, quad, trapezoid
@@ -11,7 +12,7 @@ from scipy.integrate import simpson, cumulative_trapezoid, quad, trapezoid
 from repop_algorithm import RepopAlgorithm, read_config_file
 
 
-input_file = read_config_file('input_paper_example.yml')
+input_file = read_config_file('input_paper_ale.yml')
 
 
 outtime = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
@@ -45,7 +46,67 @@ def aaa(Vmax, params):
 #     'formula': aaa, 'params': 12, 'variables': 'Vmax'}
 
 
+
+def rho_VL(Distgc, Vmax): # no entiendo nada de lo que pasa, que es lo de arriba?
+
+    if Vmax >= 0: # 2023-04-03
+         a = 0.8220569767611305
+         b = 8.410128564347877
+         r0 = 1036.2376643526568
+    return (Distgc/(r0))**a*np.exp(-b*(Distgc - r0)/r0) #cosmic
+
+
+input_file['configurations']['dmo_fragile']['SRD'] = {
+    'formula': rho_VL, 'variables': ['Distgc', 'Vmax'], 'params': 12 }
+
+raaange = [0.5, 0.6, 0.72, 0.864, 1.0368, 1.24416, 1.4929919999999999,
+           1.7915903999999998, 2.1499084799999997, 2.5798901759999997,
+           3.0958682111999996, 3.7150418534399994, 4.]
+
 model = RepopAlgorithm(input_file)
+model.configuration = 'dmo_fragile'
+
+lt.figure()
+xx = np.geomspace(0.1, 10) * u.km / u.s
+yy = 8226.1 * xx ** 3.72
+lt.plot(xx, yy)
+
+cv_mean = model.calculate_formula(
+    xx,
+    model.input_dict['configurations'][
+        model.configuration]['Cv']['formula'],
+    {'c0': model.input_dict['configurations'][
+        model.configuration]['Cv']['params']['c0'],
+     'sigma_scatter': 0.}
+)
+c200 = model.C200_from_Cv(cv_mean)
+# print((Vmax_max * u.km / u.s / (
+#             self.input_dict['cosmo_constants']['H_0']
+#             * np.sqrt(2. * cv_mean))).to(u.kpc))
+R_max=(xx / (
+            model.input_dict['cosmo_constants']['H_0']
+            * np.sqrt(2. * cv_mean))).to(u.kpc)
+def ff(c):
+    return np.log(1. + c) - c / (1. + c)
+
+M = (xx ** 2 * R_max / (4.297e-06 * u.Unit('kpc * km2 / (Msun * s2)'))
+                * ff(c200)/ ff(2.163)).to(u.Msun)
+
+lt.loglog(xx, M)
+lt.xscale('log')
+
+lt.show()
+
+for i in range(len(raaange) - 1):
+    print(raaange[i], raaange[i + 1])
+
+    print(model.SHVF_integral(
+        Vmax_min=raaange[i],
+        Vmax_max=raaange[i + 1],
+        force_no_fraction=False
+    ))
+    print()
+
 
 from scipy.integrate import simpson, cumtrapz
 
@@ -61,9 +122,9 @@ def xx(mmin, mmax, root):
         y=yy * np.log(10) * vmax_array, x=np.log10(vmax_array))))
             - root)
 
-aa = newton(xx, 1., args=[120., int(2e5)])
-print(aa)
-print(xx(aa, 120., 0))
+# aa = newton(xx, 1., args=[120., int(2e5)])
+# print(aa)
+# print(xx(aa, 120., 0))
 
 
 # def SHVF_integraltraaa(Vmax_min, Vmax_max,
@@ -114,6 +175,6 @@ print(xx(aa, 120., 0))
 # print((SHVF_integralsimson(0.1, 120.)))
 # print((SHVF_integralquad(0.1, 120.)))
 
-model.run('../outputs/test_2026/test_' + outtime,
-          # configuration='mhd_fragile'
-          )
+# model.run('../outputs/test_2026/test_' + outtime,
+#           # configuration='mhd_fragile'
+#           )

@@ -1092,30 +1092,51 @@ class RepopAlgorithm:
                      'sigma_scatter': 0.}
                 )
                 c200 = self.C200_from_Cv(cv_mean)
-                print((Vmax_max * u.km / u.s / (
-                            self.input_dict['cosmo_constants']['H_0']
-                            * np.sqrt(2. * cv_mean))).to(u.kpc))
+                # print((Vmax_max * u.km / u.s / (
+                #             self.input_dict['cosmo_constants']['H_0']
+                #             * np.sqrt(2. * cv_mean))).to(u.kpc))
                 M = self.mass_from_Vmax(
                     Vmax=Vmax_max * u.km / u.s,
                     R_max=(Vmax_max * u.km / u.s / (
                             self.input_dict['cosmo_constants']['H_0']
                             * np.sqrt(2. * cv_mean))).to(u.kpc),
                     c200=c200).to(u.Msun)[0]
-                print(cv_mean)
-                print(c200)
-                print(M)
-                self._Rcut = self.R_Cut(M)
-                print(self.R_Cut(M))
-                fraction = self.dist_frac(self.R_Cut(M))
-                print(fraction)
-                print()
+                print(c200, M)
 
+                # print(cv_mean)
+                # print(c200)
+                # print(M)
+                self._Rcut = self.R_Cut(Vmax_max)
+                print(self.R_Cut(Vmax_max))
+                fraction = self.dist_frac(self.R_Cut(Vmax_max))
+                print(fraction)
+                # print()
+
+        print(quad(
+            self.calculate_formula,
+            a=Vmax_min, b=Vmax_max,
+            args=(formula, params))[0])
         return int(np.rint(fraction * quad(
             self.calculate_formula,
             a=Vmax_min, b=Vmax_max,
             args=(formula, params))[0]))
 
     # fraction of subhalos in this distance range
+    def exp_num_sh(V1, V2, Rcut, dist_cut=True):
+        if dist_cut:
+            print('     dist frac:', dist_frac(Rcut))  # temp
+            # return math.floor(dist_frac(Rcut)*C1*(1./M1 - 1./M2))
+            return math.floor(dist_frac(Rcut) * C1 / (alpha - 1) * (
+                        1. / V1 ** (alpha - 1) - 1. / V2 ** (
+                            alpha - 1)))  # NUEVO
+        #    return math.floor(dist_frac(Rcut)* Klp*((M1)**(-alphalp-betalp*np.log(M1))-Klp*(M2)**(-alphalp-betalp*np.log(M2)) )) #NUEVO LogPar
+        else:
+            print('     WARNING: no detectability distance cut applied')
+            # return math.floor(C1*(1./M1 - 1./M2))
+            return math.floor(C1 / (alpha - 1) * (
+                        1. / V1 ** (alpha - 1) - 1. / V2 ** (
+                            alpha - 1)))  # NUEVO
+
     def dist_frac(self, Rcut, formula=None, params=None):
         if formula is None:
             formula = self.input_dict['configurations'][
@@ -1133,8 +1154,17 @@ class RepopAlgorithm:
                     / quad(
                 self.calculate_formula, a=0., b=R_vir,
                 args=(formula, params))[0])
-        else:
+        elif Rcut + 8.5 >= R_vir:
             return 1.
+        else:
+            return (quad(
+                self.calculate_formula, a=0., b=8.5 + Rcut,
+                args=(formula, params))[0]
+                    / quad(
+                self.calculate_formula, a=0., b=R_vir,
+                args=(formula, params))[0])
+            #intg(8.5 + Rcut) / intg(R_vir)
+
         # elif Rcut + 8.5 >= R_vir:
         #     return 1
         # else:
@@ -1149,10 +1179,20 @@ class RepopAlgorithm:
     def R_Cut(self, M, D_D=80., M_D=2.e8, C_D_corr=19,
               **kwargs):
         # NOTE: fraction of luminosity of Draco used as
+        M = 8226.1 * M ** 3.72
+        print(M)
 
         # cutoff is R = .1, i.e. 10%
-        C = self.C_200(M, 0.1, **kwargs)  # este 0.1 es la distancia a la que
-        print(C, 'interior')
+        # C = self.C_200(M, 0.1, **kwargs)  # este 0.1 es la distancia a la que
+        def C_200(M, x, ci=[19.9, -0.195, 0.089, 0.089, -0.54]):
+            return ci[0] * (1 + (
+                sum([(ci[i + 1] * np.log10(M * 0.7 / 10 ** 8)) ** (i + 1) for i
+                     in range(3)]))) * (1 + ci[4] * np.log10(x / 402.))
+
+        C = C_200(M, 1, **kwargs)  # TODO: try with boost and/or upper scatter
+
+        C_D_corr = C_200(M_D, D_D)
+        print(C_D_corr, C)
         # estaría el
         # subhalo, 0.1 kpc,
         # del centro de la galaxia. Es muy pequeña, lo cual nos da una C
@@ -1161,12 +1201,14 @@ class RepopAlgorithm:
         # grande (es decir, estamos siendo conservadoras en sentido
         # de no dejarnos posibles subhalos relevantes sin simular)
         return ((M * (D_D)**2 * C**3 * ff(C_D_corr)**2
-                / (M_D * 0.1 * ff(C)**2 * C_D_corr**3))**.5).value
+                / (M_D * 0.1 * C_D_corr**3 * ff(C)**2))**.5)#.value
 
-    def C_200(self, M, x, ci=[19.9, -0.195, 0.089, 0.089, -0.54]):
-        return (ci[0]
-                * (1 + sum([(ci[i + 1] * np.log10(M.value * 0.677 / 10 ** 8)
-                             ) ** (i + 1)
-                            for i in range(3)]))
-                * (1 + ci[4] * np.log10(
-                    x / self.input_dict['host']['R_vir'].value)))
+
+
+    # def C_200(self, M, x, ci=[19.9, -0.195, 0.089, 0.089, -0.54]):
+    #     return (ci[0]
+    #             * (1 + sum([(ci[i + 1] * np.log10(M.value * 0.677 / 10 ** 8)
+    #                          ) ** (i + 1)
+    #                         for i in range(3)]))
+    #             * (1 + ci[4] * np.log10(
+    #                 x / self.input_dict['host']['R_vir'].value)))
