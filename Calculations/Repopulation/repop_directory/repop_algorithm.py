@@ -75,6 +75,14 @@ class RepopAlgorithm:
 
         self._its = self.input_dict['repopulations']['number_iterations']
 
+        try:
+            self._prntfrq = int(
+                self.input_dict['repopulations']['print_frequency'])
+            if self._prntfrq <= 0:
+                self._prntfrq = None
+        except ValueError:
+            self._prntfrq = None
+
         self.RangeMin = self.input_dict['repopulations']['RangeMin']
         self.RangeMax = self.input_dict['repopulations']['RangeMax']
 
@@ -354,7 +362,7 @@ class RepopAlgorithm:
 
         if position_Earth is None:
             position_Earth = self.input_dict['host']['position_Earth']
-
+        '''
         # Random distribution of subhalos around the celestial sphere
         self.subhalo_data['galactocentric_theta'] = self.rng.uniform(
             0, 2 * np.pi, len(self.subhalo_data['Vmax'])) * u.rad
@@ -411,7 +419,7 @@ class RepopAlgorithm:
             self.get_parameter('R_s', None)
             > self.get_parameter('D_Earth', None)
             )
-
+        '''
         return
 
     def xx(self, mmax, mmin, root):
@@ -484,8 +492,7 @@ class RepopAlgorithm:
 
             for iter_idx in range(self._its):
 
-                if (iter_idx % self.input_dict['repopulations'][
-                    'print_frequency'] == 0):
+                if iter_idx % self._prntfrq == 0:
                     print('    %s %s: it %d' % (
                         time.strftime(
                             ' %Y-%m-%d %H:%M:%S', time.gmtime()),
@@ -551,8 +558,7 @@ class RepopAlgorithm:
 
             for iter_idx in range(self._its):
 
-                if (iter_idx % self.input_dict['repopulations'][
-                    'print_frequency'] == 0):
+                if iter_idx % self._prntfrq == 0:
                     print('    %s %s: it %d' % (
                         time.strftime(
                             ' %Y-%m-%d %H:%M:%S', time.gmtime()),
