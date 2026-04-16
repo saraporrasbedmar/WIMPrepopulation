@@ -31,7 +31,7 @@ repopulations:
   print_frequency: 1
 
   save_full_repop: True
-  use_spherical_shells: False
+  use_spherical_shells: True
   number_highest: 5
   allow_break_Roche: False
   allow_engulf_Earth: False
@@ -70,6 +70,28 @@ repopulations:
       unit: degree
 
 configurations:
+  dmo_ale:
+    use_Roche: True
+    Cv:
+      formula: 'Cv_Mol2021_redshift0_scattered'
+      params:
+        c0: 283862.7023
+        sigma_scatter: 0.297659
+    SHVF:
+      formula: 'power_law'
+      params:
+        V0: 5.8963127240825415
+        slope: -3.97
+    SRD:
+      formula: 'srd_exponential'
+      params:
+        exp_fit:
+          - -0.151
+          - 39.3
+          - 220.0
+        last_subhalo:
+          value: 5.57
+          unit: kpc
   dmo_resilient:
     use_Roche: True
     Cv:
@@ -110,7 +132,7 @@ configurations:
           - 39.3
           - 220.0
         last_subhalo:
-          value: 5.57
+          value: 15.57
           unit: kpc
 
   mhd_resilient:
