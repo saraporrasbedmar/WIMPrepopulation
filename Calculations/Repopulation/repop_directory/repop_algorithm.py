@@ -127,12 +127,20 @@ class RepopAlgorithm:
 
         for ii in config_list:
             self.configuration = ii
+            aa = self.SHVF_integral(
+                self.RangeMin, self.RangeMax, force_no_fraction=True)
             print()
             print(self.configuration)
             print(self.RangeMin, self.RangeMax)
-            print('    Max number of repop subhalos: %i'
-                  % self.SHVF_integral(
-                self.RangeMin, self.RangeMax, force_no_fraction=True))
+            print('    Max number of repop subhalos: %i' % aa)
+
+            if self._number_highest > aa:
+                print(
+                    'Warning: number of requested subhalos to save is\n'
+                    'higher than the total subhalos that are created.\n'
+                    'Therefore, all subhalos will be saved.\n'
+                    'Change this parameter if needed in:\n'
+                    "input_dict['repopulations']['number_highest']")
 
             if self.input_dict['repopulations']['save_full_repop']:
                 self.interior_full_repop()
@@ -292,11 +300,11 @@ class RepopAlgorithm:
             except:
                 self._m_max = self.RangeMax
 
-            num_subhalos = self.SHVF_integral(
+            self._num_subhalos = self.SHVF_integral(
                 Vmax_min=self._m_min, Vmax_max=self._m_max,
                 force_no_fraction=False)
 
-            print(self._m_min, self._m_max, num_subhalos)
+            print(self._m_min, self._m_max, self._num_subhalos)
 
             # Montecarlo algorithm for creating of subhalo Vmax
             x = np.geomspace(self._m_min, self._m_max, num=2000)
@@ -315,7 +323,7 @@ class RepopAlgorithm:
                 cumul, x, s=0, k=1, ext=1)
 
             self.subhalo_data['Vmax'] = (
-                    spline(self.rng.random(num_subhalos))
+                    spline(self.rng.random(self._num_subhalos))
                     * u.Unit(
                 self.input_dict['repopulations'][
                     'params_to_save']['Vmax']['unit']))
@@ -353,7 +361,7 @@ class RepopAlgorithm:
                 cumul[x_min:], x[x_min:], s=0, k=1, ext=1)
 
             self.subhalo_data['D_GC'] = (
-                    spline(self.rng.random(num_subhalos))
+                    spline(self.rng.random(self._num_subhalos))
                     * u.Unit(self.input_dict
                              ['repopulations']['params_to_save']
                              ['D_GC']['unit']))
@@ -612,19 +620,31 @@ class RepopAlgorithm:
                             data_bright *= ~self.get_parameter(
                                 'engulfs_Earth', None)
 
-                        temp = np.argpartition(
-                            -data_bright, self._number_highest)
-                        highest_indexes = temp[:self._number_highest]
+                        if self._number_highest < self._num_subhalos:
+                            temp = np.argpartition(
+                                -data_bright, self._number_highest)
+                            highest_indexes = temp[:self._number_highest]
 
-                        for key, array in self.subhalo_data.items():
-                            if key not in highest_dict[ii].keys():
-                                highest_dict[ii][key] = (
-                                    array[highest_indexes].copy()
-                                )
-                            else:
-                                highest_dict[ii][key] = np.append(
-                                    highest_dict[ii][key],
-                                    array[highest_indexes])
+                            for key, array in self.subhalo_data.items():
+                                if key not in highest_dict[ii].keys():
+                                    highest_dict[ii][key] = (
+                                        array[highest_indexes].copy()
+                                    )
+                                else:
+                                    highest_dict[ii][key] = np.append(
+                                        highest_dict[ii][key],
+                                        array[highest_indexes])
+                        else:
+
+                            for key, array in self.subhalo_data.items():
+                                if key not in highest_dict[ii].keys():
+                                    highest_dict[ii][key] = (
+                                        array.copy()
+                                    )
+                                else:
+                                    highest_dict[ii][key] = np.append(
+                                        highest_dict[ii][key], array)
+
                     self._m_min = self._m_max
 
                 for ii in self.input_dict[
