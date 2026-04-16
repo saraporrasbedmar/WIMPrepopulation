@@ -40,10 +40,6 @@ mass_energy2 = [
 ]
 
 
-def ff(c):
-    return np.log(1. + c) - c / (1. + c)
-
-
 class RepopAlgorithm:
     def __init__(self, path_input):
 
@@ -201,8 +197,8 @@ class RepopAlgorithm:
                 aa = eval(formula, {}, bb)
             except Exception as e:
                 raise ValueError(
-                    f'Error evaluating formula' + formula
-                    + f'with parameters {bb}: {e}')
+                    f'Error evaluating formula ' + formula
+                    + f' with parameters {bb}: {e}')
             return aa
 
         elif callable(formula):
@@ -261,9 +257,9 @@ class RepopAlgorithm:
                 aa = eval(parametrization['formula'], {}, bb)
             except Exception as e:
                 raise ValueError(
-                    f'Error evaluating formula'
+                    f'Error evaluating formula '
                     + parametrization['formula']
-                    + f'with parameters {bb}: {e}')
+                    + f' with parameters {bb}: {e}')
 
             self.subhalo_data[name] = aa
             return
@@ -370,7 +366,7 @@ class RepopAlgorithm:
 
         if position_Earth is None:
             position_Earth = self.input_dict['host']['position_Earth']
-        '''
+
         # Random distribution of subhalos around the celestial sphere
         self.subhalo_data['galactocentric_theta'] = self.rng.uniform(
             0, 2 * np.pi, len(self.subhalo_data['Vmax'])) * u.rad
@@ -406,28 +402,28 @@ class RepopAlgorithm:
             self.get_parameter('Cv',
                 parametrization=self.input_dict['configurations'][
                     self.configuration]['Cv'])
-            self.get_parameter('C200_from_Cv', None)
+            # self.get_parameter('C200_from_Cv', None)
 
         for pn in self.input_dict['repopulations']['params_to_save']:
             self.get_parameter(
                 pn,
                 self.input_dict['repopulations']['params_to_save'][pn])
 
-        if self.input_dict['configurations'][
-                    self.configuration]['use_Roche']:
-            self.get_parameter('R_t', None)
-            self.get_parameter('R_s', None)
-            self.subhalo_data['survives_Roche'] = (
-                    self.get_parameter('R_t', None)
-                    > self.get_parameter('R_s', None)
-            )
+        # if self.input_dict['configurations'][
+        #             self.configuration]['use_Roche']:
+        #     self.get_parameter('R_t', None)
+        #     self.get_parameter('R_s', None)
+        #     self.subhalo_data['survives_Roche'] = (
+        #             self.get_parameter('R_t', None)
+        #             > self.get_parameter('R_s', None)
+        #     )
 
         self.get_parameter('R_s', None)
         self.subhalo_data['engulfs_Earth'] = (
             self.get_parameter('R_s', None)
             > self.get_parameter('D_Earth', None)
             )
-        '''
+
         return
 
     def xx(self, mmax, mmin, root):
@@ -686,7 +682,7 @@ class RepopAlgorithm:
                                     self.subhalo_data[key].unit)
                             except AttributeError:
                                 datasets[key].attrs['units'] = ''
-                print(memory_usage_psutil())
+                print('Memory in use: %.1f MB' % memory_usage_psutil())
             f.flush()
         return
 
@@ -816,7 +812,7 @@ class RepopAlgorithm:
             host_r_s = self.input_dict['host']['r_s']
 
         return (4 * np.pi * host_rho_0 * host_r_s ** 3
-                * ff(D_GC / host_r_s))
+                * self.ff(D_GC / host_r_s))
 
     def C200_from_Cv(self, Cv=None):
         """
@@ -836,8 +832,8 @@ class RepopAlgorithm:
             Cv = self.get_parameter('Cv', None)
 
         def int_interior(c200i, Cvi):
-            return (200 * ff(2.163)
-                    / ff(c200i) * (c200i / 2.163) ** 3 - Cvi)
+            return (200 * self.ff(2.163)
+                    / self.ff(c200i) * (c200i / 2.163) ** 3 - Cvi)
 
         if type(Cv) == float:
             c200 = newton(int_interior, x0=40.0, args=[Cv])
@@ -877,7 +873,7 @@ class RepopAlgorithm:
             cosmo_G = self.input_dict['cosmo_constants']['G']
 
         return (Vmax ** 2 * Rmax / cosmo_G
-                * ff(c200)/ ff(2.163)).to(u.Msun)
+                * self.ff(c200)/ self.ff(2.163)).to(u.Msun)
 
     def theta_s(self, Vmax=None, Cv=None, D_Earth=None, cosmo_H_0=None,
                 unit='degree'):
@@ -968,7 +964,7 @@ class RepopAlgorithm:
             except KeyError:
                 unit = 'GeV2 cm-5'
 
-        yy = (2.163 ** 3. / D_Earth ** 2. / ff(2.163) ** 2
+        yy = (2.163 ** 3. / D_Earth ** 2. / self.ff(2.163) ** 2
               * cosmo_H_0 / 12 / np.pi / cosmo_G ** 2
               * np.sqrt(Cv / 2) * Vmax ** 3)
 
@@ -1059,6 +1055,49 @@ class RepopAlgorithm:
                       / self.Rmax(Vmax, Cv, cosmo_H_0)) ** 3)
                 ).to(u.Unit(unit), equivalencies=mass_energy2)
 
+
+    # ------- Internal density profile ---------------------------------
+
+    def ff(self, x, density_profile=None):
+        if density_profile is None:
+            density_profile = self.input_dict['configurations'][
+                self.configuration]['internal_density_profile']
+        print(density_profile)
+        print(self.configuration)
+
+        if density_profile == 'NFW':
+            return np.log(1. + x) - x / (1. + x)
+
+        elif density_profile == 'Burkert':
+            return (0.25 * np.log(1. + x**2.)
+                    + 0.5 * np.log(1 + x)
+                    - 0.5 * np.arctan(x))
+
+        else:
+            try:
+                formula = density_profile['formula']
+                params = density_profile['params']
+
+                int_total = np.zeros_like(x)
+
+                if isinstance(x, float) or isinstance(x, int):
+                    int_total = quad(
+                        self.calculate_formula, a=0., b=x,
+                        args=(formula, params))[0]
+
+                elif isinstance(params, list):
+                    for ni, xi in enumerate(x):
+                        int_total[ni] = quad(
+                            self.calculate_formula, a=0., b=xi,
+                            args=(formula, params))[0]
+
+                return int_total
+
+            except Exception as e:
+                raise ValueError(
+                    f'Error evaluating formula ' + formula
+                    + f' with parameters {params}: {e}')
+
     # ----------- SRD --------------------------------------------------
     def srd_constant(self, xx, args):
         return args * np.ones_like(xx)
@@ -1133,7 +1172,7 @@ class RepopAlgorithm:
                 print(fraction)
                 # print()
 
-        print(quad(
+        print('total number subh', quad(
             self.calculate_formula,
             a=Vmax_min, b=Vmax_max,
             args=(formula, params))[0])
@@ -1174,7 +1213,7 @@ class RepopAlgorithm:
               **kwargs):
         # NOTE: fraction of luminosity of Draco used as
         M = 8226.1 * M ** 3.72
-        print(M)
+        print('mass from Vmax', M)
 
         # cutoff is R = .1, i.e. 10%
         # C = self.C_200(M, 0.1, **kwargs)  # este 0.1 es la distancia a la que
@@ -1186,7 +1225,7 @@ class RepopAlgorithm:
         C = C_200(M, 1, **kwargs)  # TODO: try with boost and/or upper scatter
 
         C_D_corr = C_200(M_D, D_D)
-        print(C_D_corr, C)
+        print('C_D_corr, C', C_D_corr, C)
         # estaría el
         # subhalo, 0.1 kpc,
         # del centro de la galaxia. Es muy pequeña, lo cual nos da una C
@@ -1194,8 +1233,8 @@ class RepopAlgorithm:
         # y por tanto un R_Cut mayor, con lo que repoblamos una región más
         # grande (es decir, estamos siendo conservadoras en sentido
         # de no dejarnos posibles subhalos relevantes sin simular)
-        return ((M * (D_D)**2 * C**3 * ff(C_D_corr)**2
-                / (M_D * 0.1 * C_D_corr**3 * ff(C)**2))**.5)#.value
+        return ((M * (D_D)**2 * C**3 * self.ff(C_D_corr)**2
+                / (M_D * 0.1 * C_D_corr**3 * self.ff(C)**2))**.5)#.value
 
 
 

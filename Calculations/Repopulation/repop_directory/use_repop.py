@@ -68,7 +68,29 @@ raaange = [0.5, 0.6, 0.72, 0.864, 1.0368, 1.24416, 1.4929919999999999,
            3.0958682111999996, 3.7150418534399994, 4., 400.]
 
 model = RepopAlgorithm(input_file)
-model.configuration = 'dmo_fragile'
+model.run('../outputs/test_2026/test_' + outtime,
+          configuration='dmo_fragile'
+          )
+model.configuration = 'dmo_ale'
+
+print(model.ff(20, density_profile='NFW'))
+print(model.ff(5, density_profile='Burkert'))
+
+xx = np.linspace(0, 50, num=200)
+aa = np.zeros_like(xx)
+bb = np.zeros_like(xx)
+
+for ni, ii in enumerate(xx):
+    aa[ni] = model.ff(ii, density_profile='NFW')
+    bb[ni] = model.ff(ii, density_profile='Burkert')
+
+plt.figure()
+plt.plot(xx, aa)
+plt.plot(xx, bb)
+plt.plot(xx, xx * 0.05)
+plt.show()
+print(model.ff(20, density_profile='NFW'))
+print(model.ff(5, density_profile='Burkert'))
 
 plt.figure()
 xx = np.geomspace(0.1, 10) * u.km / u.s
