@@ -27,7 +27,7 @@ repopulations:
   RangeMax: 120.
   RangeMin: 35.
 
-  number_iterations: 5
+  number_iterations: 2
   print_frequency: 1
 
   save_full_repop: False
@@ -116,8 +116,8 @@ configurations:
 
   dmo_fragile:
     internal_density_profile: #'NFW'
-      formula: '1. - xx / (1. + xx) + params'
-      params: 0.05
+      formula: 'xx / (1. + xx) / params'
+      params: 20.
     use_Roche: True
     Cv:
       formula: 'Cv_Mol2021_redshift0_scattered'

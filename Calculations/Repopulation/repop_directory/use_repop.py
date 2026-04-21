@@ -46,56 +46,18 @@ def aaa(Vmax, params):
 #     'formula': aaa, 'params': 12, 'variables': 'Vmax'}
 
 
-
-def rho_VL(D_GC):
-
-    a = 0.8220569767611305
-    b = 8.410128564347877
-    try:
-        r0 = 1036.2376643526568 * u.kpc
-        return (D_GC/r0)**a*np.exp(-b*(D_GC - r0)/r0) #cosmic
-    except:
-        r0 = 1036.2376643526568
-        return (D_GC/r0)**a*np.exp(-b*(D_GC - r0)/r0) #cosmic
-
-
-input_file['configurations']['dmo_ale']['SRD'] = {
-    'formula': rho_VL, 'variables': ['D_GC'],
-    'params': None }
-
-raaange = [0.5, 0.6, 0.72, 0.864, 1.0368, 1.24416, 1.4929919999999999,
-           1.7915903999999998, 2.1499084799999997, 2.5798901759999997,
-           3.0958682111999996, 3.7150418534399994, 4., 400.]
-
 model = RepopAlgorithm(input_file)
 model.run('../outputs/test_2026/test_' + outtime,
           configuration='dmo_fragile'
           )
-model.configuration = 'dmo_ale'
 
-print(model.ff(20, density_profile='NFW'))
-print(model.ff(5, density_profile='Burkert'))
-
-xx = np.linspace(0, 50, num=200)
-aa = np.zeros_like(xx)
-bb = np.zeros_like(xx)
-
-for ni, ii in enumerate(xx):
-    aa[ni] = model.ff(ii, density_profile='NFW')
-    bb[ni] = model.ff(ii, density_profile='Burkert')
-
-plt.figure()
-plt.plot(xx, aa)
-plt.plot(xx, bb)
-plt.plot(xx, xx * 0.05)
-plt.show()
-print(model.ff(20, density_profile='NFW'))
-print(model.ff(5, density_profile='Burkert'))
 
 plt.figure()
 xx = np.geomspace(0.1, 10) * u.km / u.s
 yy = 8226.1 * xx ** 3.72
-plt.plot(xx, yy)
+plt.loglog(xx, yy)
+
+print(model.configuration)
 
 cv_mean = model.calculate_formula(
     xx,
@@ -105,7 +67,8 @@ cv_mean = model.calculate_formula(
         model.configuration]['Cv']['params']['c0'],
      'sigma_scatter': 0.}
 )
-c200 = model.C200_from_Cv(cv_mean)
+print(cv_mean[0])
+# c200 = model.C200_from_Cv(cv_mean)
 # print((Vmax_max * u.km / u.s / (
 #             self.input_dict['cosmo_constants']['H_0']
 #             * np.sqrt(2. * cv_mean))).to(u.kpc))
@@ -115,26 +78,12 @@ R_max=(xx / (
 def ff(c):
     return np.log(1. + c) - c / (1. + c)
 
-M = (xx ** 2 * R_max / (4.297e-06 * u.Unit('kpc * km2 / (Msun * s2)'))
-                * ff(c200)/ ff(2.163)).to(u.Msun)
+# M = (xx ** 2 * R_max / (4.297e-06 * u.Unit('kpc * km2 / (Msun * s2)'))
+#                 * ff(c200)/ ff(2.163)).to(u.Msun)
 
-plt.loglog(xx, M)
+# plt.loglog(xx, M)
 plt.xscale('log')
 
-# plt.show()
-
-for i in range(len(raaange) - 1):
-    print(raaange[i], raaange[i + 1])
-
-    print(model.SHVF_integral(
-        Vmax_min=raaange[i],
-        Vmax_max=raaange[i + 1],
-        force_no_fraction=False
-    ))
-    print()
-model.run('../outputs/test_2026/test_' + outtime,
-          configuration='dmo_fragile'
-          )
 plt.show()
 
 from scipy.integrate import simpson, cumtrapz

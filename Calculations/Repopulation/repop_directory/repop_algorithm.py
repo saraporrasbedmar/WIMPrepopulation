@@ -831,9 +831,14 @@ class RepopAlgorithm:
         if Cv is None:
             Cv = self.get_parameter('Cv', None)
 
+        # def int_interior(c200i, Cvi):
+        #     return (200 * self.ff(2.163)
+        #             / self.ff(c200i) * (c200i / 2.163) ** 3 - Cvi)
+
         def int_interior(c200i, Cvi):
-            return (200 * self.ff(2.163)
-                    / self.ff(c200i) * (c200i / 2.163) ** 3 - Cvi)
+            return (200 *  (c200i) ** 3
+                    self.ff(2.163)
+                    / self.ff(c200i) * ( / 2.163) ** 3 - Cvi)
 
         if isinstance(Cv, float):
             c200 = newton(int_interior, x0=40.0, args=[Cv])
