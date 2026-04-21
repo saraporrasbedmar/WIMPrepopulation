@@ -46,7 +46,7 @@ class RepopAlgorithm:
         self.path_output = None
         self.configuration = None
 
-        if type(path_input) == str:
+        if isinstance(path_input, str):
             self.input_dict = read_config_file(path_input)
         else:
             self.input_dict = path_input
@@ -835,7 +835,7 @@ class RepopAlgorithm:
             return (200 * self.ff(2.163)
                     / self.ff(c200i) * (c200i / 2.163) ** 3 - Cvi)
 
-        if type(Cv) == float:
+        if isinstance(Cv, float):
             c200 = newton(int_interior, x0=40.0, args=[Cv])
         else:
             c200 = np.array([newton(int_interior, x0=40.0, args=[i])
@@ -1057,13 +1057,13 @@ class RepopAlgorithm:
 
 
     # ------- Internal density profile ---------------------------------
-
     def ff(self, x, density_profile=None):
         if density_profile is None:
             density_profile = self.input_dict['configurations'][
                 self.configuration]['internal_density_profile']
-        print(density_profile)
-        print(self.configuration)
+
+        if isinstance(x, list):
+            x = np.array(x)
 
         if density_profile == 'NFW':
             return np.log(1. + x) - x / (1. + x)
@@ -1076,19 +1076,77 @@ class RepopAlgorithm:
         else:
             try:
                 formula = density_profile['formula']
-                params = density_profile['params']
+                try:
+                    params = density_profile['params']
+                except KeyError:
+                    params = []
 
                 int_total = np.zeros_like(x)
 
+                def integrand(x_prime):
+                    rho_x = self.calculate_formula(
+                        x_prime, formula, params)
+                    return x_prime ** 2 * rho_x
+
                 if isinstance(x, float) or isinstance(x, int):
                     int_total = quad(
-                        self.calculate_formula, a=0., b=x,
-                        args=(formula, params))[0]
+                        lambda x_prime: integrand(x_prime),
+                        a=0., b=x)[0]
 
                 elif isinstance(params, list):
                     for ni, xi in enumerate(x):
                         int_total[ni] = quad(
-                            self.calculate_formula, a=0., b=xi,
+                            lambda x_prime: integrand(x_prime),
+                            a=0., b=xi,
+                            args=(formula, params))[0]
+
+                return int_total
+
+            except Exception as e:
+                raise ValueError(
+                    f'Error evaluating formula ' + formula
+                    + f' with parameters {params}: {e}')
+
+    def fff(self, x, density_profile=None):
+        if density_profile is None:
+            density_profile = self.input_dict['configurations'][
+                self.configuration]['internal_density_profile']
+
+        if isinstance(x, list):
+            x = np.array(x)
+
+        if density_profile == 'NFW':
+            return (1 - 1 / (1 + x) ** 3.) / 3.
+
+        elif density_profile == 'Burkert':
+            return 0.25 * (2. - 1 / (1 + x)
+                           - 1 / (1 + x ** 2) - np.arctan(x))
+
+        else:
+            try:
+                formula = density_profile['formula']
+                try:
+                    params = density_profile['params']
+                except KeyError:
+                    params = []
+
+                int_total = np.zeros_like(x)
+
+                def integrand(x_prime):
+                    rho_x = self.calculate_formula(
+                        x_prime, formula, params)
+                    return x_prime ** 2 * rho_x ** 2
+
+                if isinstance(x, float) or isinstance(x, int):
+                    int_total = quad(
+                        lambda x_prime: integrand(x_prime),
+                        a=0., b=x)[0]
+
+                elif isinstance(params, list):
+                    for ni, xi in enumerate(x):
+                        int_total[ni] = quad(
+                            lambda x_prime: integrand(x_prime),
+                            a=0., b=xi,
                             args=(formula, params))[0]
 
                 return int_total
