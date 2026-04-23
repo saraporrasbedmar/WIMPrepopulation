@@ -13,8 +13,6 @@ from repop_algorithm import RepopAlgorithm, read_config_file
 
 
 input_file = read_config_file('input_paper_example.yml')
-
-
 outtime = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
 
@@ -47,9 +45,64 @@ def aaa(Vmax, params):
 
 
 model = RepopAlgorithm(input_file)
-model.run('../outputs/test_2026/test_' + outtime,
-          configuration='dmo_fragile'
-          )
+
+def functionfff(r):
+    aa = model.M_encapsulated(
+        radius=r*u.kpc,
+        rho_0=model.input_dict['host']['rho_0'],
+        r_s=model.input_dict['host']['r_s'],
+        density_profile=model.input_dict['host']['density_profile'])
+    return ((aa/(4./3.*np.pi*(r*u.kpc)**3.)
+       ).to(u.Unit('Msun / kpc3')).value - 200*135.73)
+
+
+rvir = newton(functionfff, x0=235)
+mass = model.M_encapsulated(
+        radius=rvir*u.kpc,
+        rho_0=model.input_dict['host']['rho_0'],
+        r_s=model.input_dict['host']['r_s'],
+        density_profile=model.input_dict['host']['density_profile'])
+print('rvir', rvir)
+print('mass', mass)
+# print(aa)
+# print((aa/(4./3.*np.pi*model.input_dict['host']['R_vir']**3.)
+#        ).to(u.Unit('Msun / kpc3')))
+
+print(model.J_general(
+            D_Earth=200 * u.kpc,
+            density_profile='NFW',
+            calculate_from='mass_Cdelta', integrate_up_to=0.03,
+            Mass=mass, Cdelta=rvir*u.kpc/model.input_dict['host']['r_s'],
+            ))
+
+print(model.J_general(
+            D_Earth=200 * u.kpc,
+            density_profile='NFW',
+            calculate_from='rho0_rS', integrate_up_to=0.03,
+            rho_0=model.input_dict['host']['rho_0'],
+            r_s=model.input_dict['host']['r_s'],
+            ))
+rmax = 2.16257584237*model.input_dict['host']['r_s']
+Vmax=np.sqrt(model.M_encapsulated(
+        radius=rmax,
+        rho_0=model.input_dict['host']['rho_0'],
+        r_s=model.input_dict['host']['r_s'],
+        density_profile=model.input_dict['host']['density_profile'])
+             * model.input_dict['cosmo_constants']['G']/rmax)
+cv = (2. * (Vmax/rmax/model.input_dict['cosmo_constants']['H_0'])**2.).to(1)
+print(Vmax, cv)
+print(model.J_general(
+            D_Earth=200 * u.kpc,
+            density_profile='NFW',
+            calculate_from='Vmax_Cv', integrate_up_to=0.03,
+    Vmax=Vmax,
+    Cv=cv
+            ))
+
+
+# model.run('../outputs/test_2026/test_' + outtime,
+#           configuration='dmo_fragile'
+#           )
 model.configuration = 'dmo_fragile'
 
 

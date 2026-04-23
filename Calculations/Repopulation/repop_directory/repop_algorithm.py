@@ -947,9 +947,9 @@ class RepopAlgorithm:
 
     # ----------- J-FACTORS --------------------------------------------
     def J_general(
-            self, radius_normalized=None, D_Earth=None,
+            self, D_Earth=None,
             density_profile=None,
-            calculate_from=None, unit=None,
+            calculate_from=None, integrate_up_to=None, unit=None,
             Vmax=None, Cv=None, cosmo_G=None, cosmo_H_0=None,
             Mass=None, Cdelta=None, rho_crit=None,
             rho_0=None, r_s=None
@@ -973,20 +973,36 @@ class RepopAlgorithm:
         if calculate_from is None:
             calculate_from = self.input_dict['repopulations'][
                     'params_to_save']['J_abs_vel']['calculate_from']
+        if integrate_up_to is None:
+            integrate_up_to = self.input_dict['repopulations'][
+                    'params_to_save']['J_abs_vel']['integrate_up_to']
         if D_Earth is None:
             D_Earth = self.get_parameter('D_Earth')
         if density_profile is None:
             density_profile = self.input_dict['configurations'][
                 self.configuration]['internal_density_profile']
 
-        if radius_normalized is None:
-            # TODO fix this ;)
+        if integrate_up_to == 'R_s':
             radius_normalized = 1.
 
-        yy = self.fff(radius_normalized, density_profile) / D_Earth**2.
-        print(self.ff(radius_normalized))
+        elif integrate_up_to == 'whole':
+            # TODO fix this ;)
+            radius_normalized = 1000.
 
-        if calculate_from == 'Vmax_Rmax':
+        elif isinstance(integrate_up_to, float):
+            radius_normalized = (
+                    D_Earth * np.tan(integrate_up_to * np.pi / 180.))
+
+        else:
+            raise ValueError(
+                f'Error at initializing the integration bounds of'
+                f' the Jfactor, with value {integrate_up_to}.'
+                  'Allowed values are: R_s, whole,'
+                  ' and a float that represents the angular extension.')
+
+        yy = 1. / D_Earth**2.
+
+        if calculate_from == 'Vmax_Cv':
             if Vmax is None:
                 Vmax = self.get_parameter('Vmax')
             if Cv is None:
@@ -999,6 +1015,10 @@ class RepopAlgorithm:
             Rmax_over_rs = self.RmaxoverrS(density_profile)
             print(Rmax_over_rs)
 
+            if isinstance(integrate_up_to, float):
+                radius_normalized *= (
+                        Rmax_over_rs / self.Rmax(Vmax, Cv, cosmo_H_0))
+
             yy *= (cosmo_H_0 / 4. / np.pi / cosmo_G ** 2
                    * np.sqrt(Cv / 2) * Vmax ** 3
                    * Rmax_over_rs**3.
@@ -1010,6 +1030,9 @@ class RepopAlgorithm:
             if r_s is None:
                 r_s = self.get_parameter('r_s')
 
+            if isinstance(integrate_up_to, float):
+                radius_normalized /= r_s
+
             yy *= 4. * np.pi * rho_0**2. * r_s**3.
 
         elif calculate_from == 'mass_Cdelta':
@@ -1020,14 +1043,23 @@ class RepopAlgorithm:
             if rho_crit is None:
                 rho_crit = self.input_dict['cosmo_constants']['rho_crit']
 
+            if isinstance(integrate_up_to, float):
+                Rvir = (3. * Mass / (800. * np.pi * rho_crit))**(1/3.)
+                radius_normalized /= (Rvir / Cdelta)
+                print(Rvir, (Rvir / Cdelta))
+
             yy *= (200 / 3. * rho_crit * Mass * Cdelta**3.
                    / self.ff(Cdelta, density_profile)**2.)
 
         else:
             raise ValueError(
-                f'Error at inicializing the way to calculate the Jfactor.'
+                f'Error at initializing the way to calculate the Jfactor.'
                 + f' with value {calculate_from}.'
                   'Allowed values are: mass_Cdelta, Vmax_Rmax, and rho0_rS')
+
+        if isinstance(radius_normalized, u.Quantity):
+            radius_normalized = radius_normalized.to(1).value
+        yy *= self.fff(radius_normalized, density_profile)
 
         if unit is None:
             try:
