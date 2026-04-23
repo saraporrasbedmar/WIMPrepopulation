@@ -99,10 +99,9 @@ print(model.J_general(
     Cv=cv
             ))
 
-
-# model.run('../outputs/test_2026/test_' + outtime,
-#           configuration='dmo_fragile'
-#           )
+model.run('../outputs/test_2026/test_' + outtime,
+          configuration='dmo_fragile'
+          )
 model.configuration = 'dmo_fragile'
 
 

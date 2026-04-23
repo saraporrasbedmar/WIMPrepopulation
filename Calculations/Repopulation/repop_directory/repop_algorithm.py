@@ -31,7 +31,7 @@ def read_config_file(ConfigFile):
             print(exc)
     return parsed_yaml
 
-
+# TODO: la conversion no funciona si tienes cualquier otra cosa ie no con Msun
 mass_energy2 = [
     (u.si.kg**2, u.si.J**2.,
      lambda x: (x * c.c.value**4), lambda x: (x / c.c.value**4)),
@@ -230,8 +230,11 @@ class RepopAlgorithm:
 
             if hasattr(self, formula):
                 if isinstance(parametrization, dict):
-                    self.subhalo_data[name] = getattr(self, formula)(
-                        **parametrization['params'])
+                    try:
+                        self.subhalo_data[name] = getattr(self, formula)(
+                            **parametrization['params'])
+                    except KeyError:
+                        self.subhalo_data[name] = getattr(self, formula)()
                     return self.subhalo_data[name]
                 self.subhalo_data[name] = getattr(self, formula)()
                 return self.subhalo_data[name]
@@ -404,6 +407,8 @@ class RepopAlgorithm:
             # self.get_parameter('C200_from_Cv', None)
 
         for pn in self.input_dict['repopulations']['params_to_save']:
+            self._current_param_to_save = pn
+            print(pn)
             self.get_parameter(
                 pn,
                 self.input_dict['repopulations']['params_to_save'][pn])
@@ -972,10 +977,12 @@ class RepopAlgorithm:
         """
         if calculate_from is None:
             calculate_from = self.input_dict['repopulations'][
-                    'params_to_save']['J_abs_vel']['calculate_from']
+                    'params_to_save'][self._current_param_to_save][
+                    'calculate_from']
         if integrate_up_to is None:
             integrate_up_to = self.input_dict['repopulations'][
-                    'params_to_save']['J_abs_vel']['integrate_up_to']
+                    'params_to_save'][self._current_param_to_save][
+                'integrate_up_to']
         if D_Earth is None:
             D_Earth = self.get_parameter('D_Earth')
         if density_profile is None:
@@ -1064,8 +1071,9 @@ class RepopAlgorithm:
         if unit is None:
             try:
                 unit = self.input_dict['repopulations'][
-                    'params_to_save']['J_abs_vel']['unit']
-            except KeyError:
+                    'params_to_save'][self._current_param_to_save][
+                    'unit']
+            except (KeyError, AttributeError):
                 unit = 'GeV2 cm-5'
 
         return yy.to(u.Unit(unit), equivalencies=mass_energy2)
@@ -1102,7 +1110,8 @@ class RepopAlgorithm:
         if unit is None:
             try:
                 unit = self.input_dict['repopulations'][
-                    'params_to_save']['J_abs_vel']['unit']
+                    'params_to_save'][self._current_param_to_save][
+                    'unit']
             except KeyError:
                 unit = 'GeV2 cm-5'
 
@@ -1145,7 +1154,7 @@ class RepopAlgorithm:
         if unit is None:
             try:
                 unit = self.input_dict['repopulations'][
-                    'params_to_save']['Js_vel']['unit']
+                    'params_to_save'][self._current_param_to_save]['unit']
             except KeyError:
                 unit = 'GeV2 cm-5'
 
@@ -1186,7 +1195,7 @@ class RepopAlgorithm:
         if unit is None:
             try:
                 unit = self.input_dict['repopulations'][
-                    'params_to_save']['J03_vel']['unit']
+                    'params_to_save'][self._current_param_to_save]['unit']
             except KeyError:
                 unit = 'GeV2 cm-5'
 
