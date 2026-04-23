@@ -52,9 +52,8 @@ model.run('../outputs/test_2026/test_' + outtime,
           )
 model.configuration = 'dmo_fragile'
 
-model.RmaxoverrS()
-print(model.input_dict['configurations'][model.configuration][
-          'internal_density_profile']['RmaxoverrS'])
+
+print(model.RmaxoverrS())
 
 plt.figure()
 xx = np.geomspace(0.1, 10) * u.km / u.s

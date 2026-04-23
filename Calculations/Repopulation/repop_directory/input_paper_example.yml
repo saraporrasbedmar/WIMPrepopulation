@@ -10,6 +10,7 @@ cosmo_constants:
     unit: Msun / kpc3
 
 host:
+  density_profile: 'NFW'
   R_vir:
     value: 220
     unit: kpc
@@ -61,11 +62,14 @@ repopulations:
 #    Rmax:
 #      unit: kpc
 #    J03_fromVmax:
-#      unit: GeV2 / cm5
-#    Js_fromVmax:
-#      unit: Msun2 / kpc5
+#      unit: Msun2 / cm5
+    Js_fromVmax:
+      unit: GeV2 / cm5
     J_whole_fromVmax:
       unit: GeV2 / cm5
+    J_general:
+      unit: GeV2 / cm5
+      calculate_from: Vmax_Rmax
 #    theta_s:
 #      unit: degree
 
@@ -115,10 +119,10 @@ configurations:
 #  TODO: Cv fails with '3e5 + Vmax.value'
 
   dmo_fragile:
-    internal_density_profile: #'NFW'
+    internal_density_profile:  'NFW'
 #      formula: '1. / xx / (1. + xx)**params'
-      formula: '1. / (1. + xx**params[1]) / (1. + xx**params[0])'
-      params: [2., 3.]
+#      formula: '1. / (1. + xx**params[1]) / (1. + xx**params[0])'
+#      params: [2., 3.]
     use_Roche: True
     Cv:
       formula: 'Cv_Mol2021_redshift0_scattered'

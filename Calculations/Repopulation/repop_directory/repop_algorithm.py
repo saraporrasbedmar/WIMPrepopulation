@@ -90,11 +90,10 @@ class RepopAlgorithm:
             )
 
         for key, value in self.input_dict['host'].items():
-            self.input_dict['host'][key] = (
-                self.input_dict['host'][key]['value']
-                * u.Unit(self.input_dict['host'][key]['unit']
-                         )
-            )
+            if 'unit' in self.input_dict['host'][key]:
+                self.input_dict['host'][key] = (
+                    self.input_dict['host'][key]['value']
+                    * u.Unit(self.input_dict['host'][key]['unit']))
 
         self._m_min = None
         self._m_max = None
@@ -221,9 +220,9 @@ class RepopAlgorithm:
             if isinstance(parametrization, dict):
                 self.subhalo_data[name] = getattr(self, name)(
                     **parametrization)
-                return
+                return self.subhalo_data[name]
             self.subhalo_data[name] = getattr(self, name)()
-            return
+            return self.subhalo_data[name]
 
         formula = parametrization.get('formula', None)
 
@@ -233,9 +232,9 @@ class RepopAlgorithm:
                 if isinstance(parametrization, dict):
                     self.subhalo_data[name] = getattr(self, formula)(
                         **parametrization['params'])
-                    return
+                    return self.subhalo_data[name]
                 self.subhalo_data[name] = getattr(self, formula)()
-                return
+                return self.subhalo_data[name]
 
             bb = {}
 
@@ -262,7 +261,7 @@ class RepopAlgorithm:
                     + f' with parameters {bb}: {e}')
 
             self.subhalo_data[name] = aa
-            return
+            return self.subhalo_data[name]
 
         elif callable(formula):
 
@@ -278,7 +277,7 @@ class RepopAlgorithm:
                 vars_for_func['params'] = params
 
             self.subhalo_data[name] = formula(**vars_for_func)
-            return
+            return self.subhalo_data[name]
 
     def calculate_characteristics_subhalo(
             self, Vmax=None, D_GC=None, position_Earth=None):
@@ -409,20 +408,15 @@ class RepopAlgorithm:
                 pn,
                 self.input_dict['repopulations']['params_to_save'][pn])
 
-        # if self.input_dict['configurations'][
-        #             self.configuration]['use_Roche']:
-        #     self.get_parameter('R_t', None)
-        #     self.get_parameter('R_s', None)
-        #     self.subhalo_data['survives_Roche'] = (
-        #             self.get_parameter('R_t', None)
-        #             > self.get_parameter('R_s', None)
-        #     )
-
-        self.get_parameter('R_s')
-        self.subhalo_data['engulfs_Earth'] = (
-            self.get_parameter('R_s')
-            > self.get_parameter('D_Earth')
+        if self.input_dict['configurations'][
+                    self.configuration]['use_Roche']:
+            self.subhalo_data['survives_Roche'] = (
+                    self.get_parameter('R_t')
+                    > self.get_parameter('R_s')
             )
+
+        self.subhalo_data['engulfs_Earth'] = (
+            self.get_parameter('R_s') > self.get_parameter('D_Earth'))
 
         return
 
@@ -601,8 +595,6 @@ class RepopAlgorithm:
                         'repopulations']['allow_break_Roche']:
                             if ('survives_Roche'
                                     not in self.subhalo_data.keys()):
-                                self.get_parameter('R_t')
-                                self.get_parameter('R_s')
                                 self.subhalo_data['survives_Roche'] = (
                                     self.get_parameter('R_t')
                                     > self.get_parameter('R_s')
@@ -714,7 +706,8 @@ class RepopAlgorithm:
 
         return (Vmax / cosmo_H_0 * np.sqrt(2. / Cv)).to(u.Unit(unit))
 
-    def R_s(self, Vmax=None, Cv=None, cosmo_H_0=None, unit=None):
+    def R_s(self, Vmax=None, Cv=None, cosmo_H_0=None,
+            density_profile=None, unit=None):
         """
         Calculate scale radius (R_s) of a subhalo following the NFW
         analytical expression for a subhalo density profile.
@@ -739,22 +732,17 @@ class RepopAlgorithm:
                     'params_to_save']['R_s']['unit']
             except KeyError:
                 unit = 'kpc'
-        try:
-            RmaxoverrS = self.input_dict['configurations'][
-                self.configuration]['internal_density_profile'][
-                'RmaxoverrS']
-        except KeyError:
-            self.RmaxoverrS()
-            RmaxoverrS = self.input_dict['configurations'][
-                self.configuration]['internal_density_profile'][
-                'RmaxoverrS']
+
+        RmaxoverrS = self.RmaxoverrS(density_profile)
 
         return (self.Rmax(Vmax, Cv, cosmo_H_0) / RmaxoverrS
                 ).to(u.Unit(unit))
 
     def R_t(self, Vmax=None, Cv=None, D_GC=None,
             cosmo_H_0=None, cosmo_G=None,
-            host_rho_0=None, host_r_s=None, unit=None):
+            host_rho_0=None, host_r_s=None,
+            density_profile_sub=None, density_profile_host=None,
+            unit=None):
         """
         Calculation of tidal radius (R_t) of a subhalo, following the
         NFW analytical expression for a subhalo density profile.
@@ -782,6 +770,9 @@ class RepopAlgorithm:
             cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
         if cosmo_G is None:
             cosmo_G = self.input_dict['cosmo_constants']['G']
+        if density_profile_host is None:
+            density_profile_host = self.input_dict['host'][
+                'density_profile']
         if host_rho_0 is None:
             host_rho_0 = self.input_dict['host']['rho_0']
         if host_r_s is None:
@@ -795,17 +786,20 @@ class RepopAlgorithm:
 
         Rmax = self.Rmax(Vmax=Vmax, Cv=Cv, cosmo_H_0=cosmo_H_0)
         c200 = self.get_parameter('C200_from_Cv')
-        M_subhalo = self.mass_from_Vmax(Vmax, Rmax, c200, cosmo_G)
-        M_host = self.M_encapsulated(D_GC, host_rho_0, host_r_s)
+        M_subhalo = self.mass_from_Vmax(
+            c200, Vmax, Rmax, cosmo_G, density_profile_sub)
+        M_host = self.M_encapsulated(
+            D_GC, host_rho_0, host_r_s, density_profile_host)
 
         return (D_GC * (M_subhalo / (3 * M_host)) ** (1/3.)
                 ).to(u.Unit(unit))
 
-    def M_encapsulated(self, D_GC=None, host_rho_0=None,
-                       host_r_s=None, unit=None):
+    def M_encapsulated(self, radius, rho_0, r_s, density_profile,
+                       unit=None):
+        # TODO que meto aqui como defaults
         """
-        Host mass encapsulated up to a certain radius. We are following
-        a NFW density profile for the host.
+        Mass encapsulated up to a certain radius.
+        We assume a known density profile for the (sub)halo.
 
         :param R: float or array-like [kpc]
             Radius up to which we integrate the density profile.
@@ -813,17 +807,25 @@ class RepopAlgorithm:
         :return: float or array-like [Msun]
             Host mass encapsulated up to R.
         """
-        if D_GC is None:
-            D_GC = self.get_parameter('D_GC')
-        if host_rho_0 is None:
-            host_rho_0 = self.input_dict['host']['rho_0']
-        if host_r_s is None:
-            host_r_s = self.input_dict['host']['r_s']
+        # if radius is None:
+        #     radius = self.get_parameter('D_GC')
+        # if rho_0 is None:
+        #     rho_0 = self.input_dict['host']['rho_0']
+        # if r_s is None:
+        #     r_s = self.input_dict['host']['r_s']
+        if unit is None:
+            try:
+                unit = self.input_dict['repopulations'][
+                    'params_to_save']['M_encapsulated']['unit']
+            except KeyError:
+                unit = 'Msun'
 
-        return (4 * np.pi * host_rho_0 * host_r_s ** 3
-                * self.ff(D_GC / host_r_s))
+        return (4 * np.pi * rho_0 * r_s ** 3
+                * self.ff(
+                    radius / r_s, density_profile=density_profile)
+                ).to(u.Unit(unit))
 
-    def C200_from_Cv(self, Cv=None):
+    def C200_from_Cv(self, Cv=None, density_profile=None):
         """
         Formula to find c200 knowing Cv to input in the Newton
         root-finding method.
@@ -840,15 +842,7 @@ class RepopAlgorithm:
         if Cv is None:
             Cv = self.get_parameter('Cv')
 
-        try:
-            RmaxoverrS = self.input_dict['configurations'][
-                self.configuration]['internal_density_profile'][
-                'RmaxoverrS']
-        except KeyError:
-            self.RmaxoverrS()
-            RmaxoverrS = self.input_dict['configurations'][
-                self.configuration]['internal_density_profile'][
-                'RmaxoverrS']
+        RmaxoverrS = self.RmaxoverrS(density_profile)
 
         def int_interior(c200i, Cvi):
             return (200 * c200i ** 3 / self.ff(c200i)
@@ -864,8 +858,9 @@ class RepopAlgorithm:
 
         return c200 * u.dimensionless_unscaled
 
-    def mass_from_Vmax(self, Vmax=None, Rmax=None, c200=None,
-                       cosmo_G=None, unit=None):
+    def mass_from_Vmax(self, radius_normalized, Vmax=None, Rmax=None,
+                       cosmo_G=None, density_profile=None,
+                       unit=None):
         """
         Mass from a subhalo assuming a NFW profile.
         Theoretical steps in Moline16.
@@ -883,18 +878,20 @@ class RepopAlgorithm:
             Vmax = self.get_parameter('Vmax')
         if Rmax is None:
             Rmax = self.get_parameter('Rmax')
-        if c200 is None:
-            try:
-                self.get_parameter('c200')
-            except:
-                self.get_parameter('C200_from_Cv')
-            c200 = self.get_parameter('C200_from_Cv')
-
         if cosmo_G is None:
             cosmo_G = self.input_dict['cosmo_constants']['G']
+        if unit is None:
+            try:
+                unit = self.input_dict['repopulations'][
+                    'params_to_save']['mass_from_Vmax']['unit']
+            except KeyError:
+                unit = 'Msun'
+
+        Rmax_over_rs = self.RmaxoverrS(density_profile)
 
         return (Vmax ** 2 * Rmax / cosmo_G
-                * self.ff(c200)/ self.ff(2.163)).to(u.Msun)
+                * self.ff(radius_normalized)
+                / self.ff(Rmax_over_rs)).to(u.Unit(unit))
 
     def theta_s(self, Vmax=None, Cv=None, D_Earth=None, cosmo_H_0=None,
                 unit='degree'):
@@ -949,6 +946,98 @@ class RepopAlgorithm:
         return yy * scatter * u.dimensionless_unscaled
 
     # ----------- J-FACTORS --------------------------------------------
+    def J_general(
+            self, radius_normalized=None, D_Earth=None,
+            density_profile=None,
+            calculate_from=None, unit=None,
+            Vmax=None, Cv=None, cosmo_G=None, cosmo_H_0=None,
+            Mass=None, Cdelta=None, rho_crit=None,
+            rho_0=None, r_s=None
+            ):
+        """
+        J-factor enclosing whole subhalo as a function of the
+        subhalo Vmax.
+
+        :param V: float or array-like  [km/s]
+            Maximum circular velocity inside a subhalo.
+        :param D_Earth: float or array-like [kpc]
+            Distance between the subhalo and the Earth.
+        :param C: float or array-like
+            Subhalo concentration.
+        :param unit: str
+            Change the output units of the Jfactors.
+
+        :return: float or array-like
+            Jfactor of a whole subhalo.
+        """
+        if calculate_from is None:
+            calculate_from = self.input_dict['repopulations'][
+                    'params_to_save']['J_abs_vel']['calculate_from']
+        if D_Earth is None:
+            D_Earth = self.get_parameter('D_Earth')
+        if density_profile is None:
+            density_profile = self.input_dict['configurations'][
+                self.configuration]['internal_density_profile']
+
+        if radius_normalized is None:
+            # TODO fix this ;)
+            radius_normalized = 1.
+
+        yy = self.fff(radius_normalized, density_profile) / D_Earth**2.
+        print(self.ff(radius_normalized))
+
+        if calculate_from == 'Vmax_Rmax':
+            if Vmax is None:
+                Vmax = self.get_parameter('Vmax')
+            if Cv is None:
+                Cv = self.get_parameter('Cv')
+            if cosmo_G is None:
+                cosmo_G = self.input_dict['cosmo_constants']['G']
+            if cosmo_H_0 is None:
+                cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
+
+            Rmax_over_rs = self.RmaxoverrS(density_profile)
+            print(Rmax_over_rs)
+
+            yy *= (cosmo_H_0 / 4. / np.pi / cosmo_G ** 2
+                   * np.sqrt(Cv / 2) * Vmax ** 3
+                   * Rmax_over_rs**3.
+                   / self.ff(Rmax_over_rs, density_profile)**2.)
+
+        elif calculate_from == 'rho0_rS':
+            if rho_0 is None:
+                rho_0 = self.get_parameter('rho_0')
+            if r_s is None:
+                r_s = self.get_parameter('r_s')
+
+            yy *= 4. * np.pi * rho_0**2. * r_s**3.
+
+        elif calculate_from == 'mass_Cdelta':
+            if Mass is None:
+                Mass = self.get_parameter('Mass')
+            if Cdelta is None:
+                Cdelta = self.get_parameter('Cdelta')
+            if rho_crit is None:
+                rho_crit = self.input_dict['cosmo_constants']['rho_crit']
+
+            yy *= (200 / 3. * rho_crit * Mass * Cdelta**3.
+                   / self.ff(Cdelta, density_profile)**2.)
+
+        else:
+            raise ValueError(
+                f'Error at inicializing the way to calculate the Jfactor.'
+                + f' with value {calculate_from}.'
+                  'Allowed values are: mass_Cdelta, Vmax_Rmax, and rho0_rS')
+
+        if unit is None:
+            try:
+                unit = self.input_dict['repopulations'][
+                    'params_to_save']['J_abs_vel']['unit']
+            except KeyError:
+                unit = 'GeV2 cm-5'
+
+        return yy.to(u.Unit(unit), equivalencies=mass_energy2)
+
     def J_whole_fromVmax(
             self, Vmax=None, D_Earth=None, Cv=None,
             cosmo_G=None, cosmo_H_0=None, unit=None):
@@ -985,7 +1074,8 @@ class RepopAlgorithm:
             except KeyError:
                 unit = 'GeV2 cm-5'
 
-        yy = (2.163 ** 3. / D_Earth ** 2. / self.ff(2.163) ** 2
+        yy = (2.1625758423 ** 3. / D_Earth ** 2.
+              / self.ff(2.1625758423) ** 2
               * cosmo_H_0 / 12 / np.pi / cosmo_G ** 2
               * np.sqrt(Cv / 2) * Vmax ** 3)
 
@@ -1175,40 +1265,37 @@ class RepopAlgorithm:
                     f'Error evaluating formula ' + formula
                     + f' with parameters {params}: {e}')
 
-
     def RmaxoverrS(self, density_profile=None):
+
         if density_profile is None:
             density_profile = self.input_dict['configurations'][
                 self.configuration]['internal_density_profile']
 
-        if density_profile == 'NFW':
-            self.input_dict['configurations'][
-                self.configuration]['internal_density_profile'][
-                'RmaxoverrS'] = 2.16257584237016
-            return
+        try:
+            return density_profile['RmaxoverrS']
 
-        elif density_profile == 'Burkert':
-            self.input_dict['configurations'][
-                self.configuration]['internal_density_profile'][
-                'RmaxoverrS'] = 3.244597456471571
-            return
+        except (TypeError, KeyError):
 
-        else:
-            try:
-                def funcc(xx):
-                    return -self.ff(xx, density_profile) / xx
+            if density_profile == 'NFW':
+                return 2.16257584237016
 
-                argwhere = minimize(funcc, x0=3.)
+            elif density_profile == 'Burkert':
+                return 3.244597456471571
 
-                self.input_dict['configurations'][
-                    self.configuration]['internal_density_profile'][
-                    'RmaxoverrS'] = argwhere['x'][0]
-                return
+            else:
+                try:
+                    def funcc(xx):
+                        return -self.ff(xx, density_profile) / xx
 
-            except Exception as e:
-                raise ValueError(
-                    f'Error evaluating density profile'
-                    + density_profile + f': {e}')
+                    argwhere = minimize(funcc, x0=3.)
+
+                    density_profile['RmaxoverrS'] = argwhere['x'][0]
+                    return argwhere['x'][0]
+
+                except Exception as e:
+                    raise ValueError(
+                        f'Error evaluating density profile'
+                        + density_profile + f': {e}')
 
     # ----------- SRD --------------------------------------------------
     def srd_constant(self, xx, args):
