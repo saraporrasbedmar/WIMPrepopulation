@@ -72,20 +72,17 @@ cv_mean = model.calculate_formula(
      'sigma_scatter': 0.}
 )
 print(cv_mean[0])
-# c200 = model.C200_from_Cv(cv_mean)
-# print((Vmax_max * u.km / u.s / (
-#             self.input_dict['cosmo_constants']['H_0']
-#             * np.sqrt(2. * cv_mean))).to(u.kpc))
+c200 = model.C200_from_Cv(cv_mean)
 R_max=(xx / (
             model.input_dict['cosmo_constants']['H_0']
             * np.sqrt(2. * cv_mean))).to(u.kpc)
 def ff(c):
     return np.log(1. + c) - c / (1. + c)
 
-# M = (xx ** 2 * R_max / (4.297e-06 * u.Unit('kpc * km2 / (Msun * s2)'))
-#                 * ff(c200)/ ff(2.163)).to(u.Msun)
+M = (xx ** 2 * R_max / (4.297e-06 * u.Unit('kpc * km2 / (Msun * s2)'))
+                * model.ff(c200)/ ff(2.163)).to(u.Msun)
 
-# plt.loglog(xx, M)
+plt.loglog(xx, M)
 plt.xscale('log')
 
 plt.show()

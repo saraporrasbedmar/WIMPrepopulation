@@ -739,8 +739,17 @@ class RepopAlgorithm:
                     'params_to_save']['R_s']['unit']
             except KeyError:
                 unit = 'kpc'
+        try:
+            RmaxoverrS = self.input_dict['configurations'][
+                self.configuration]['internal_density_profile'][
+                'RmaxoverrS']
+        except KeyError:
+            self.RmaxoverrS()
+            RmaxoverrS = self.input_dict['configurations'][
+                self.configuration]['internal_density_profile'][
+                'RmaxoverrS']
 
-        return (self.Rmax(Vmax, Cv, cosmo_H_0) / 2.163
+        return (self.Rmax(Vmax, Cv, cosmo_H_0) / RmaxoverrS
                 ).to(u.Unit(unit))
 
     def R_t(self, Vmax=None, Cv=None, D_GC=None,
@@ -787,13 +796,13 @@ class RepopAlgorithm:
         Rmax = self.Rmax(Vmax=Vmax, Cv=Cv, cosmo_H_0=cosmo_H_0)
         c200 = self.get_parameter('C200_from_Cv')
         M_subhalo = self.mass_from_Vmax(Vmax, Rmax, c200, cosmo_G)
-        M_host = self.Mhost_encapsulated(D_GC, host_rho_0, host_r_s)
+        M_host = self.M_encapsulated(D_GC, host_rho_0, host_r_s)
 
         return (D_GC * (M_subhalo / (3 * M_host)) ** (1/3.)
                 ).to(u.Unit(unit))
 
-    def Mhost_encapsulated(self, D_GC=None,
-                           host_rho_0=None, host_r_s=None, unit=None):
+    def M_encapsulated(self, D_GC=None, host_rho_0=None,
+                       host_r_s=None, unit=None):
         """
         Host mass encapsulated up to a certain radius. We are following
         a NFW density profile for the host.
@@ -841,10 +850,6 @@ class RepopAlgorithm:
                 self.configuration]['internal_density_profile'][
                 'RmaxoverrS']
 
-        # def int_interior(c200i, Cvi):
-        #     return (200 * self.ff(2.163)
-        #             / self.ff(c200i) * (c200i / 2.163) ** 3 - Cvi)
-
         def int_interior(c200i, Cvi):
             return (200 * c200i ** 3 / self.ff(c200i)
                     * self.ff(RmaxoverrS) / RmaxoverrS ** 3
@@ -853,8 +858,9 @@ class RepopAlgorithm:
         if isinstance(Cv, float):
             c200 = newton(int_interior, x0=40.0, args=[Cv])
         else:
-            c200 = np.array([newton(int_interior, x0=40.0, args=[i])
-                             for i in Cv])
+            c200 = np.array([
+                newton(int_interior, x0=40.0, args=[i.value])
+                for i in Cv])
 
         return c200 * u.dimensionless_unscaled
 
