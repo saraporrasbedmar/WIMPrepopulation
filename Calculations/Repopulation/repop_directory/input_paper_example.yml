@@ -8,6 +8,7 @@ cosmo_constants:
   rho_crit:
     value: 135.73
     unit: Msun / kpc3
+  delta_overdensity: 200.
 
 host:
   density_profile: 'NFW'
@@ -23,17 +24,30 @@ host:
   position_Earth:
     value: [8.5, 0., 0.]
     unit: kpc
+  Draco:
+    Mass:
+      value: 2.e8
+      unit: Msun
+    D_GC:
+      value: 80.
+      unit: kpc
+    Cdelta: 19.
+    percentage_accepted: 0.1
+    distance_subhalo_cutoff:
+      value: 1.
+      unit: kpc
 
 repopulations:
+  param_to_repopulate: Mass
   RangeMax: 120.
-  RangeMin: 35.
+  RangeMin: 3.
 
   number_iterations: 2
   print_frequency: 1
 
-  save_full_repop: False
-  use_spherical_shells: False
-  number_highest: 5000
+  save_full_repop: True
+  use_spherical_shells: True
+  number_highest: 2
   allow_break_Roche: True
   allow_engulf_Earth: True
   params_to_order_by:
@@ -43,44 +57,43 @@ repopulations:
   rng_seed: 0
 
   params_to_save:
-    Vmax:
-      unit: km / s
+#    Vmax:
+#      unit: km / s
+    Mass:
+      unit: Msun
     D_GC:
       unit: kpc
-    formula_example:
-      formula: '1e17 * params[0] * Vmax'
-      params:
-        - 0.5
-        - !!float 2e7
-      variables:
-        'Vmax'
-      unit: Msun * km / s
+#    formula_example:
+#      formula: '1e17 * params[0] * Vmax'
+#      params:
+#        - 0.5
+#        - !!float 2e7
+#      variables:
+#        'Vmax'
+#      unit: Msun * km / s
 #    R_t:
 #      unit: kpc
 #    R_s:
 #      unit: kpc
 #    Rmax:
 #      unit: kpc
-    J03_fromVmax:
-      unit: Msun2 / cm5
-    Js_fromVmax:
-      unit: GeV2 / cm5
-    J_whole_fromVmax:
-      unit: GeV2 / cm5
+#    J03_fromVmax:
+#      unit: Msun2 / cm5
+#    Js_fromVmax:
+#      unit: GeV2 / cm5
+#    J_whole_fromVmax:
+#      unit: GeV2 / cm5
     J_general_fromVmaxRmax_toRs_custom:
       formula: J_general
       unit: GeV2 / cm5
-      calculate_from: Vmax_Cv
-      integrate_up_to: 'R_s'
+      integrate_up_to: 'R_t'
     J_custom2:
       formula: J_general
       unit: GeV2 / cm5
-      calculate_from: Vmax_Cv
       integrate_up_to: 'whole'
     J_custom3:
       formula: J_general
       unit: Msun2 / cm5
-      calculate_from: Vmax_Cv
       integrate_up_to: 0.15
 #    theta_s:
 #      unit: degree
@@ -141,6 +154,13 @@ configurations:
       params:
         c0: 283862.7023
         sigma_scatter: 0.297659
+        ci: [55., -0.195, 0.089, 0.089, -0.54]
+    Cmass:
+      formula: 'C_200'
+      params:
+        c0: 283862.7023
+        sigma_scatter: 0.297659
+        ci: [55., -0.195, 0.089, 0.089, -0.54]
     SHVF:
       formula: 'power_law'
       params:
@@ -154,7 +174,7 @@ configurations:
           - 39.3
           - 220.0
         last_subhalo:
-          value: 15.57
+          value: 1.57
           unit: kpc
 
   mhd_resilient:

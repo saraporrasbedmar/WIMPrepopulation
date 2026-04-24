@@ -16,13 +16,13 @@ input_file = read_config_file('input_paper_example.yml')
 outtime = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
 
-def save_example_with_callable(Vmax, params):
-    return (0.5 * (u.km/ u.s) + 0.01 * Vmax)**params
+# def save_example_with_callable(Vmax, params):
+#     return (0.5 * (u.km/ u.s) + 0.01 * Vmax)**params
 
 
-input_file['repopulations']['params_to_save']['ex_with_callable'] = {
-    'formula': save_example_with_callable,
-    'params': 10, 'variables': 'Vmax'}
+# input_file['repopulations']['params_to_save']['ex_with_callable'] = {
+#     'formula': save_example_with_callable,
+#     'params': 10, 'variables': 'Vmax'}
 
 
 # Careful with this, because this technically works, but the SRD
@@ -71,8 +71,8 @@ print('mass', mass)
 print(model.J_general(
             D_Earth=200 * u.kpc,
             density_profile='NFW',
-            calculate_from='mass_Cdelta', integrate_up_to=0.03,
-            Mass=mass, Cdelta=rvir*u.kpc/model.input_dict['host']['r_s'],
+            calculate_from='mass_Cmass', integrate_up_to=0.03,
+            Mass=mass, Cmass=rvir*u.kpc/model.input_dict['host']['r_s'],
             ))
 
 print(model.J_general(
@@ -102,7 +102,7 @@ print(model.J_general(
 model.run('../outputs/test_2026/test_' + outtime,
           configuration='dmo_fragile'
           )
-model.configuration = 'dmo_fragile'
+model.configuration = 'mhd_resilient'
 
 
 print(model.RmaxoverrS())
