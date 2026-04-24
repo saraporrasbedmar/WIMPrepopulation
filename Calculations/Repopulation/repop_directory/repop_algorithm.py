@@ -342,6 +342,15 @@ class RepopAlgorithm:
                 x_min=self._m_min, x_max=self._m_max,
                 force_no_fraction=False)
 
+            if self._num_subhalos <= 0:
+                print('No subhalos between %.2f and %.2f %s'
+                      % (self._m_min, self._m_max,
+                         self.input_dict['repopulations'][
+                             'params_to_save'][
+                             self._param_repopulation]['unit']
+                         ))
+                return
+
             print(self._m_min, self._m_max, self._num_subhalos)
 
             # Montecarlo algorithm for creating of subhalo Vmax
@@ -730,7 +739,10 @@ class RepopAlgorithm:
         return
 
     # ----------- General formulas -------------------------------------
-    def Rmax(self, Vmax=None, Cv=None, cosmo_H_0=None, unit=None):
+    def Rmax(self, Vmax=None, Cv=None, Mass=None,  Cmass=None,
+             cosmo_H_0=None, rho_crit=None,
+             delta=None, density_profile=None,
+             unit=None):
         """
         Calculate Rmax of a subhalo.
 
@@ -742,12 +754,32 @@ class RepopAlgorithm:
         :return: float or array-like [kpc]
             Rmax of the subhalo given by the inputs.
         """
-        if Vmax is None:
-            Vmax = self.get_parameter('Vmax')
-        if Cv is None:
-            Cv = self.get_parameter('Cv')
-        if cosmo_H_0 is None:
-            cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
+        if self._param_repopulation == 'Vmax':
+            if Vmax is None:
+                Vmax = self.get_parameter('Vmax')
+            if Cv is None:
+                Cv = self.get_parameter('Cv')
+            if cosmo_H_0 is None:
+                cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
+            r_max = Vmax / cosmo_H_0 * np.sqrt(2. / Cv)
+
+        elif self._param_repopulation == 'Mass':
+            if Mass is None:
+                Mass = self.get_parameter('Mass')
+            if Cmass is None:
+                Cmass = self.get_parameter('Cmass')
+            if rho_crit is None:
+                rho_crit = self.input_dict['cosmo_constants']['rho_crit']
+            if delta is None:
+                delta = self.input_dict['cosmo_constants']['delta_overdensity']
+            if density_profile is None:
+                density_profile = self.input_dict['configurations'][
+                    self.configuration]['internal_density_profile']
+
+            RmaxoverrS = self.RmaxoverrS(density_profile)
+            r_max = self.R_s(Mass=Mass, Cmass=Cmass, rho_crit=rho_crit,
+                             delta=delta) * RmaxoverrS
+
         if unit is None:
             try:
                 unit = self.input_dict['repopulations'][
@@ -755,7 +787,7 @@ class RepopAlgorithm:
             except KeyError:
                 unit = 'kpc'
 
-        return (Vmax / cosmo_H_0 * np.sqrt(2. / Cv)).to(u.Unit(unit))
+        return r_max.to(u.Unit(unit))
 
     def R_s(self, Mass=None, Cmass=None, Vmax=None, Cv=None,
             cosmo_H_0=None, rho_crit=None,
@@ -772,7 +804,7 @@ class RepopAlgorithm:
         :return: float or array-like [kpc]
             R_s of the subhalo given by the inputs.
         """
-        if self._param_repopulation is 'Vmax':
+        if self._param_repopulation == 'Vmax':
             if Vmax is None:
                 Vmax = self.get_parameter('Vmax')
             if Cv is None:
@@ -782,9 +814,10 @@ class RepopAlgorithm:
 
             RmaxoverrS = self.RmaxoverrS(density_profile)
 
-            r_s = self.Rmax(Vmax, Cv, cosmo_H_0) / RmaxoverrS
+            r_s = self.Rmax(Vmax=Vmax, Cv=Cv, cosmo_H_0=cosmo_H_0
+                            ) / RmaxoverrS
 
-        elif self._param_repopulation is 'Mass':
+        elif self._param_repopulation == 'Mass':
             if Mass is None:
                 Mass = self.get_parameter('Mass')
             if Cmass is None:
@@ -1021,6 +1054,30 @@ class RepopAlgorithm:
             scatter = 10 ** self.rng.normal(loc=0, scale=sigma_scatter)
 
         return yy * scatter * u.dimensionless_unscaled
+
+    def C_200(self, Mass=None, D_GC=None, ci=None, cosmo_H_0=None,
+              R_vir_host=None, **kwargs):
+        if Mass is None:
+            Mass = self.get_parameter('Mass')
+        if D_GC is None:
+            D_GC = self.get_parameter('D_GC')
+        if ci is None:
+            try:
+                ci = self.input_dict['configurations'][
+                self.configuration][self._concentr]['params']['ci']
+            except KeyError:
+                ci = [19.9, -0.195, 0.089, 0.089, -0.54]
+        if cosmo_H_0 is None:
+            cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
+        if R_vir_host is None:
+            R_vir_host = self.input_dict['host']['R_vir']
+
+        yy = (Mass / (1e8 * u.Msun)
+              * cosmo_H_0 / (100 * u.km / (u.s * u.Mpc))).to(1)
+
+        return (ci[0] * (1 + sum([(ci[i + 1] * np.log10(yy)) ** (i + 1)
+                                  for i in range(3)]))
+                * (1 + ci[4] * np.log10((D_GC / R_vir_host).to(1))))
 
     # ----------- J-FACTORS --------------------------------------------
     def J_general(
@@ -1590,27 +1647,3 @@ class RepopAlgorithm:
         return ((Dgc_D**2 * Mass * C**3 * self.ff(C_D_corr) ** 2
                  / (percentage * Mass_D * C_D_corr**3 * self.ff(C) ** 2)
                  ) ** .5).to(u.Unit(unit))
-
-    def C_200(self, Mass=None, D_GC=None, ci=None, cosmo_H_0=None,
-              R_vir_host=None, **kwargs):
-        if Mass is None:
-            Mass = self.get_parameter('Mass')
-        if D_GC is None:
-            D_GC = self.get_parameter('D_GC')
-        if ci is None:
-            try:
-                ci = self.input_dict['configurations'][
-                self.configuration][self._concentr]['params']['ci']
-            except KeyError:
-                ci = [19.9, -0.195, 0.089, 0.089, -0.54]
-        if cosmo_H_0 is None:
-            cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
-        if R_vir_host is None:
-            R_vir_host = self.input_dict['host']['R_vir']
-
-        yy = (Mass / (1e8 * u.Msun)
-              * cosmo_H_0 / (100 * u.km / (u.s * u.Mpc))).to(1)
-
-        return (ci[0] * (1 + sum([(ci[i + 1] * np.log10(yy)) ** (i + 1)
-                                  for i in range(3)]))
-                * (1 + ci[4] * np.log10((D_GC / R_vir_host).to(1))))
