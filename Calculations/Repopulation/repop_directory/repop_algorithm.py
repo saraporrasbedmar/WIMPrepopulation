@@ -936,9 +936,8 @@ class RepopAlgorithm:
         return (D_GC * (Mass / (3 * M_host)) ** (1/3.)
                 ).to(u.Unit(unit))
 
-    def M_encapsulated(self, radius, rho_0, r_s, density_profile,
-                       unit=None):
-        # TODO que meto aqui como defaults
+    def M_encapsulated(self, radius, rho_0, r_s,
+                       density_profile, unit=None):
         """
         Mass encapsulated up to a certain radius.
         We assume a known density profile for the (sub)halo.
@@ -963,7 +962,7 @@ class RepopAlgorithm:
                 unit = 'Msun'
 
         return (4 * np.pi * rho_0 * r_s ** 3
-                * self.ff(radius / r_s, density_profile=density_profile)
+                * self.ff(radius/r_s, density_profile=density_profile)
                 ).to(u.Unit(unit))
 
     def C200_from_Cv(self, Cv=None, density_profile=None):
@@ -1704,7 +1703,7 @@ class RepopAlgorithm:
         # de no dejarnos posibles subhalos relevantes sin simular)
         # TODO: what about the Jfact calculation
         return ((Dgc_D**2 * Mass * C**3
-                 * self.ff(C_D_corr, density_profile=density_profile) ** 2
+                 * self.ff(C_D_corr, density_profile=density_profile)**2
                  / (percentage * Mass_D * C_D_corr**3
-                    * self.ff(C, density_profile=density_profile) ** 2)
+                    * self.ff(C, density_profile=density_profile)**2)
                  ) ** .5).to(u.Unit(unit))
