@@ -45,6 +45,15 @@ def aaa(Vmax, params):
 
 
 model = RepopAlgorithm(input_file)
+model.configuration = 'dmo_fragile'
+
+print(model.Mass_from_Vmax(
+    radius_normalized=0.1, Vmax=10.*u.km/u.s, Rmax=0.1*u.kpc))
+
+model.configuration = 'dmo_fragile2'
+
+print(model.Mass_from_Vmax(
+    radius_normalized=0.1, Vmax=10.))
 
 def functionfff(r):
     aa = model.M_encapsulated(
@@ -101,6 +110,10 @@ print(model.J_general(
 
 model.run('../outputs/test_2026/test_' + outtime,
           configuration='dmo_fragile'
+          )
+
+model.run('../outputs/test_2026/test_' + outtime,
+          configuration='dmo_fragile2'
           )
 model.configuration = 'mhd_resilient'
 
