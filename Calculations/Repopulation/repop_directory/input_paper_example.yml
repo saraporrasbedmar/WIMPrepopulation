@@ -40,13 +40,14 @@ host:
 repopulations:
   param_to_repopulate: Vmax
   RangeMax: 120.
-  RangeMin: 5.
+  RangeMin: 0.5
 
   number_iterations: 2
   print_frequency: 1
+  verbose: True
 
   save_full_repop: True
-  use_spherical_shells: True
+  use_spherical_shells: False
   number_highest: 2
   allow_break_Roche: True
   allow_engulf_Earth: True
@@ -93,55 +94,13 @@ repopulations:
       unit: degree
 
 configurations:
-  dmo_ale:
-    internal_density_profile: 'NFW'
-    use_Roche: True
-    Cv:
-      formula: 'Cv_Mol2021_redshift0_scattered'
-      params:
-        c0: 283862.7023
-        sigma_scatter: 0.297659
-    SHVF:
-      formula: 'power_law'
-      params:
-        V0: 5.8963127240825415
-        slope: -3.97
-    SRD:
-      formula: 'srd_exponential'
-      params:
-        exp_fit:
-          - -0.151
-          - 39.3
-          - 220.0
-        last_subhalo:
-          value: 5.57
-          unit: kpc
-  dmo_resilient:
-    internal_density_profile: 'NFW'
-    use_Roche: True
-    Cv:
-      formula: 'Cv_Mol2021_redshift0_scattered'
-      variables: Vmax
-      params:
-        c0: 283862.7023
-        sigma_scatter: 0.297659
-    SHVF:
-      formula: 'power_law'
-      params:
-        V0: 5.78
-        slope: -3.92
-    SRD:
-      formula: 'srd_constant'
-      params:
-        args: 1.
-
 #  TODO: Cv fails with '3e5 + Vmax.value'
 
   dmo_fragile:
-    internal_density_profile:   'NFW'
+    internal_density_profile:   #'NFW'
 #      formula: '1. / xx / (1. + xx)**params'
-#      formula: '1. / (1 + xx**params[0])'
-#      params: [2., 1.1]
+      formula: '1. / (1 + xx**params[0])'
+      params: [2., 1.1]
     relation_Mass_Vmax: M200_from_VmaxRmax
       # We assume that the units here are Msun
 #      formula: '8226.1 * xx ** 3.72'
@@ -174,10 +133,10 @@ configurations:
           value: 1.57
           unit: kpc
   dmo_fragile2:
-    internal_density_profile: 'NFW'
-    #      formula: '1. / xx / (1. + xx)**params'
-    #      formula: '1. / (1 + xx**params[0])'
-    #      params: [2., 1.1]
+    internal_density_profile: #'NFW'
+#          formula: '1. / xx / (1. + xx)**params'
+          formula: '1. / (1 + xx**params[0])'
+          params: [2., 1.1]
     relation_Mass_Vmax: #M200_from_VmaxRmax
     # We assume that the units here are Msun
           formula: '8226.1 * xx ** 3.72'
@@ -227,27 +186,3 @@ configurations:
       formula: 'srd_constant'
       params:
         args: 1.
-
-#  mhd_fragile:
-#    internal_density_profile: 'NFW'
-#    use_Roche: True
-#    Cv:
-#      formula: 'Cv_Mol2021_redshift0_scattered'
-#      params:
-#        c0: 192879.057
-#        sigma_scatter: 0.374942
-#    SHVF:
-#      formula: 'power_law'
-#      params:
-#        V0: 5.3
-#        slope: -4.08
-#    SRD:
-#      formula: 'srd_exponential'
-#      params:
-#        exp_fit:
-#          - -0.16
-#          - 37.1
-#          - 220.0
-#        last_subhalo:
-#          value: 15.71
-#          unit: kpc

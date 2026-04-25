@@ -4,6 +4,7 @@ import copy
 import time
 import h5py
 import psutil
+import logging
 import inspect
 
 import numpy as np
@@ -43,6 +44,12 @@ mass_energy2 = [
 
 class RepopAlgorithm:
     def __init__(self, path_input):
+
+        self._process_time = time.process_time()
+        logging.basicConfig(
+            level='INFO',
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S')
 
         self.path_output = None
         self.configuration = None
@@ -137,6 +144,13 @@ class RepopAlgorithm:
         self._m_max = None
 
         self.subhalo_data = {}
+
+    def logging_info(self, text):
+        if self.input_dict['repopulations']['verbose']:
+            logging.info(
+                '%.2fs: %s' % (time.process_time()
+                               - self._process_time, text))
+            self._process_time = time.process_time()
 
     def run(self, path_output, configuration=None):
 
@@ -343,7 +357,8 @@ class RepopAlgorithm:
                 force_no_fraction=False)
 
             if self._num_subhalos <= 0:
-                print('No subhalos between %.2f and %.2f %s'
+                self.logging_info(
+                    'No subhalos between %.2f and %.2f %s'
                       % (self._m_min, self._m_max,
                          self.input_dict['repopulations'][
                              'params_to_save'][
@@ -351,7 +366,8 @@ class RepopAlgorithm:
                          ))
                 return
 
-            print(self._m_min, self._m_max, self._num_subhalos)
+            self.logging_info(
+                str((self._m_min, self._m_max, self._num_subhalos)))
 
             # Montecarlo algorithm for creating of subhalo Vmax
             x = np.geomspace(self._m_min, self._m_max, num=2000)
@@ -459,7 +475,10 @@ class RepopAlgorithm:
                 parametrization=self.input_dict['configurations'][
                     self.configuration][self._concentr])
 
+        self.logging_info('Subhalos positioned in the Galaxy.')
+
         for pn in self.input_dict['repopulations']['params_to_save']:
+            self.logging_info('Calculating: %s' % pn)
             self._current_param_to_save = pn
             self.get_parameter(
                 pn,
@@ -536,6 +555,7 @@ class RepopAlgorithm:
             group.create_dataset(key, data=data, dtype=dtype)
 
     def interior_full_repop(self):
+        self.logging_info('Enter loop of iterations.')
 
         with h5py.File(self.path_output + 'fullrepop_'
                        + self.configuration + '.h5', 'a') as f:
@@ -573,6 +593,7 @@ class RepopAlgorithm:
                 while self._m_min < self.RangeMax:
 
                     self.calculate_characteristics_subhalo()
+                    self.logging_info('All characterizations done.')
 
                     for key, array in self.subhalo_data.items():
                         if key not in iter_group.keys():
@@ -595,11 +616,14 @@ class RepopAlgorithm:
                         new_size = current_size + len(array)
                         dataset.resize((new_size,))
                         dataset[current_size:new_size] = array
+                    self.logging_info('All characterizations saved,'
+                                      'loop continues.')
                     self._m_min = self._m_max
             f.flush()
         return
 
     def interior_brightest(self):
+        self.logging_info('Enter loop of iterations.')
 
         with h5py.File(self.path_output + 'brightest_'
                        + self.configuration + '.h5', 'a') as f:
@@ -643,6 +667,7 @@ class RepopAlgorithm:
                 while self._m_min < self.RangeMax:
 
                     self.calculate_characteristics_subhalo()
+                    self.logging_info('All characterizations done.')
 
                     for ii in self.input_dict[
                         'repopulations']['params_to_order_by']:
@@ -690,10 +715,14 @@ class RepopAlgorithm:
                                     highest_dict[ii][key] = np.append(
                                         highest_dict[ii][key], array)
 
+                    self.logging_info('All characterizations saved,'
+                                      'loop continues.')
                     self._m_min = self._m_max
 
                 for ii in self.input_dict[
                     'repopulations']['params_to_order_by']:
+
+                    self.logging_info('Order by highest: %s' % ii)
 
                     highest_group = iter_group.create_group(
                         f'highest_' + str(ii))
@@ -731,6 +760,8 @@ class RepopAlgorithm:
                                     self.subhalo_data[key].unit)
                             except AttributeError:
                                 datasets[key].attrs['units'] = ''
+
+                self.logging_info('Finish ordering by highest.')
                 print('Memory in use: %.1f MB' % memory_usage_psutil())
             f.flush()
         return
@@ -860,17 +891,29 @@ class RepopAlgorithm:
                 density_profile_sub = self.input_dict['configurations'][
                     self.configuration]['internal_density_profile']
 
+            self.logging_info('Rt: enter')
+
             method_Vmax_Mass = self.input_dict['configurations'][
                     self.configuration]['relation_Mass_Vmax']
 
-            Rmax = self.Rmax(
-                Vmax=Vmax, Cv=Cv, density_profile=density_profile_sub)
-            c200 = self.C200_from_Cv(
-                Cv=Cv, density_profile=density_profile_sub)
-            Mass = self.Mass_from_Vmax(
-                radius_normalized=c200, Vmax=Vmax, Rmax=Rmax,
-                density_profile=density_profile_sub,
-                method=method_Vmax_Mass)
+            if method_Vmax_Mass == 'M200_from_VmaxRmax':
+
+                Rmax = self.Rmax(
+                    Vmax=Vmax, Cv=Cv,
+                    density_profile=density_profile_sub)
+                self.logging_info('Rt: Rmax')
+                c200 = self.C200_from_Cv(
+                    Cv=Cv, density_profile=density_profile_sub)
+                self.logging_info('Rt: c200')
+                Mass = self.Mass_from_Vmax(
+                    radius_normalized=c200, Vmax=Vmax, Rmax=Rmax,
+                    density_profile=density_profile_sub,
+                    method=method_Vmax_Mass)
+            else:
+                Mass = self.Mass_from_Vmax(
+                    Vmax=Vmax, method=method_Vmax_Mass)
+
+            self.logging_info('Rt: mass')
 
         elif self._param_repopulation == 'Mass':
             if Mass is None:
@@ -889,6 +932,7 @@ class RepopAlgorithm:
         M_host = self.M_encapsulated(
             radius=D_GC, rho_0=host_rho_0, r_s=host_r_s,
             density_profile=density_profile_host)
+        self.logging_info('Rt: mass host')
 
         return (D_GC * (Mass / (3 * M_host)) ** (1/3.)
                 ).to(u.Unit(unit))
@@ -953,12 +997,29 @@ class RepopAlgorithm:
                     / RmaxoverrS ** 3
                     - Cvi)
 
+        self.logging_info('C200_from_Cv: enter')
+
         try:
-            c200 = np.array([
-                newton(int_interior, x0=40.0, args=[i.value])
-                for i in Cv])
-        except (ValueError, TypeError):
-            c200 = newton(int_interior, x0=40.0, args=[Cv])
+            c200 = newton(int_interior, x0=40.0, args=[Cv.value])
+
+        except: # (ValueError, TypeError):
+            c200_min = newton(int_interior, x0=40.0,
+                              args=[np.min(Cv.value)])
+            c200_max = newton(int_interior, x0=40.0,
+                              args=[np.max(Cv.value)])
+            C200_array = np.geomspace(
+                0.95 * c200_min, 1.05 * c200_max, num=500)
+            Cv_array = (delta * C200_array ** 3
+                        / self.ff(C200_array, density_profile)
+                        * self.ff(RmaxoverrS, density_profile)
+                        / RmaxoverrS ** 3)
+            spline = UnivariateSpline(
+                np.log10(Cv_array), np.log10(C200_array),
+                s=0, k=1, ext=2)
+
+            c200 = 10**spline(np.log10(Cv))
+
+        self.logging_info('C200_from_Cv: newton calculated')
 
         return c200 * u.dimensionless_unscaled
 
@@ -998,12 +1059,16 @@ class RepopAlgorithm:
                 density_profile = self.input_dict['configurations'][
                     self.configuration]['internal_density_profile']
 
+            self.logging_info('Mass_from_Vmax: enter')
+
             cosmo_G = self.input_dict['cosmo_constants']['G']
             Rmax_over_rs = self.RmaxoverrS(density_profile)
 
             yy = (Vmax ** 2 * Rmax / cosmo_G
                   * self.ff(radius_normalized, density_profile)
                   / self.ff(Rmax_over_rs, density_profile))
+
+            self.logging_info('Mass_from_Vmax: yy calculated')
         else:
             if 'params' in method.keys():
                 params = method['params']
@@ -1192,7 +1257,8 @@ class RepopAlgorithm:
             if (isinstance(integrate_up_to, float)
                     or integrate_up_to == 'R_t'):
                 radius_normalized *= (
-                        Rmax_over_rs / self.Rmax(Vmax=Vmax, Cv=Cv))
+                        Rmax_over_rs / self.Rmax(
+                    Vmax=Vmax, Cv=Cv, density_profile=density_profile))
 
             yy *= (cosmo_H_0 / 4. / np.pi / cosmo_G ** 2
                    * np.sqrt(Cv / 2) * Vmax ** 3
@@ -1258,6 +1324,8 @@ class RepopAlgorithm:
 
         if isinstance(x, list):
             x = np.array(x)
+        if isinstance(x, u.Quantity):
+            x = x.to(1).value
 
         if density_profile == 'NFW':
             return np.log(1. + x) - x / (1. + x)
@@ -1268,37 +1336,79 @@ class RepopAlgorithm:
                     - 0.5 * np.arctan(x))
 
         else:
-            try:
-                formula = density_profile['formula']
+            if 'ff_spline' in density_profile.keys():
                 try:
-                    params = density_profile['params']
-                except KeyError:
-                    params = []
+                    return density_profile['ff_spline'](x)
+                except ValueError:
+                    try:
+                        formula = density_profile['formula']
+                        try:
+                            params = density_profile['params']
+                        except KeyError:
+                            params = []
 
-                int_total = np.zeros_like(x)
+                        int_total = np.zeros_like(x)
 
-                def integrand(x_prime):
-                    rho_x = self.calculate_formula(
-                        x_prime, formula, params)
-                    return x_prime ** 2 * rho_x
+                        def integrand(x_prime):
+                            rho_x = self.calculate_formula(
+                                x_prime, formula, params)
+                            return x_prime ** 2 * rho_x
 
-                if isinstance(x, float) or isinstance(x, int):
-                    int_total = quad(
-                        lambda x_prime: integrand(x_prime),
-                        a=0., b=x)[0]
+                        if isinstance(x, float) or isinstance(x, int):
+                            int_total = quad(
+                                lambda x_prime: integrand(x_prime),
+                                a=0., b=x)[0]
 
-                elif isinstance(x, list) or isinstance(x, np.ndarray):
-                    for ni, xi in enumerate(x):
+                        elif isinstance(x, list) or isinstance(x, np.ndarray):
+                            for ni, xi in enumerate(x):
+                                int_total[ni] = quad(
+                                    lambda x_prime: integrand(x_prime),
+                                    a=0., b=xi)[0]
+
+                        return int_total
+
+                    except Exception as e:
+                        raise ValueError(
+                            f'Error evaluating formula ' + formula
+                            + f' with parameters {params}: {e}')
+            else:
+                self.logging_info('Creating spline for ff(x).')
+                try:
+                    formula = density_profile['formula']
+                    try:
+                        params = density_profile['params']
+                    except KeyError:
+                        params = []
+
+                    xx_array = np.linspace(
+                        0.,
+                        np.max((150.,
+                                self.input_dict['host']['R_vir']
+                                / self.input_dict['host']['r_s'])),
+                        num=1000
+                    )
+                    int_total = np.zeros_like(xx_array)
+
+                    def integrand(x_prime):
+                        rho_x = self.calculate_formula(
+                            x_prime, formula, params)
+                        return x_prime ** 2 * rho_x
+
+                    for ni, xi in enumerate(xx_array):
                         int_total[ni] = quad(
                             lambda x_prime: integrand(x_prime),
                             a=0., b=xi)[0]
 
-                return int_total
+                    density_profile['ff_spline'] = UnivariateSpline(
+                        xx_array, int_total, k=1, s=0
+                    )
 
-            except Exception as e:
-                raise ValueError(
-                    f'Error evaluating formula ' + formula
-                    + f' with parameters {params}: {e}')
+                    return density_profile['ff_spline'](x)
+
+                except Exception as e:
+                    raise ValueError(
+                        f'Error evaluating formula ' + formula
+                        + f' with parameters {params}: {e}')
 
     def fff(self, x, density_profile=None):
         if density_profile is None:
@@ -1307,6 +1417,8 @@ class RepopAlgorithm:
 
         if isinstance(x, list):
             x = np.array(x)
+        if isinstance(x, u.Quantity):
+            x = x.to(1).value
 
         if density_profile == 'NFW':
             return (1 - 1 / (1 + x) ** 3.) / 3.
@@ -1316,37 +1428,79 @@ class RepopAlgorithm:
                            - 1 / (1 + x ** 2) - np.arctan(x))
 
         else:
-            try:
-                formula = density_profile['formula']
+            if 'fff_spline' in density_profile.keys():
                 try:
-                    params = density_profile['params']
-                except KeyError:
-                    params = []
+                    return density_profile['fff_spline'](x)
+                except ValueError:
+                    try:
+                        formula = density_profile['formula']
+                        try:
+                            params = density_profile['params']
+                        except KeyError:
+                            params = []
 
-                int_total = np.zeros_like(x)
+                        int_total = np.zeros_like(x)
 
-                def integrand(x_prime):
-                    rho_x = self.calculate_formula(
-                        x_prime, formula, params)
-                    return x_prime ** 2 * rho_x ** 2
+                        def integrand(x_prime):
+                            rho_x = self.calculate_formula(
+                                x_prime, formula, params)
+                            return x_prime ** 2 * rho_x ** 2
 
-                if isinstance(x, float) or isinstance(x, int):
-                    int_total = quad(
-                        lambda x_prime: integrand(x_prime),
-                        a=0., b=x)[0]
+                        if isinstance(x, float) or isinstance(x, int):
+                            int_total = quad(
+                                lambda x_prime: integrand(x_prime),
+                                a=0., b=x)[0]
 
-                elif isinstance(x, list) or isinstance(x, np.ndarray):
-                    for ni, xi in enumerate(x):
+                        elif isinstance(x, list) or isinstance(x, np.ndarray):
+                            for ni, xi in enumerate(x):
+                                int_total[ni] = quad(
+                                    lambda x_prime: integrand(x_prime),
+                                    a=0., b=xi)[0]
+
+                        return int_total
+
+                    except Exception as e:
+                        raise ValueError(
+                            f'Error evaluating formula ' + formula
+                            + f' with parameters {params}: {e}')
+            else:
+                self.logging_info('Creating spline for fff(x).')
+                try:
+                    formula = density_profile['formula']
+                    try:
+                        params = density_profile['params']
+                    except KeyError:
+                        params = []
+
+                    xx_array = np.linspace(
+                        0.,
+                        np.max((150.,
+                                self.input_dict['host']['R_vir']
+                                / self.input_dict['host']['r_s'])),
+                        num=1000
+                    )
+                    int_total = np.zeros_like(xx_array)
+
+                    def integrand(x_prime):
+                        rho_x = self.calculate_formula(
+                            x_prime, formula, params)
+                        return x_prime ** 2 * rho_x
+
+                    for ni, xi in enumerate(xx_array):
                         int_total[ni] = quad(
                             lambda x_prime: integrand(x_prime),
                             a=0., b=xi)[0]
 
-                return int_total
+                    density_profile['fff_spline'] = UnivariateSpline(
+                        xx_array, int_total, k=1, s=0
+                    )
 
-            except Exception as e:
-                raise ValueError(
-                    f'Error evaluating formula ' + formula
-                    + f' with parameters {params}: {e}')
+                    return density_profile['fff_spline'](x)
+
+                except Exception as e:
+                    raise ValueError(
+                        f'Error evaluating formula ' + formula
+                        + f' with parameters {params}: {e}')
 
     def RmaxoverrS(self, density_profile=None):
 
