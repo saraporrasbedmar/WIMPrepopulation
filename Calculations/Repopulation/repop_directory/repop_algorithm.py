@@ -990,6 +990,9 @@ class RepopAlgorithm:
         delta = self.input_dict['cosmo_constants']['delta_overdensity']
         RmaxoverrS = self.RmaxoverrS(density_profile=density_profile)
 
+        if isinstance(Cv, u.Quantity):
+            Cv.value
+
         def int_interior(c200i, Cvi):
             return (delta
                     * c200i ** 3 / self.ff(c200i, density_profile)
@@ -1000,13 +1003,13 @@ class RepopAlgorithm:
         self.logging_info('C200_from_Cv: enter')
 
         try:
-            c200 = newton(int_interior, x0=40.0, args=[Cv.value])
+            c200 = newton(int_interior, x0=40.0, args=[Cv])
 
         except: # (ValueError, TypeError):
             c200_min = newton(int_interior, x0=40.0,
-                              args=[np.min(Cv.value)])
+                              args=[np.min(Cv)])
             c200_max = newton(int_interior, x0=40.0,
-                              args=[np.max(Cv.value)])
+                              args=[np.max(Cv)])
             C200_array = np.geomspace(
                 0.95 * c200_min, 1.05 * c200_max, num=500)
             Cv_array = (delta * C200_array ** 3
@@ -1164,7 +1167,7 @@ class RepopAlgorithm:
             try:
                 ci = self.input_dict['configurations'][
                 self.configuration][self._concentr]['params']['ci']
-            except KeyError:
+            except (KeyError, TypeError):
                 ci = [19.9, -0.195, 0.089, 0.089, -0.54]
 
         cosmo_H_0 = self.input_dict['cosmo_constants']['H_0']
@@ -1385,7 +1388,7 @@ class RepopAlgorithm:
                         np.max((150.,
                                 self.input_dict['host']['R_vir']
                                 / self.input_dict['host']['r_s'])),
-                        num=1000
+                        num=2000
                     )
                     int_total = np.zeros_like(xx_array)
 
@@ -1477,7 +1480,7 @@ class RepopAlgorithm:
                         np.max((150.,
                                 self.input_dict['host']['R_vir']
                                 / self.input_dict['host']['r_s'])),
-                        num=1000
+                        num=2000
                     )
                     int_total = np.zeros_like(xx_array)
 
@@ -1583,17 +1586,22 @@ class RepopAlgorithm:
                         formula_concentr = self.input_dict[
                             'configurations'][self.configuration][
                             'Cv']['formula']
+
                         params_concentr = self.input_dict[
                             'configurations'][self.configuration][
-                            'Cv']['params'].copy()
-
-                        for i in params_concentr.keys():
-                            if 'scatter' in i:
-                                    params_concentr[i] = 0
+                            'Cv']['params']
+                        if isinstance(params_concentr, dict):
+                            params_concentr = params_concentr.copy()
+                            for i in params_concentr.keys():
+                                if 'scatter' in i:
+                                        params_concentr[i] = 0
+                        if isinstance(formula_concentr, str):
+                            formula_concentr = formula_concentr.replace(
+                                'Vmax','xx')
 
                         cv_mean = self.calculate_formula(
-                            x_max * u.km / u.s,
-                            formula_concentr, params_concentr)
+                                x_max * u.km / u.s,
+                                formula_concentr, params_concentr)
                         c200 = self.C200_from_Cv(Cv=cv_mean)
                         Rmax = self.Rmax(
                             Vmax=x_max * u.km / u.s, Cv=cv_mean)

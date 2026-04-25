@@ -47,7 +47,7 @@ repopulations:
   verbose: True
 
   save_full_repop: True
-  use_spherical_shells: False
+  use_spherical_shells: True
   number_highest: 2
   allow_break_Roche: True
   allow_engulf_Earth: True
@@ -94,7 +94,6 @@ repopulations:
       unit: degree
 
 configurations:
-#  TODO: Cv fails with '3e5 + Vmax.value'
 
   dmo_fragile:
     internal_density_profile:   #'NFW'
@@ -106,11 +105,14 @@ configurations:
 #      formula: '8226.1 * xx ** 3.72'
     use_Roche: True
     Cv:
-      formula: 'Cv_Mol2021_redshift0_scattered'
+      formula: '3e5 + Vmax.value'
       params:
         c0: 283862.7023
         sigma_scatter: 0.297659
         ci: [55., -0.195, 0.089, 0.089, -0.54]
+      variables:
+        'Vmax'
+
     Cmass:
       formula: 'C_200'
       params:
@@ -133,10 +135,10 @@ configurations:
           value: 1.57
           unit: kpc
   dmo_fragile2:
-    internal_density_profile: #'NFW'
+    internal_density_profile: 'NFW'
 #          formula: '1. / xx / (1. + xx)**params'
-          formula: '1. / (1 + xx**params[0])'
-          params: [2., 1.1]
+#          formula: '1. / (1 + xx**params[0])'
+#          params: [2., 1.1]
     relation_Mass_Vmax: #M200_from_VmaxRmax
     # We assume that the units here are Msun
           formula: '8226.1 * xx ** 3.72'

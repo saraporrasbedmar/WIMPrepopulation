@@ -37,11 +37,11 @@ def srd_example(Vmax, params):
 #     'formula': srd_example, 'params': 1e2}
 
 def aaa(Vmax, params):
-    return 1e5 + Vmax.value + params
+    return 1e5 + Vmax.value * params
 
-# TODO: esto falla con draco
-# input_file['configurations']['dmo_resilient']['Cv'] = {
-#     'formula': aaa, 'params': 12, 'variables': 'Vmax'}
+
+input_file['configurations']['dmo_fragile']['Cv'] = {
+    'formula': aaa, 'params': 12, 'variables': 'Vmax'}
 
 
 model = RepopAlgorithm(input_file)
