@@ -86,9 +86,13 @@ repopulations:
       formula: J_general
       unit: GeV2 / cm5
       integrate_up_to: 'whole'
-    J_custom3:
+    J_customUnit:
       formula: J_general
-      unit: Msun2 / cm5
+      unit: GeV2 / cm5
+      integrate_up_to: 0.15
+    J_customUnit2:
+      formula: J_general
+      unit: Msun2 / kpc5
       integrate_up_to: 0.15
     theta_s:
       unit: degree

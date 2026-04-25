@@ -33,7 +33,6 @@ def read_config_file(ConfigFile):
     return parsed_yaml
 
 
-# TODO: la conversion no funciona si tienes cualquier otra cosa ie no con Msun
 mass_energy2 = [
     (u.si.kg ** 2, u.si.J ** 2.,
      lambda x: (x * c.c.value ** 4), lambda x: (x / c.c.value ** 4)),
